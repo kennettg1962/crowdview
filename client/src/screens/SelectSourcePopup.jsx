@@ -1,0 +1,183 @@
+import React, { useState, useEffect } from 'react';
+import { useApp } from '../context/AppContext';
+import { XIcon, CheckIcon } from '../components/Icons';
+
+function DeviceList({ devices, selected, onSelect, onConnect, onDisconnect, connected }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="max-h-32 overflow-y-auto bg-gray-900 rounded-lg divide-y divide-gray-700">
+        {devices.length === 0 ? (
+          <p className="text-gray-500 text-sm p-3">No devices found</p>
+        ) : devices.map(d => (
+          <button
+            key={d.deviceId}
+            onClick={() => onSelect(d)}
+            className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+              selected?.deviceId === d.deviceId ? 'bg-blue-800 text-white' : 'text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            <span className="truncate">{d.label || `Device (${d.deviceId.slice(0, 8)}...)`}</span>
+            {connected?.deviceId === d.deviceId && <CheckIcon className="w-4 h-4 text-green-400 flex-shrink-0" />}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => onConnect(selected)}
+          disabled={!selected}
+          className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm disabled:opacity-40"
+        >
+          Connect
+        </button>
+        <button
+          onClick={() => onDisconnect()}
+          disabled={!connected}
+          className="flex-1 py-1.5 bg-gray-600 hover:bg-gray-500 text-white rounded text-sm disabled:opacity-40"
+        >
+          Disconnect
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function SelectSourcePopup({ onClose }) {
+  const { currentSource, setCurrentSource, startStream, stopStream, mediaStream } = useApp();
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [audioInputDevices, setAudioInputDevices] = useState([]);
+  const [audioOutputDevices, setAudioOutputDevices] = useState([]);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [selectedAudioIn, setSelectedAudioIn] = useState(null);
+  const [selectedAudioOut, setSelectedAudioOut] = useState(null);
+  const [connectedVideo, setConnectedVideo] = useState(currentSource);
+  const [connectedAudioIn, setConnectedAudioIn] = useState(null);
+  const [connectedAudioOut, setConnectedAudioOut] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    enumerateDevices();
+  }, []);
+
+  async function enumerateDevices() {
+    try {
+      // Request permission first
+      await navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(s => s.getTracks().forEach(t => t.stop()));
+    } catch {
+      // Permission may not be granted
+    }
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
+      setAudioInputDevices(devices.filter(d => d.kind === 'audioinput'));
+      setAudioOutputDevices(devices.filter(d => d.kind === 'audiooutput'));
+    } catch (err) {
+      setError('Failed to enumerate devices: ' + err.message);
+    }
+  }
+
+  async function handleConnectVideo(device) {
+    if (!device) return;
+    try {
+      if (mediaStream) stopStream();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: device.deviceId } },
+        audio: connectedAudioIn ? { deviceId: { exact: connectedAudioIn.deviceId } } : true
+      });
+      startStream(stream);
+      setConnectedVideo(device);
+      setCurrentSource(device);
+    } catch (err) {
+      setError('Could not connect to camera: ' + err.message);
+    }
+  }
+
+  function handleDisconnectVideo() {
+    stopStream();
+    setConnectedVideo(null);
+    setCurrentSource(null);
+  }
+
+  async function handleConnectAudioIn(device) {
+    if (!device) return;
+    setConnectedAudioIn(device);
+  }
+
+  function handleDisconnectAudioIn() {
+    setConnectedAudioIn(null);
+  }
+
+  function handleConnectAudioOut(device) {
+    if (!device) return;
+    setConnectedAudioOut(device);
+  }
+
+  function handleDisconnectAudioOut() {
+    setConnectedAudioOut(null);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+          <h2 className="text-white font-semibold text-lg">Select Source</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <XIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+          {error && <p className="text-red-400 text-sm bg-red-900/30 p-3 rounded-lg">{error}</p>}
+
+          {/* Video Sources */}
+          <div>
+            <h3 className="text-blue-400 font-medium text-sm mb-2 uppercase tracking-wide">Video Sources</h3>
+            <DeviceList
+              devices={videoDevices}
+              selected={selectedVideo}
+              onSelect={setSelectedVideo}
+              onConnect={handleConnectVideo}
+              onDisconnect={handleDisconnectVideo}
+              connected={connectedVideo}
+            />
+          </div>
+
+          {/* Voice/Audio Inputs */}
+          <div>
+            <h3 className="text-blue-400 font-medium text-sm mb-2 uppercase tracking-wide">Voice Sources</h3>
+            <DeviceList
+              devices={audioInputDevices}
+              selected={selectedAudioIn}
+              onSelect={setSelectedAudioIn}
+              onConnect={handleConnectAudioIn}
+              onDisconnect={handleDisconnectAudioIn}
+              connected={connectedAudioIn}
+            />
+          </div>
+
+          {/* Audio Outputs */}
+          <div>
+            <h3 className="text-blue-400 font-medium text-sm mb-2 uppercase tracking-wide">Audio Outputs</h3>
+            <DeviceList
+              devices={audioOutputDevices}
+              selected={selectedAudioOut}
+              onSelect={setSelectedAudioOut}
+              onConnect={handleConnectAudioOut}
+              onDisconnect={handleDisconnectAudioOut}
+              connected={connectedAudioOut}
+            />
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t border-gray-700">
+          <button
+            onClick={onClose}
+            className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
