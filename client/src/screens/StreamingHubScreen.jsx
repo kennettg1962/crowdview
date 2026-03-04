@@ -104,8 +104,8 @@ export default function StreamingHubScreen() {
 
       {/* Main content: Id | Video | Stream */}
       <main className="flex-1 flex items-stretch p-2 gap-2">
-        {/* Left 10%: Id button */}
-        <div className="w-[10%] flex flex-col items-center justify-center">
+        {/* Left 15%: Id button */}
+        <div className="w-[15%] flex flex-col items-center justify-center">
           <button
             onClick={handleId}
             disabled={!isStreaming}
@@ -117,8 +117,8 @@ export default function StreamingHubScreen() {
           </button>
         </div>
 
-        {/* Center 80%: Video */}
-        <div className="flex-1 flex flex-col items-center justify-center">
+        {/* Center 70%: Video */}
+        <div className="w-[70%] flex flex-col items-center justify-center">
           <div className="w-full video-container bg-black rounded-xl overflow-hidden border border-gray-700">
             {mediaStream ? (
               <video
@@ -143,8 +143,8 @@ export default function StreamingHubScreen() {
           </div>
         </div>
 
-        {/* Right 10%: Stream button */}
-        <div className="w-[10%] flex flex-col items-center justify-center">
+        {/* Right 15%: Stream button */}
+        <div className="w-[15%] flex flex-col items-center justify-center">
           {isStreaming ? (
             <button
               onClick={handleStream}
