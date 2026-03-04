@@ -29,7 +29,7 @@ function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
 
 export default function StreamingHubScreen() {
   const navigate = useNavigate();
-  const { isStreaming, mediaStream, startStream, stopStream, currentSource, currentOutlet } = useApp();
+  const { isStreaming, mediaStream, startStream, stopStream, currentSource } = useApp();
   const videoRef = useRef(null);
   const [showSource, setShowSource] = useState(false);
   const [showStreamTo, setShowStreamTo] = useState(false);
