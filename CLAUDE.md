@@ -121,6 +121,15 @@ git push origin feature/my-feature
 gh pr create --title "..." --body "..."   # open PR when ready
 ```
 
+### Pushing from this machine (Cursor credential workaround)
+Running inside Cursor, plain `git push` gets intercepted by Cursor's askpass helper and returns 401. Use the GitHub CLI token in the remote URL for the push, then reset it:
+
+```bash
+git remote set-url origin https://kennettg1962:$(gh auth token)@github.com/kennettg1962/crowdview.git
+git push origin main
+git remote set-url origin https://github.com/kennettg1962/crowdview.git
+```
+
 ### What never gets committed
 - `server/.env` (gitignored — contains DB credentials and JWT secret)
 - `node_modules/` (gitignored in both `server/` and `client/`)
