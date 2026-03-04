@@ -1,26 +1,39 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import MenuSlideout from '../components/MenuSlideout';
 import SelectSourcePopup from './SelectSourcePopup';
 import StreamToPopup from './StreamToPopup';
 import {
-  MovieCameraIcon, FriendsIcon, LibraryIcon,
-  SelectSourceIcon, StreamToIcon, IdIcon,
-  StreamIcon, StopStreamIcon
+  FriendsIcon, LibraryIcon, SelectSourceIcon, StreamToIcon,
+  IdIcon, ActionIcon, CameraIcon, ShareIcon, PostIcon,
+  MonitorPlayIcon, StopStreamIcon, MovieCameraIcon
 } from '../components/Icons';
+
+function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full
+        disabled:opacity-30 disabled:cursor-not-allowed ${className}`}
+    >
+      <Icon className="w-7 h-7" />
+      <span className="text-xs font-medium">{label}</span>
+    </button>
+  );
+}
 
 export default function StreamingHubScreen() {
   const navigate = useNavigate();
-  const { isStreaming, mediaStream, startStream, stopStream, currentSource, currentOutlet, setSlideoutOpen } = useApp();
+  const { isStreaming, mediaStream, startStream, stopStream, currentSource, currentOutlet } = useApp();
   const videoRef = useRef(null);
   const [showSource, setShowSource] = useState(false);
   const [showStreamTo, setShowStreamTo] = useState(false);
 
-  // Attach MediaStream to video element
   useEffect(() => {
     if (videoRef.current && mediaStream) {
       videoRef.current.srcObject = mediaStream;
@@ -28,11 +41,7 @@ export default function StreamingHubScreen() {
   }, [mediaStream]);
 
   const handleStream = useCallback(async () => {
-    if (isStreaming) {
-      stopStream();
-      return;
-    }
-    // Auto-start with default camera if no source selected
+    if (isStreaming) { stopStream(); return; }
     try {
       const constraints = currentSource
         ? { video: { deviceId: { exact: currentSource.deviceId } }, audio: true }
@@ -46,80 +55,106 @@ export default function StreamingHubScreen() {
 
   const handleId = useCallback(() => {
     if (!videoRef.current || !mediaStream) return;
-    // Capture a still frame from the video
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth || 640;
     canvas.height = videoRef.current.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(videoRef.current, 0, 0);
-    const photoDataUrl = canvas.toDataURL('image/jpeg');
-    navigate('/id', { state: { photoDataUrl } });
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+    navigate('/id', { state: { photoDataUrl: canvas.toDataURL('image/jpeg') } });
   }, [mediaStream, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-slate-700 flex flex-col">
       <MenuSlideout />
 
       {/* Header */}
-      <AppHeader
-        left={
-          <button onClick={() => navigate('/library')} title="Library" className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
-            <LibraryIcon className="w-5 h-5" />
-          </button>
-        }
-        center={
-          <span className="text-white font-bold text-xl tracking-wide">CrowdView</span>
-        }
-        right={
-          <button onClick={() => navigate('/friends')} title="Friends" className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
-            <FriendsIcon className="w-5 h-5" />
-          </button>
-        }
-      />
+      <header className="bg-slate-700 px-6 py-3 flex items-center justify-between">
+        {/* Left: Friends */}
+        <button
+          onClick={() => navigate('/friends')}
+          className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
+        >
+          <FriendsIcon className="w-6 h-6" />
+          <span className="text-xs font-medium">Friends</span>
+        </button>
 
-      {/* Source / Outlet row */}
-      <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-center gap-4">
+        {/* Center: Title */}
+        <span className="text-white font-bold text-2xl tracking-wide">CrowdView</span>
+
+        {/* Right: Library */}
+        <button
+          onClick={() => navigate('/library')}
+          className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
+        >
+          <LibraryIcon className="w-6 h-6" />
+          <span className="text-xs font-medium">Library</span>
+        </button>
+      </header>
+
+      {/* Select Source / Stream To row */}
+      <div className="bg-slate-700 px-4 pb-3 flex items-center justify-center gap-3">
         <button
           onClick={() => setShowSource(true)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm font-medium transition-colors border border-slate-500"
         >
           <SelectSourceIcon className="w-4 h-4" />
-          <span>Source</span>
+          <span>Select Source</span>
         </button>
-        <span className="text-gray-400 text-sm truncate max-w-[120px]">
-          {currentSource?.label || 'None'}
-        </span>
-        <span className="text-gray-600">|</span>
         <button
           onClick={() => setShowStreamTo(true)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded-lg text-sm transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm font-medium transition-colors border border-slate-500"
         >
           <StreamToIcon className="w-4 h-4" />
           <span>Stream To</span>
         </button>
-        <span className="text-gray-400 text-sm truncate max-w-[120px]">
-          {currentOutlet?.name || 'None'}
-        </span>
       </div>
 
-      {/* Main content: Id | Video | Stream */}
-      <main className="flex-1 flex items-stretch p-2 gap-2">
-        {/* Left 15%: Id button */}
-        <div className="w-[15%] flex flex-col items-center justify-center">
-          <button
+      {/* Main 3-column layout */}
+      <main className="flex-1 flex items-stretch px-2 pb-2 gap-0">
+
+        {/* Left 15%: white panel with Id + action buttons */}
+        <div className="w-[15%] bg-white rounded-l-xl flex flex-col border border-gray-200">
+          {/* Id button */}
+          <SideButton
+            icon={IdIcon}
+            label="Id"
             onClick={handleId}
             disabled={!isStreaming}
-            title="Identify Faces"
-            className="flex flex-col items-center gap-1 text-xs text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed p-2 rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            <IdIcon className="w-7 h-7" />
-            <span>Id</span>
-          </button>
+            className="text-gray-700 hover:bg-gray-100"
+          />
+
+          {/* Divider */}
+          <div className="mx-3 border-t border-gray-200" />
+
+          {/* Secondary action buttons */}
+          <SideButton
+            icon={ActionIcon}
+            label="Action"
+            onClick={() => {}}
+            className="text-gray-700 hover:bg-gray-100"
+          />
+          <SideButton
+            icon={CameraIcon}
+            label="Camera"
+            onClick={() => {}}
+            className="text-gray-700 hover:bg-gray-100"
+          />
+          <SideButton
+            icon={ShareIcon}
+            label="Share"
+            onClick={() => {}}
+            className="text-gray-700 hover:bg-gray-100"
+          />
+          <SideButton
+            icon={PostIcon}
+            label="Post"
+            onClick={() => {}}
+            className="text-gray-700 hover:bg-gray-100"
+          />
         </div>
 
-        {/* Center 70%: Video */}
-        <div className="w-[70%] flex flex-col items-center justify-center">
-          <div className="w-full video-container bg-black rounded-xl overflow-hidden border border-gray-700">
+        {/* Center 70%: video container */}
+        <div className="w-[70%] bg-white flex flex-col items-center justify-center p-3 border-t border-b border-gray-200">
+          <div className="w-full video-container bg-black border-2 border-white rounded-sm overflow-hidden">
             {mediaStream ? (
               <video
                 ref={videoRef}
@@ -129,40 +164,31 @@ export default function StreamingHubScreen() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600 gap-3">
-                <MovieCameraIcon className="w-16 h-16" />
-                <p className="text-sm">No video source connected</p>
-                <button
-                  onClick={() => setShowSource(true)}
-                  className="text-blue-400 hover:text-blue-300 text-sm underline"
-                >
-                  Select Source
-                </button>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-3">
+                <MovieCameraIcon className="w-16 h-16 opacity-80" />
+                <p className="text-base font-medium">Video Stream Container</p>
+                <p className="text-sm text-gray-400">16:9 Aspect Ratio</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right 15%: Stream button */}
-        <div className="w-[15%] flex flex-col items-center justify-center">
+        {/* Right 15%: dark panel with Stream button */}
+        <div className="w-[15%] bg-white rounded-r-xl flex flex-col border border-gray-200">
           {isStreaming ? (
-            <button
+            <SideButton
+              icon={StopStreamIcon}
+              label="Stop"
               onClick={handleStream}
-              title="Stop Streaming"
-              className="flex flex-col items-center gap-1 text-xs text-white p-2 rounded-lg bg-pink-800 hover:bg-pink-700 transition-colors"
-            >
-              <StopStreamIcon className="w-7 h-7" />
-              <span>Stop</span>
-            </button>
+              className="text-pink-700 hover:bg-pink-50"
+            />
           ) : (
-            <button
+            <SideButton
+              icon={MonitorPlayIcon}
+              label="Stream"
               onClick={handleStream}
-              title="Start Streaming"
-              className="flex flex-col items-center gap-1 text-xs text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              <StreamIcon className="w-7 h-7" />
-              <span>Stream</span>
-            </button>
+              className="text-gray-700 hover:bg-gray-100"
+            />
           )}
         </div>
       </main>

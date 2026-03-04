@@ -13,7 +13,7 @@ export default function NavBar() {
   ];
 
   return (
-    <nav className="bg-gray-900 border-t border-gray-700 flex">
+    <nav className="bg-white border-t border-gray-200 flex">
       {tabs.map(({ label, icon: Icon, path }) => {
         const active = location.pathname === path;
         return (
@@ -21,7 +21,7 @@ export default function NavBar() {
             key={path}
             onClick={() => navigate(path)}
             className={`flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors ${
-              active ? 'text-blue-400 border-t-2 border-blue-400' : 'text-gray-400 hover:text-gray-200'
+              active ? 'text-blue-600 border-t-2 border-blue-600' : 'text-gray-500 hover:text-gray-800'
             }`}
           >
             <Icon className="w-5 h-5" />
