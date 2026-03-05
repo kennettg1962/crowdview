@@ -44,7 +44,7 @@ jobs:
               pm2 restart crowdview
             else
               echo "PM2 process not found. Starting new process..."
-              pm2 start npm --name crowdview -- preview
+              pm2 start npm --name crowdview -- run preview
             fi
 
             # server
@@ -59,7 +59,7 @@ jobs:
               pm2 restart crowdview-api
             else
               echo "PM2 process not found. Starting new process..."
-              pm2 start npm --name crowdview-api -- preview
+              pm2 start npm --name crowdview-api -- start
             fi
 
             # save pm2 state (so it restarts on reboot)
