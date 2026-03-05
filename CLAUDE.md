@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 CrowdView is a real-time crowd face-identification and live-streaming web app. It has two independent sub-projects that must run concurrently during development:
 
 - `server/` — Node.js/Express REST API on port **5000**
-- `client/` — React (CRA + Tailwind CSS) SPA on port **3000**, proxied to port 5000
+- `client/` — React (Vite + Tailwind CSS v4) SPA on port **3000**, proxied to port 5000
 
 ## Commands
 
@@ -23,14 +23,17 @@ npm run dev          # with nodemon (auto-restart)
 ```bash
 cd client
 npm install          # first time
-npm start            # dev server (port 3000)
-npm run build        # production build → client/build/
+npm run dev          # dev server (port 3000) — NOT npm start
+npm run build        # production build → client/dist/
+npm run preview      # serve the production build locally
 ```
 
-### Database setup (run once)
+### Database setup
 ```bash
-mysql -u root -p < server/db/schema.sql
+cd server
+npm run migrate      # runs schema.sql then seed.sql via db/migrate.js
 ```
+Or manually: `mysql -u root -p < server/db/schema.sql`
 
 ## Environment
 
@@ -40,7 +43,14 @@ Copy `server/.env.example` to `server/.env` and fill in:
 - `JWT_EXPIRES_IN` — default `7d`
 - `PORT` — default `5000`
 
-No `.env` file is needed for the client; the CRA proxy setting in `client/package.json` routes all `/api/*` calls to `http://localhost:5000`.
+No `.env` file is needed for the client in development; `client/vite.config.js` proxies all `/api/*` requests to `http://localhost:5000`. In production, add `CLIENT_URL` to `server/.env` (your domain) so the Express CORS whitelist allows it.
+
+The client uses **Vite** (not Create React App). Key differences:
+- Entry point is `client/index.html` at the repo root of `client/` (not `client/public/`)
+- Environment variables use `import.meta.env.*` not `process.env.*`
+- Tailwind v4 is configured via the `@tailwindcss/vite` plugin in `vite.config.js` — no `tailwind.config.js` or `postcss.config.js`
+- CSS import is `@import "tailwindcss"` (not the old `@tailwind` directives)
+- Build output goes to `client/dist/` (not `client/build/`)
 
 ## Architecture
 
@@ -130,7 +140,17 @@ git push origin main
 git remote set-url origin https://github.com/kennettg1962/crowdview.git
 ```
 
+### CI/CD — GitHub Actions auto-deploy
+`.github/workflows/deploy.yml` triggers on every push to `main`. It SSHs into the production server and:
+1. Pulls latest code
+2. Runs `npm install && npm run build` in `client/`
+3. Manages the Vite preview server via PM2 as `crowdview`
+4. Runs `npm install` in `server/` and manages Express via PM2 as `crowdview-api`
+5. Saves PM2 state for reboot persistence
+
+Three GitHub repository secrets must be set for this to work: `SSH_PRIVATE_KEY`, `SERVER_USER`, `SERVER_HOST`.
+
 ### What never gets committed
 - `server/.env` (gitignored — contains DB credentials and JWT secret)
 - `node_modules/` (gitignored in both `server/` and `client/`)
-- `client/build/` (gitignored — generated artifact)
+- `client/dist/` (Vite build output, gitignored)
