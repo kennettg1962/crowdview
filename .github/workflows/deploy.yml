@@ -1,0 +1,66 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+
+            cd /var/www/crowdview
+
+            # pull latest changes
+            git pull
+
+            # client
+            cd client
+
+            # install dependencies
+            npm install
+
+            # build project
+            npm run build
+
+            # check if pm2 process exists
+            if pm2 describe crowdview > /dev/null 2>&1; then
+              echo "PM2 process exists. Restarting..."
+              pm2 restart crowdview
+            else
+              echo "PM2 process not found. Starting new process..."
+              pm2 start npm --name crowdview -- preview
+            fi
+
+            # server
+            cd ../server
+
+            # install dependencies
+            npm install
+
+             # check if pm2 process exists
+            if pm2 describe crowdview-api > /dev/null 2>&1; then
+              echo "PM2 process exists. Restarting..."
+              pm2 restart crowdview-api
+            else
+              echo "PM2 process not found. Starting new process..."
+              pm2 start npm --name crowdview-api -- preview
+            fi
+
+            # save pm2 state (so it restarts on reboot)
+            pm2 save
+          EOF
