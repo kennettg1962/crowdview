@@ -29,6 +29,16 @@ jobs:
             # pull latest changes
             git pull
 
+            # run DB migrations (safe to re-run — ALTER uses IF NOT EXISTS)
+            cd /var/www/crowdview/server
+            DB_HOST=$(grep '^DB_HOST=' .env | cut -d= -f2)
+            DB_PORT=$(grep '^DB_PORT=' .env | cut -d= -f2)
+            DB_USER=$(grep '^DB_USER=' .env | cut -d= -f2)
+            DB_PASSWORD=$(grep '^DB_PASSWORD=' .env | cut -d= -f2)
+            mysql -h "$DB_HOST" -P "${DB_PORT:-3306}" -u "$DB_USER" -p"$DB_PASSWORD" < db/alter.sql
+            echo "DB migration complete"
+            cd /var/www/crowdview
+
             # client
             cd client
 
