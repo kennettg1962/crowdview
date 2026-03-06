@@ -125,29 +125,33 @@ export default function StreamingHubScreen() {
           {/* Divider */}
           <div className="mx-3 border-t border-slate-600" />
 
-          {/* Secondary action buttons */}
+          {/* Secondary action buttons — enabled only when streaming */}
           <SideButton
             icon={ActionIcon}
             label="Action"
             onClick={() => {}}
+            disabled={!isStreaming}
             className="text-white hover:bg-slate-600"
           />
           <SideButton
             icon={CameraIcon}
             label="Camera"
             onClick={() => {}}
+            disabled={!isStreaming}
             className="text-white hover:bg-slate-600"
           />
           <SideButton
             icon={ShareIcon}
             label="Share"
             onClick={() => {}}
+            disabled={!isStreaming}
             className="text-white hover:bg-slate-600"
           />
           <SideButton
             icon={PostIcon}
             label="Post"
             onClick={() => {}}
+            disabled={!isStreaming}
             className="text-white hover:bg-slate-600"
           />
         </div>
