@@ -11,31 +11,31 @@ export function AppProvider({ children }) {
   const [mediaStream, setMediaStream] = useState(null);
   const [slideoutOpen, setSlideoutOpen] = useState(false);
 
-  // Restore session from localStorage on mount
+  // Restore session from sessionStorage on mount
   useEffect(() => {
-    const token = localStorage.getItem('cv_token');
-    const savedUser = localStorage.getItem('cv_user');
+    const token = sessionStorage.getItem('cv_token');
+    const savedUser = sessionStorage.getItem('cv_user');
     if (token && savedUser) {
       try {
         setUser(JSON.parse(savedUser));
         setIsAuthenticated(true);
       } catch {
-        localStorage.removeItem('cv_token');
-        localStorage.removeItem('cv_user');
+        sessionStorage.removeItem('cv_token');
+        sessionStorage.removeItem('cv_user');
       }
     }
   }, []);
 
   const login = (userData, token) => {
-    localStorage.setItem('cv_token', token);
-    localStorage.setItem('cv_user', JSON.stringify(userData));
+    sessionStorage.setItem('cv_token', token);
+    sessionStorage.setItem('cv_user', JSON.stringify(userData));
     setUser(userData);
     setIsAuthenticated(true);
   };
 
   const logout = () => {
-    localStorage.removeItem('cv_token');
-    localStorage.removeItem('cv_user');
+    sessionStorage.removeItem('cv_token');
+    sessionStorage.removeItem('cv_user');
     setUser(null);
     setIsAuthenticated(false);
     setIsStreaming(false);
