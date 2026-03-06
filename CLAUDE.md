@@ -47,10 +47,20 @@ No `.env` file is needed for the client in development; `client/vite.config.js` 
 
 The client uses **Vite** (not Create React App). Key differences:
 - Entry point is `client/index.html` at the repo root of `client/` (not `client/public/`)
-- Environment variables use `import.meta.env.*` not `process.env.*`
+- Environment variables use `import.meta.env.*` not `process.env.*`, and must be prefixed `VITE_` (e.g. `VITE_APP_API_URL`)
 - Tailwind v4 is configured via the `@tailwindcss/vite` plugin in `vite.config.js` — no `tailwind.config.js` or `postcss.config.js`
 - CSS import is `@import "tailwindcss"` (not the old `@tailwind` directives)
 - Build output goes to `client/dist/` (not `client/build/`)
+
+## Production Domain
+
+Live site: **`https://crowdview.tv`** (also `https://www.crowdview.tv`)
+
+Both domains are whitelisted in:
+- `server/server.js` — Express CORS `allowedOrigins`
+- `client/vite.config.js` — `server.allowedHosts` and `preview.allowedHosts`
+
+The Vite preview server (`npm run preview`) is what PM2 serves in production as the `crowdview` process. Without `preview.allowedHosts`, the domain would receive a 403 from Vite.
 
 ## Architecture
 
