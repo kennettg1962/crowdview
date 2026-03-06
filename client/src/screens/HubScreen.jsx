@@ -180,7 +180,7 @@ export default function HubScreen() {
       <main className="flex-1 flex items-stretch px-2 pb-2 gap-0">
 
         {/* Left 15%: Id + action buttons */}
-        <div className="w-[15%] bg-slate-700 rounded-l-xl flex flex-col border border-slate-600">
+        <div className="w-[15%] bg-slate-700 rounded-l-xl flex flex-col">
           <SideButton
             icon={IdIcon}
             label="Id"
@@ -217,7 +217,7 @@ export default function HubScreen() {
         </div>
 
         {/* Right 15%: Stream / Stop Stream */}
-        <div className="w-[15%] bg-slate-700 rounded-r-xl flex flex-col items-center border border-slate-600">
+        <div className="w-[15%] bg-slate-700 rounded-r-xl flex flex-col items-center">
           {!isStreamingOut ? (
             <SideButton
               icon={StreamIcon}
