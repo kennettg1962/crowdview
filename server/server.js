@@ -7,6 +7,8 @@ const allowedOrigins = [
   "http://localhost:4173", // Vite preview
   "http://localhost:5173", // Vite dev
   "http://localhost:3000", // Alternative dev
+  "https://crowdview.tv", // Production URL
+  "https://www.crowdview.tv", // Production URL with www
   process.env.CLIENT_URL, // Production URL from env
 ].filter(Boolean);
 
