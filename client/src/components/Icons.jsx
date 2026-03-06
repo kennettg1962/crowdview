@@ -185,6 +185,16 @@ export function ShareIcon({ className = iconClass }) {
   );
 }
 
+export function StopCircleIcon({ className = iconClass }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <rect x="9" y="9" width="6" height="6" fill="currentColor" strokeWidth="0" />
+    </svg>
+  );
+}
+
 export function PostIcon({ className = iconClass }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">

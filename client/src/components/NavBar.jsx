@@ -1,34 +1,42 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useApp } from '../context/AppContext';
 import { HomeIcon, FriendsIcon, UserProfileIcon } from './Icons';
 
 export default function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
-
-  const tabs = [
-    { label: 'Home', icon: HomeIcon, path: '/hub' },
-    { label: 'Friends', icon: FriendsIcon, path: '/friends' },
-    { label: 'Profile', icon: UserProfileIcon, path: '/profile' },
-  ];
+  const { setSlideoutOpen } = useApp();
 
   return (
     <nav className="bg-white border-t border-gray-200 flex">
-      {tabs.map(({ label, icon: Icon, path }) => {
-        const active = location.pathname === path;
-        return (
-          <button
-            key={path}
-            onClick={() => navigate(path)}
-            className={`flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors ${
-              active ? 'text-blue-600 border-t-2 border-blue-600' : 'text-gray-500 hover:text-gray-800'
-            }`}
-          >
-            <Icon className="w-5 h-5" />
-            <span>{label}</span>
-          </button>
-        );
-      })}
+      <button
+        onClick={() => navigate('/hub')}
+        className={`flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors ${
+          location.pathname === '/hub' ? 'text-blue-600 border-t-2 border-blue-600' : 'text-gray-500 hover:text-gray-800'
+        }`}
+      >
+        <HomeIcon className="w-5 h-5" />
+        <span>Home</span>
+      </button>
+
+      <button
+        onClick={() => navigate('/friends')}
+        className={`flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors ${
+          location.pathname === '/friends' ? 'text-blue-600 border-t-2 border-blue-600' : 'text-gray-500 hover:text-gray-800'
+        }`}
+      >
+        <FriendsIcon className="w-5 h-5" />
+        <span>Friends</span>
+      </button>
+
+      <button
+        onClick={() => setSlideoutOpen(true)}
+        className="flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors text-gray-500 hover:text-gray-800"
+      >
+        <UserProfileIcon className="w-5 h-5" />
+        <span>User Menu</span>
+      </button>
     </nav>
   );
 }
