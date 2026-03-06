@@ -111,49 +111,49 @@ export default function StreamingHubScreen() {
       {/* Main 3-column layout */}
       <main className="flex-1 flex items-stretch px-2 pb-2 gap-0">
 
-        {/* Left 15%: white panel with Id + action buttons */}
-        <div className="w-[15%] bg-white rounded-l-xl flex flex-col border border-gray-200">
+        {/* Left 15%: slate panel with Id + action buttons */}
+        <div className="w-[15%] bg-slate-700 rounded-l-xl flex flex-col border border-slate-600">
           {/* Id button */}
           <SideButton
             icon={IdIcon}
             label="Id"
             onClick={handleId}
             disabled={!isStreaming}
-            className="text-gray-700 hover:bg-gray-100"
+            className="text-white hover:bg-slate-600"
           />
 
           {/* Divider */}
-          <div className="mx-3 border-t border-gray-200" />
+          <div className="mx-3 border-t border-slate-600" />
 
           {/* Secondary action buttons */}
           <SideButton
             icon={ActionIcon}
             label="Action"
             onClick={() => {}}
-            className="text-gray-700 hover:bg-gray-100"
+            className="text-white hover:bg-slate-600"
           />
           <SideButton
             icon={CameraIcon}
             label="Camera"
             onClick={() => {}}
-            className="text-gray-700 hover:bg-gray-100"
+            className="text-white hover:bg-slate-600"
           />
           <SideButton
             icon={ShareIcon}
             label="Share"
             onClick={() => {}}
-            className="text-gray-700 hover:bg-gray-100"
+            className="text-white hover:bg-slate-600"
           />
           <SideButton
             icon={PostIcon}
             label="Post"
             onClick={() => {}}
-            className="text-gray-700 hover:bg-gray-100"
+            className="text-white hover:bg-slate-600"
           />
         </div>
 
         {/* Center 70%: video container */}
-        <div className="w-[70%] bg-white flex flex-col items-center justify-center p-3 border-t border-b border-gray-200">
+        <div className="w-[70%] bg-slate-700 flex flex-col items-center justify-center p-3 border-t border-b border-slate-600">
           <div className="w-full video-container bg-black border-2 border-white rounded-sm overflow-hidden">
             {mediaStream ? (
               <video
@@ -173,21 +173,21 @@ export default function StreamingHubScreen() {
           </div>
         </div>
 
-        {/* Right 15%: dark panel with Stream button */}
-        <div className="w-[15%] bg-white rounded-r-xl flex flex-col border border-gray-200">
+        {/* Right 15%: slate panel with Stream button */}
+        <div className="w-[15%] bg-slate-700 rounded-r-xl flex flex-col border border-slate-600">
           {isStreaming ? (
             <SideButton
               icon={StopStreamIcon}
               label="Stop"
               onClick={handleStream}
-              className="text-pink-700 hover:bg-pink-50"
+              className="text-pink-400 hover:bg-slate-600"
             />
           ) : (
             <SideButton
               icon={MonitorPlayIcon}
               label="Stream"
               onClick={handleStream}
-              className="text-gray-700 hover:bg-gray-100"
+              className="text-white hover:bg-slate-600"
             />
           )}
         </div>
