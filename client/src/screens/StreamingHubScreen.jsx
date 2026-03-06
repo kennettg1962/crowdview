@@ -153,7 +153,7 @@ export default function StreamingHubScreen() {
         </div>
 
         {/* Center 70%: video container */}
-        <div className="w-[70%] bg-slate-700 flex flex-col items-center justify-center p-3 border-t border-b border-slate-600">
+        <div className="w-[70%] bg-white flex flex-col items-center justify-center p-3 border-t border-b border-gray-200">
           <div className="w-full video-container bg-black border-2 border-white rounded-sm overflow-hidden">
             {mediaStream ? (
               <video
