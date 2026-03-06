@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS User (
   Instagram_Token TEXT,
   YouTube_Token TEXT,
   User_Level INT DEFAULT 0,
+  Password_Reset_Token VARCHAR(255),
+  Password_Reset_Expires DATETIME,
   Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -7,6 +7,7 @@ import ManageFriendsScreen from './screens/ManageFriendsScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import IdScreen from './screens/IdScreen';
 import LibraryScreen from './screens/LibraryScreen';
+import ResetPasswordScreen from './screens/ResetPasswordScreen';
 
 function AuthGuard({ children }) {
   const { isAuthenticated } = useApp();
@@ -23,6 +24,7 @@ function AppRoutes() {
       <Route path="/profile" element={<AuthGuard><ProfileScreen /></AuthGuard>} />
       <Route path="/id" element={<AuthGuard><IdScreen /></AuthGuard>} />
       <Route path="/library" element={<AuthGuard><LibraryScreen /></AuthGuard>} />
+      <Route path="/reset-password" element={<ResetPasswordScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

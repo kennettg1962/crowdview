@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const pool = require('../db/connection');
 require('dotenv').config();
 
@@ -12,6 +13,7 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 router.post('/signup', async (req, res) => {
   const { email, password, name } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
   try {
     const hash = await bcrypt.hash(password, 10);
     const [result] = await pool.execute(
@@ -56,9 +58,79 @@ router.post('/login', async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
-  // Stub: in production, send email with reset link
-  console.log(`Password reset requested for: ${email}`);
-  res.json({ message: 'If that email exists, a reset link has been sent.' });
+  try {
+    const [rows] = await pool.execute('SELECT User_Id FROM User WHERE Email = ?', [email.toLowerCase()]);
+    // Always respond with success to prevent email enumeration
+    if (!rows.length) return res.json({ message: 'If that email exists, a reset link has been sent.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await pool.execute(
+      'UPDATE User SET Password_Reset_Token = ?, Password_Reset_Expires = ? WHERE User_Id = ?',
+      [token, expires, rows[0].User_Id]
+    );
+
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const resetUrl = `${clientUrl}/reset-password?token=${token}`;
+
+    // Send email via nodemailer if SMTP is configured, otherwise log to console
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        });
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || process.env.SMTP_USER,
+          to: email,
+          subject: 'CrowdView – Reset Your Password',
+          html: `
+            <p>Hi,</p>
+            <p>You requested a password reset for your CrowdView account.</p>
+            <p><a href="${resetUrl}" style="color:#2563eb;font-weight:bold;">Click here to reset your password</a></p>
+            <p>This link expires in 1 hour.</p>
+            <p>If you did not request this, you can safely ignore this email.</p>
+          `
+        });
+      } catch (emailErr) {
+        console.error('Email send failed:', emailErr.message);
+      }
+    } else {
+      console.log(`[Password Reset] No SMTP configured. Reset URL for ${email}:\n${resetUrl}`);
+    }
+
+    res.json({ message: 'If that email exists, a reset link has been sent.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) return res.status(400).json({ error: 'Token and new password required' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  try {
+    const [rows] = await pool.execute(
+      'SELECT User_Id FROM User WHERE Password_Reset_Token = ? AND Password_Reset_Expires > NOW()',
+      [token]
+    );
+    if (!rows.length) return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
+    const hash = await bcrypt.hash(newPassword, 10);
+    await pool.execute(
+      'UPDATE User SET Password_Hash = ?, Password_Reset_Token = NULL, Password_Reset_Expires = NULL WHERE User_Id = ?',
+      [hash, rows[0].User_Id]
+    );
+    res.json({ message: 'Password reset successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 module.exports = router;
