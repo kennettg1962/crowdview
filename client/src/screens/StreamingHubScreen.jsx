@@ -177,23 +177,22 @@ export default function StreamingHubScreen() {
           </div>
         </div>
 
-        {/* Right 15%: slate panel with Stream button */}
+        {/* Right 15%: slate panel with Stream/Stop buttons */}
         <div className="w-[15%] bg-slate-700 rounded-r-xl flex flex-col border border-slate-600">
-          {isStreaming ? (
-            <SideButton
-              icon={StopStreamIcon}
-              label="Stop"
-              onClick={handleStream}
-              className="text-pink-400 hover:bg-slate-600"
-            />
-          ) : (
-            <SideButton
-              icon={MonitorPlayIcon}
-              label="Stream"
-              onClick={handleStream}
-              className="text-white hover:bg-slate-600"
-            />
-          )}
+          <SideButton
+            icon={MonitorPlayIcon}
+            label="Stream"
+            onClick={handleStream}
+            disabled={isStreaming}
+            className="text-white hover:bg-slate-600"
+          />
+          <SideButton
+            icon={StopStreamIcon}
+            label="Stop"
+            onClick={handleStream}
+            disabled={!isStreaming}
+            className="text-pink-400 hover:bg-slate-600"
+          />
         </div>
       </main>
 
