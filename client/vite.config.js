@@ -14,8 +14,10 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-    preview: {
-      allowedHosts: ["crowdview.tv", "www.crowdview.tv"],
-    },
+    allowedHosts: ["crowdview.tv", "www.crowdview.tv"],
+  },
+  preview: {
+    host: true,
+    allowedHosts: ["crowdview.tv", "www.crowdview.tv"],
   },
 });
