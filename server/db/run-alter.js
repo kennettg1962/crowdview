@@ -1,7 +1,11 @@
 const mysql = require('mysql2/promise');
-const fs = require('fs/promises');
-const path = require('path');
 require('dotenv').config();
+
+// Columns to add if they don't already exist
+const alterations = [
+  { table: 'User', column: 'Password_Reset_Token',   definition: 'VARCHAR(255)' },
+  { table: 'User', column: 'Password_Reset_Expires', definition: 'DATETIME' }
+];
 
 (async () => {
   const conn = await mysql.createConnection({
@@ -9,13 +13,23 @@ require('dotenv').config();
     port: parseInt(process.env.DB_PORT) || 3306,
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'crowdview',
-    multipleStatements: true
+    database: process.env.DB_NAME || 'crowdview'
   });
   try {
-    const sql = await fs.readFile(path.join(__dirname, 'alter.sql'), 'utf8');
-    await conn.query(sql);
-    console.log('✅ alter.sql applied successfully');
+    for (const { table, column, definition } of alterations) {
+      const [rows] = await conn.execute(
+        `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+        [table, column]
+      );
+      if (rows[0].cnt === 0) {
+        await conn.execute(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
+        console.log(`✅ Added ${table}.${column}`);
+      } else {
+        console.log(`ℹ️  ${table}.${column} already exists, skipping`);
+      }
+    }
+    console.log('✅ DB migration complete');
   } finally {
     await conn.end();
   }
