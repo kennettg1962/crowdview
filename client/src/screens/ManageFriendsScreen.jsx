@@ -65,13 +65,13 @@ export default function ManageFriendsScreen() {
       <AppHeader
         left={
           <button onClick={() => navigate('/hub')} title="Camera" className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
-            <MovieCameraIcon className="w-5 h-5" />
+            <MovieCameraIcon className="w-[30px] h-[30px]" />
           </button>
         }
         center={<span className="text-white font-bold text-xl tracking-wide">CrowdView</span>}
         right={
           <button onClick={handleAddNew} title="Add Friend" className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
-            <PlusIcon className="w-5 h-5" />
+            <PlusIcon className="w-[30px] h-[30px]" />
           </button>
         }
       />
@@ -83,7 +83,7 @@ export default function ManageFriendsScreen() {
           <select
             value={group}
             onChange={e => setGroup(e.target.value)}
-            className="w-full bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+            className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
           >
             {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
@@ -129,7 +129,7 @@ export default function ManageFriendsScreen() {
                         className="w-full flex items-center gap-3 p-3 hover:bg-gray-800 rounded-lg text-left transition-colors"
                       >
                         {/* Photo wallet */}
-                        <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        <div className="w-[60px] h-[60px] rounded-full bg-gray-700 overflow-hidden flex-shrink-0 flex items-center justify-center">
                           {friend.Primary_Photo_Mime ? (
                             <img
                               src={`/api/friends/${friend.Friend_Id}/photos/primary/data`}
@@ -138,7 +138,7 @@ export default function ManageFriendsScreen() {
                               onError={e => { e.target.style.display = 'none'; }}
                             />
                           ) : (
-                            <span className="text-gray-500 text-lg">👤</span>
+                            <span className="text-gray-500 text-[27px]">👤</span>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
