@@ -82,7 +82,7 @@ React Router v6 with an `AuthGuard` wrapper. All routes except `/` require authe
 | Path | Screen |
 |------|--------|
 | `/` | SplashScreen (login/signup/forgot) |
-| `/hub` | StreamingHubScreen |
+| `/hub` | HubScreen |
 | `/friends` | ManageFriendsScreen |
 | `/profile` | ProfileScreen |
 | `/id` | IdScreen (face recognition results) |

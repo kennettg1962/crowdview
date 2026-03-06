@@ -27,7 +27,7 @@ function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
   );
 }
 
-export default function StreamingHubScreen() {
+export default function HubScreen() {
   const navigate = useNavigate();
   const { isStreaming, mediaStream } = useApp();
   const videoRef = useRef(null);

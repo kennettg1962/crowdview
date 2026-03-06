@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import SplashScreen from './screens/SplashScreen';
-import StreamingHubScreen from './screens/StreamingHubScreen';
+import HubScreen from './screens/HubScreen';
 import ManageFriendsScreen from './screens/ManageFriendsScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import IdScreen from './screens/IdScreen';
@@ -18,7 +18,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<SplashScreen />} />
-      <Route path="/hub" element={<AuthGuard><StreamingHubScreen /></AuthGuard>} />
+      <Route path="/hub" element={<AuthGuard><HubScreen /></AuthGuard>} />
       <Route path="/friends" element={<AuthGuard><ManageFriendsScreen /></AuthGuard>} />
       <Route path="/profile" element={<AuthGuard><ProfileScreen /></AuthGuard>} />
       <Route path="/id" element={<AuthGuard><IdScreen /></AuthGuard>} />
