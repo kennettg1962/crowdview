@@ -29,18 +29,15 @@ jobs:
             # pull latest changes
             git pull
 
-            # run DB migrations (safe to re-run — ALTER uses IF NOT EXISTS)
+            # install server deps first (needed for DB migration)
             cd /var/www/crowdview/server
-            DB_HOST=$(grep '^DB_HOST=' .env | cut -d= -f2)
-            DB_PORT=$(grep '^DB_PORT=' .env | cut -d= -f2)
-            DB_USER=$(grep '^DB_USER=' .env | cut -d= -f2)
-            DB_PASSWORD=$(grep '^DB_PASSWORD=' .env | cut -d= -f2)
-            mysql -h "$DB_HOST" -P "${DB_PORT:-3306}" -u "$DB_USER" -p"$DB_PASSWORD" < db/alter.sql
-            echo "DB migration complete"
-            cd /var/www/crowdview
+            npm install
+
+            # run DB migrations via Node (safe to re-run — ALTER uses IF NOT EXISTS)
+            npm run alter
 
             # client
-            cd client
+            cd /var/www/crowdview/client
 
             # install dependencies
             npm install
@@ -59,9 +56,6 @@ jobs:
 
             # server
             cd ../server
-
-            # install dependencies
-            npm install
 
              # check if pm2 process exists
             if pm2 describe crowdview-api > /dev/null 2>&1; then
