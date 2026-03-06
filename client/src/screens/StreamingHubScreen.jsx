@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import NavBar from '../components/NavBar';
@@ -9,7 +9,7 @@ import StreamToPopup from './StreamToPopup';
 import {
   FriendsIcon, LibraryIcon, SelectSourceIcon, StreamToIcon,
   IdIcon, ActionIcon, CameraIcon, ShareIcon, PostIcon,
-  MonitorPlayIcon, StopStreamIcon, MovieCameraIcon
+  MovieCameraIcon
 } from '../components/Icons';
 
 function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
@@ -29,7 +29,7 @@ function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
 
 export default function StreamingHubScreen() {
   const navigate = useNavigate();
-  const { isStreaming, mediaStream, startStream, stopStream, currentSource } = useApp();
+  const { isStreaming, mediaStream } = useApp();
   const videoRef = useRef(null);
   const [showSource, setShowSource] = useState(false);
   const [showStreamTo, setShowStreamTo] = useState(false);
@@ -40,18 +40,6 @@ export default function StreamingHubScreen() {
     }
   }, [mediaStream]);
 
-  const handleStream = useCallback(async () => {
-    if (isStreaming) { stopStream(); return; }
-    try {
-      const constraints = currentSource
-        ? { video: { deviceId: { exact: currentSource.deviceId } }, audio: true }
-        : { video: true, audio: true };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      startStream(stream);
-    } catch (err) {
-      alert('Could not access camera: ' + err.message);
-    }
-  }, [isStreaming, currentSource, startStream, stopStream]);
 
   const handleId = useCallback(() => {
     if (!videoRef.current || !mediaStream) return;
@@ -177,22 +165,8 @@ export default function StreamingHubScreen() {
           </div>
         </div>
 
-        {/* Right 15%: slate panel with Stream/Stop buttons */}
+        {/* Right 15%: slate panel */}
         <div className="w-[15%] bg-slate-700 rounded-r-xl flex flex-col border border-slate-600">
-          <SideButton
-            icon={MonitorPlayIcon}
-            label="Stream"
-            onClick={handleStream}
-            disabled={isStreaming}
-            className="text-white hover:bg-slate-600"
-          />
-          <SideButton
-            icon={StopStreamIcon}
-            label="Stop"
-            onClick={handleStream}
-            disabled={!isStreaming}
-            className="text-pink-400 hover:bg-slate-600"
-          />
         </div>
       </main>
 
