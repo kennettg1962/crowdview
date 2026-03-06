@@ -21,7 +21,7 @@ function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
       className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full
         disabled:opacity-30 disabled:cursor-not-allowed ${className}`}
     >
-      <Icon className="w-7 h-7" />
+      <Icon className="w-[42px] h-[42px]" />
       <span className="text-xs font-medium">{label}</span>
     </button>
   );
@@ -130,7 +130,7 @@ export default function HubScreen() {
           onClick={() => navigate('/friends')}
           className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
         >
-          <FriendsIcon className="w-6 h-6" />
+          <FriendsIcon className="w-9 h-9" />
           <span className="text-xs font-medium">Friends</span>
         </button>
 
@@ -140,7 +140,7 @@ export default function HubScreen() {
           onClick={() => navigate('/library')}
           className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
         >
-          <LibraryIcon className="w-6 h-6" />
+          <LibraryIcon className="w-9 h-9" />
           <span className="text-xs font-medium">Library</span>
         </button>
       </header>
@@ -208,7 +208,7 @@ export default function HubScreen() {
               />
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-3">
-                <MovieCameraIcon className="w-16 h-16 opacity-80" />
+                <MovieCameraIcon className="w-24 h-24 opacity-80" />
                 <p className="text-base font-medium">Video Stream Container</p>
                 <p className="text-sm text-gray-400">16:9 Aspect Ratio</p>
               </div>
