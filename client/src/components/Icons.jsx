@@ -26,8 +26,14 @@ export function StreamIcon({ className = iconClass }) {
 export function FriendsIcon({ className = iconClass }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Back person — partial, right side */}
+      <circle cx="17.5" cy="7.5" r="2.5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        d="M22 18.5c0-2.49-2.01-4.5-4.5-4.5" />
+      {/* Front person — full */}
+      <circle cx="10" cy="7" r="3.5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M2.5 21c0-4.14 3.36-7.5 7.5-7.5s7.5 3.36 7.5 7.5" />
     </svg>
   );
 }
