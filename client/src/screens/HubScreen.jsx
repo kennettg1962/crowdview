@@ -59,6 +59,19 @@ export default function HubScreen() {
   const canStream = isStreaming && !!currentOutlet;
 
   // Capture still frame → navigate to Id screen
+  const handleCamera = useCallback(() => {
+    if (!videoRef.current || !mediaStream) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth || 640;
+    canvas.height = videoRef.current.videoHeight || 480;
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+    canvas.toBlob(blob => {
+      const formData = new FormData();
+      formData.append('media', blob, 'photo.jpg');
+      api.post('/api/media', formData).catch(console.error);
+    }, 'image/jpeg');
+  }, [mediaStream]);
+
   const handleId = useCallback(() => {
     if (!videoRef.current || !mediaStream) return;
     const canvas = document.createElement('canvas');
@@ -196,7 +209,7 @@ export default function HubScreen() {
           />
           <div className="mx-3 border-t border-slate-600" />
           <SideButton icon={ActionIcon} label="Action" onClick={() => {}} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
-          <SideButton icon={CameraIcon} label="Camera" onClick={() => {}} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
+          <SideButton icon={CameraIcon} label="Camera" onClick={handleCamera} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
         </div>
 
         {/* Center 70%: video container */}
