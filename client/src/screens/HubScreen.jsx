@@ -107,7 +107,7 @@ export default function HubScreen() {
         api.post('/api/media', formData).catch(console.error);
         actionChunksRef.current = [];
       };
-      recorder.start(1000);
+      recorder.start(); // No timeslice — all data collected in one ondataavailable on stop()
       actionRecorderRef.current = recorder;
       setIsRecordingAction(true);
     } catch {
