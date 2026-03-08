@@ -164,11 +164,23 @@ export default function IdScreen() {
           <div className="flex gap-3 overflow-x-auto pb-1 justify-center">
             {faces.map((face, i) => {
               const colors = STATUS_COLORS[face.status] || STATUS_COLORS.unknown;
+              const a = face.attributes || {};
+              const tooltipParts = [
+                face.friendName ? `Name: ${face.friendName}` : 'Unrecognized',
+                a.ageRange  ? `Age: ${a.ageRange}`  : null,
+                a.gender    ? `Gender: ${a.gender}`  : null,
+                a.emotion   ? `Mood: ${a.emotion}`   : null,
+                a.eyeglasses ? 'Eyeglasses' : null,
+                a.sunglasses ? 'Sunglasses' : null,
+                a.beard      ? 'Beard'      : null,
+                a.smile      ? 'Smiling'    : null,
+                face.note   ? `Note: ${face.note}`  : null,
+              ].filter(Boolean).join(' · ');
               return (
                 <button
                   key={face.faceId}
                   onClick={() => handleFaceClick(face, i)}
-                  title={face.note || face.matchedLabel}
+                  title={tooltipParts}
                   className={`flex-shrink-0 flex flex-col items-center gap-1 p-1 rounded-lg transition-colors ${
                     selectedFaceIndex === i ? 'bg-gray-700' : 'hover:bg-gray-700'
                   }`}

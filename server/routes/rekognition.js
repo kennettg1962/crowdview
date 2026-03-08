@@ -87,6 +87,20 @@ router.post('/identify', auth, async (req, res) => {
         }
       }
 
+      // Extract top emotion
+      const topEmotion = (detail.Emotions || [])
+        .sort((a, b) => b.Confidence - a.Confidence)[0];
+
+      const attributes = {
+        ageRange: detail.AgeRange ? `${detail.AgeRange.Low}–${detail.AgeRange.High}` : null,
+        gender:   detail.Gender?.Value || null,
+        emotion:  topEmotion?.Type ? topEmotion.Type.charAt(0) + topEmotion.Type.slice(1).toLowerCase() : null,
+        smile:      detail.Smile?.Value || false,
+        eyeglasses: detail.Eyeglasses?.Value || false,
+        sunglasses: detail.Sunglasses?.Value || false,
+        beard:      detail.Beard?.Value || false,
+      };
+
       faces.push({
         faceId,
         boundingBox: {
@@ -101,6 +115,7 @@ router.post('/identify', auth, async (req, res) => {
         friendName,
         note,
         matchedLabel,
+        attributes,
       });
     }
 
