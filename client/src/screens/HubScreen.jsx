@@ -8,7 +8,7 @@ import SelectSourcePopup from './SelectSourcePopup';
 import StreamToPopup from './StreamToPopup';
 import {
   FriendsIcon, LibraryIcon, SelectSourceIcon, StreamToIcon,
-  IdIcon, ActionIcon, CameraIcon, ShareIcon, PostIcon,
+  IdIcon, ActionIcon, CameraIcon,
   MovieCameraIcon, StreamIcon, StopCircleIcon
 } from '../components/Icons';
 import api from '../api/api';
@@ -197,8 +197,6 @@ export default function HubScreen() {
           <div className="mx-3 border-t border-slate-600" />
           <SideButton icon={ActionIcon} label="Action" onClick={() => {}} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
           <SideButton icon={CameraIcon} label="Camera" onClick={() => {}} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
-          <SideButton icon={ShareIcon}  label="Share"  onClick={() => {}} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
-          <SideButton icon={PostIcon}   label="Post"   onClick={() => {}} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
         </div>
 
         {/* Center 70%: video container */}
