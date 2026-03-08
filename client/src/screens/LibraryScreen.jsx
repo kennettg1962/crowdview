@@ -226,7 +226,7 @@ export default function LibraryScreen() {
           <button
             onClick={() => singleSelected && setViewingItem(singleSelected)}
             disabled={!singleSelected}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
           >
             View
           </button>
