@@ -98,6 +98,22 @@ router.get('/:id/photos', auth, async (req, res) => {
 });
 
 // GET /api/friends/:id/photos/:pid/data
+// GET /api/friends/:id/photos/primary/data — returns first photo for the friend
+router.get('/:id/photos/primary/data', auth, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT fp.Photo_Data, fp.Photo_Mime_Type FROM Friend_Photo fp JOIN Friend f ON fp.Friend_Id = f.Friend_Id WHERE fp.Friend_Id = ? AND f.User_Id = ? ORDER BY fp.Friend_Photo_Id ASC LIMIT 1',
+      [req.params.id, req.user.userId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'No photo found' });
+    res.set('Content-Type', rows[0].Photo_Mime_Type);
+    res.send(rows[0].Photo_Data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 router.get('/:id/photos/:pid/data', auth, async (req, res) => {
   try {
     const [rows] = await pool.execute(
