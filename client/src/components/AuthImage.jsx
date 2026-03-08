@@ -12,8 +12,8 @@ export default function AuthImage({ src, alt = '', className = '', fallback = nu
 
   useEffect(() => {
     if (!src) return;
-    // data: URLs don't need auth — use directly
-    if (src.startsWith('data:')) {
+    // data: and blob: URLs don't need auth — use directly
+    if (src.startsWith('data:') || src.startsWith('blob:')) {
       setBlobUrl(src);
       return;
     }
