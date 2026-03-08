@@ -233,11 +233,6 @@ export default function HubScreen() {
                 <p className="text-sm text-gray-400">16:9 Aspect Ratio</p>
               </div>
             )}
-            {cameraFlash && (
-              <div className="absolute inset-0 pointer-events-none"
-                style={{ background: 'white', animation: 'cameraFlash 0.4s ease-out forwards' }}
-              />
-            )}
           </div>
         </div>
 
@@ -274,6 +269,13 @@ export default function HubScreen() {
 
       {showSource && <SelectSourcePopup onClose={() => setShowSource(false)} />}
       {showOutlet && <StreamToPopup onClose={() => setShowOutlet(false)} />}
+
+      {cameraFlash && (
+        <div
+          className="fixed inset-0 pointer-events-none z-50"
+          style={{ background: 'white', animation: 'cameraFlash 0.4s ease-out forwards' }}
+        />
+      )}
     </div>
   );
 }
