@@ -65,9 +65,7 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
           const blob = await fetch(capturedPhotoUrl).then(r => r.blob());
           const formData = new FormData();
           formData.append('photo', blob, 'face.jpg');
-          await api.post(`/api/friends/${res.data.friendId}/photos`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+          await api.post(`/api/friends/${res.data.friendId}/photos`, formData);
         }
         onSave && onSave({ name: name.trim(), friendId: res.data?.friendId });
       }
@@ -93,9 +91,7 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
     const formData = new FormData();
     formData.append('photo', file);
     try {
-      await api.post(`/api/friends/${friend.Friend_Id}/photos`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post(`/api/friends/${friend.Friend_Id}/photos`, formData);
       await loadPhotos(friend.Friend_Id);
     } catch (err) {
       setErrors({ photo: 'Failed to upload photo' });
