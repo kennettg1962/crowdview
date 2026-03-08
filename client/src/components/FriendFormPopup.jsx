@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/api';
 import { UploadIcon, XIcon, BackIcon } from './Icons';
+import AuthImage from './AuthImage';
 
 const GROUPS = ['Friend', 'Family', 'Friend of Friend', 'Friend of Family', 'Business'];
 
@@ -135,7 +136,7 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
               {loading ? (
                 <span className="text-gray-400 text-sm">Loading...</span>
               ) : photoUrl ? (
-                <img
+                <AuthImage
                   src={photoUrl}
                   alt="Friend"
                   className="w-full h-full object-cover"

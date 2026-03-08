@@ -6,6 +6,7 @@ import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import FriendFormPopup from '../components/FriendFormPopup';
 import { MovieCameraIcon, PlusIcon } from '../components/Icons';
+import AuthImage from '../components/AuthImage';
 import api from '../api/api';
 
 const GROUPS = ['All', 'Friend', 'Family', 'Friend of Friend', 'Friend of Family', 'Business'];
@@ -131,11 +132,11 @@ export default function ManageFriendsScreen() {
                         {/* Photo wallet */}
                         <div className="w-[60px] h-[60px] rounded-full bg-gray-700 overflow-hidden flex-shrink-0 flex items-center justify-center">
                           {friend.Primary_Photo_Mime ? (
-                            <img
+                            <AuthImage
                               src={`/api/friends/${friend.Friend_Id}/photos/primary/data`}
                               alt={friend.Name_Txt}
                               className="w-full h-full object-cover"
-                              onError={e => { e.target.style.display = 'none'; }}
+                              fallback={<span className="text-gray-500 text-[27px]">👤</span>}
                             />
                           ) : (
                             <span className="text-gray-500 text-[27px]">👤</span>
