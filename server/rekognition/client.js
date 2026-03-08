@@ -78,7 +78,7 @@ async function deleteFaces(faceIds) {
 async function detectFaces(buf) {
   const result = await client.send(new DetectFacesCommand({
     Image: { Bytes: buf },
-    Attributes: ['DEFAULT'],
+    Attributes: ['ALL'],
   }));
   return result.FaceDetails || [];
 }
