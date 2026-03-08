@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
@@ -21,14 +20,109 @@ function groupMedia(items) {
   return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
 }
 
+function MediaViewer({ item, allItems, onClose }) {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [currentItem, setCurrentItem] = useState(item);
+  const urlRef = useRef(null);
+
+  useEffect(() => {
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    setBlobUrl(null);
+    api.get(`/api/media/${currentItem.User_Media_Id}/data`, { responseType: 'blob' })
+      .then(res => {
+        const url = URL.createObjectURL(res.data);
+        urlRef.current = url;
+        setBlobUrl(url);
+      })
+      .catch(console.error);
+    return () => { if (urlRef.current) URL.revokeObjectURL(urlRef.current); };
+  }, [currentItem.User_Media_Id]);
+
+  const currentIndex = allItems.findIndex(i => i.User_Media_Id === currentItem.User_Media_Id);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < allItems.length - 1;
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft' && hasPrev) setCurrentItem(allItems[currentIndex - 1]);
+      if (e.key === 'ArrowRight' && hasNext) setCurrentItem(allItems[currentIndex + 1]);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [currentIndex, hasPrev, hasNext, allItems, onClose]);
+
+  const d = new Date(currentItem.Created_At);
+  const dateStr = `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+
+  return (
+    <div className="fixed inset-0 bg-black/95 flex flex-col items-center justify-center z-50" onClick={onClose}>
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent">
+        <span className="text-gray-300 text-sm">{dateStr} · {currentItem.Media_Type === 'video' ? 'Video' : 'Photo'}</span>
+        <button
+          onClick={onClose}
+          className="text-white text-2xl leading-none w-8 h-8 flex items-center justify-center hover:text-gray-300"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Media */}
+      <div className="relative w-full max-w-4xl px-4 flex items-center justify-center" onClick={e => e.stopPropagation()}>
+        {/* Prev */}
+        <button
+          onClick={() => hasPrev && setCurrentItem(allItems[currentIndex - 1])}
+          disabled={!hasPrev}
+          className="absolute left-0 z-10 w-10 h-10 flex items-center justify-center text-white text-xl bg-black/40 hover:bg-black/70 rounded-full ml-2 disabled:opacity-20"
+        >
+          ◀
+        </button>
+
+        {!blobUrl ? (
+          <div className="flex justify-center py-32">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white" />
+          </div>
+        ) : currentItem.Media_Type === 'video' ? (
+          <video
+            key={blobUrl}
+            src={blobUrl}
+            controls
+            autoPlay
+            className="w-full max-h-[80vh] rounded-xl"
+          />
+        ) : (
+          <img src={blobUrl} alt="Media" className="w-full max-h-[80vh] object-contain rounded-xl" />
+        )}
+
+        {/* Next */}
+        <button
+          onClick={() => hasNext && setCurrentItem(allItems[currentIndex + 1])}
+          disabled={!hasNext}
+          className="absolute right-0 z-10 w-10 h-10 flex items-center justify-center text-white text-xl bg-black/40 hover:bg-black/70 rounded-full mr-2 disabled:opacity-20"
+        >
+          ▶
+        </button>
+      </div>
+
+      {/* Counter */}
+      <div className="absolute bottom-24 text-gray-400 text-sm">
+        {currentIndex + 1} / {allItems.length}
+      </div>
+    </div>
+  );
+}
+
 export default function LibraryScreen() {
   const navigate = useNavigate();
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState('all'); // 'all' | year | month
+  const [filter, setFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [viewingItem, setViewingItem] = useState(null);
+  const clickTimers = useRef({});
 
   const loadMedia = useCallback(async () => {
     setLoading(true);
@@ -44,13 +138,25 @@ export default function LibraryScreen() {
 
   useEffect(() => { loadMedia(); }, [loadMedia]);
 
-  function toggleSelect(id) {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  function handleItemClick(item) {
+    const id = item.User_Media_Id;
+    if (clickTimers.current[id]) {
+      // Double-click — open viewer
+      clearTimeout(clickTimers.current[id]);
+      delete clickTimers.current[id];
+      setViewingItem(item);
+    } else {
+      // Single click — wait to see if double-click follows
+      clickTimers.current[id] = setTimeout(() => {
+        delete clickTimers.current[id];
+        setSelectedIds(prev => {
+          const next = new Set(prev);
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+          return next;
+        });
+      }, 250);
+    }
   }
 
   async function handleDelete() {
@@ -68,21 +174,21 @@ export default function LibraryScreen() {
     }
   }
 
-  // Get unique years for filter
   const years = [...new Set(media.map(m => new Date(m.Created_At).getFullYear()))].sort((a, b) => b - a);
 
   const filteredMedia = media.filter(m => {
-    const d = new Date(m.Created_At);
     if (filter === 'all') return true;
-    if (typeof filter === 'number') return d.getFullYear() === filter;
+    if (typeof filter === 'number') return new Date(m.Created_At).getFullYear() === filter;
     return true;
   });
 
   const grouped = groupMedia(filteredMedia);
+  const singleSelected = selectedIds.size === 1
+    ? filteredMedia.find(m => m.User_Media_Id === [...selectedIds][0])
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
-      {/* Header */}
       <AppHeader
         left={
           <button onClick={() => navigate('/hub')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
@@ -97,9 +203,9 @@ export default function LibraryScreen() {
         }
       />
 
-      {/* Filter row */}
-      <div className="bg-gray-800 px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 overflow-x-auto">
+      {/* Filter / action row */}
+      <div className="bg-gray-800 px-4 py-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto flex-1">
           <button
             onClick={() => setFilter('all')}
             className={`px-3 py-1 rounded-full text-sm transition-colors ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
@@ -116,14 +222,23 @@ export default function LibraryScreen() {
             </button>
           ))}
         </div>
-        <button
-          onClick={() => selectedIds.size > 0 && setConfirmDelete(true)}
-          disabled={selectedIds.size === 0}
-          className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-        >
-          <DeleteIcon className="w-6 h-6" />
-          <span>Delete ({selectedIds.size})</span>
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => singleSelected && setViewingItem(singleSelected)}
+            disabled={!singleSelected}
+            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+          >
+            View
+          </button>
+          <button
+            onClick={() => selectedIds.size > 0 && setConfirmDelete(true)}
+            disabled={selectedIds.size === 0}
+            className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+          >
+            <DeleteIcon className="w-4 h-4" />
+            <span>Delete ({selectedIds.size})</span>
+          </button>
+        </div>
       </div>
 
       {/* Media grid */}
@@ -149,14 +264,14 @@ export default function LibraryScreen() {
                   return (
                     <button
                       key={item.User_Media_Id}
-                      onClick={() => toggleSelect(item.User_Media_Id)}
+                      onClick={() => handleItemClick(item)}
                       className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${
                         selected ? 'border-blue-500 scale-95' : 'border-transparent hover:border-gray-600'
                       }`}
                     >
                       {item.Media_Type === 'video' ? (
                         <div className="w-full h-full bg-gray-800 flex flex-col items-center justify-center gap-1">
-                          <span className="text-3xl">▶</span>
+                          <span className="text-3xl text-white">▶</span>
                           <span className="text-gray-400 text-xs">Video</span>
                         </div>
                       ) : (
@@ -193,22 +308,22 @@ export default function LibraryScreen() {
             <p className="text-white mb-2">Delete {selectedIds.size} item{selectedIds.size !== 1 ? 's' : ''}?</p>
             <p className="text-gray-400 text-sm mb-4">This action cannot be undone.</p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40"
-              >
+              <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">Cancel</button>
+              <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40">
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Media viewer */}
+      {viewingItem && (
+        <MediaViewer
+          item={viewingItem}
+          allItems={filteredMedia}
+          onClose={() => setViewingItem(null)}
+        />
       )}
     </div>
   );
