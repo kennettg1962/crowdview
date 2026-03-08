@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS Friend_Photo (
   Friend_Id INT NOT NULL,
   Photo_Data LONGBLOB NOT NULL,
   Photo_Mime_Type VARCHAR(50) DEFAULT 'image/jpeg',
+  Rekognition_Face_Id VARCHAR(255) NULL,
   Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (Friend_Id) REFERENCES Friend(Friend_Id) ON DELETE CASCADE
 );

@@ -47,18 +47,45 @@ export default function IdScreen() {
 
   useEffect(() => {
     if (photoDataUrl) {
+      loadImage(photoDataUrl).then(img => drawImageOnCanvas(img));
       identifyFaces();
-      drawImageOnCanvas();
     }
   }, [photoDataUrl]);
+
+  function loadImage(src) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.src = src;
+    });
+  }
+
+  async function cropFaceThumbnails(detectedFaces, img) {
+    return detectedFaces.map(face => {
+      const bb = face.boundingBox;
+      const x = Math.floor(bb.left * img.width);
+      const y = Math.floor(bb.top * img.height);
+      const w = Math.ceil(bb.width * img.width);
+      const h = Math.ceil(bb.height * img.height);
+      const offscreen = document.createElement('canvas');
+      offscreen.width = w;
+      offscreen.height = h;
+      offscreen.getContext('2d').drawImage(img, x, y, w, h, 0, 0, w, h);
+      return { ...face, thumbnailUrl: offscreen.toDataURL('image/jpeg') };
+    });
+  }
 
   async function identifyFaces() {
     setLoading(true);
     try {
-      const res = await api.post('/api/rekognition/identify', { imageData: photoDataUrl });
-      setFaces(res.data.faces || []);
-      // Draw bounding boxes after faces are loaded
-      setTimeout(() => drawBoundingBoxes(res.data.faces || []), 100);
+      const [res, img] = await Promise.all([
+        api.post('/api/rekognition/identify', { imageData: photoDataUrl }),
+        loadImage(photoDataUrl),
+      ]);
+      const rawFaces = res.data.faces || [];
+      const facesWithThumbs = await cropFaceThumbnails(rawFaces, img);
+      setFaces(facesWithThumbs);
+      drawBoundingBoxes(facesWithThumbs, img);
     } catch (err) {
       console.error('Identification failed', err);
       setFaces([]);
@@ -67,47 +94,38 @@ export default function IdScreen() {
     }
   }
 
-  function drawImageOnCanvas() {
-    const canvas = canvasRef.current;
-    if (!canvas || !photoDataUrl) return;
-    const img = new Image();
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-    };
-    img.src = photoDataUrl;
-  }
-
-  function drawBoundingBoxes(detectedFaces) {
+  function drawImageOnCanvas(img) {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+  }
+
+  function drawBoundingBoxes(detectedFaces, img) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.width = img.width;
+    canvas.height = img.height;
     const ctx = canvas.getContext('2d');
-    // Redraw the image first
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0);
-      detectedFaces.forEach(face => {
-        const color = STATUS_COLORS[face.status]?.border || '#ffffff';
-        const x = face.boundingBox.left * canvas.width;
-        const y = face.boundingBox.top * canvas.height;
-        const w = face.boundingBox.width * canvas.width;
-        const h = face.boundingBox.height * canvas.height;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x, y, w, h);
-        // Label
-        if (face.friendName) {
-          ctx.fillStyle = color + 'cc';
-          ctx.fillRect(x, y - 22, Math.min(w, 140), 22);
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '13px sans-serif';
-          ctx.fillText(face.friendName, x + 4, y - 6);
-        }
-      });
-    };
-    img.src = photoDataUrl;
+    ctx.drawImage(img, 0, 0);
+    detectedFaces.forEach(face => {
+      const color = STATUS_COLORS[face.status]?.border || '#ffffff';
+      const x = face.boundingBox.left * img.width;
+      const y = face.boundingBox.top * img.height;
+      const w = face.boundingBox.width * img.width;
+      const h = face.boundingBox.height * img.height;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, w, h);
+      if (face.friendName) {
+        ctx.fillStyle = color + 'cc';
+        ctx.fillRect(x, y - 22, Math.min(w, 140), 22);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '13px sans-serif';
+        ctx.fillText(face.friendName, x + 4, y - 6);
+      }
+    });
   }
 
   function handleFaceClick(face, index) {
@@ -159,7 +177,10 @@ export default function IdScreen() {
                     className="w-[72px] h-[72px] rounded-full bg-gray-700 border-2 overflow-hidden flex items-center justify-center"
                     style={{ borderColor: colors.border }}
                   >
-                    <span className="text-gray-500 text-[30px]">👤</span>
+                    {face.thumbnailUrl
+                      ? <img src={face.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                      : <span className="text-gray-500 text-[30px]">👤</span>
+                    }
                   </div>
                   <span className="text-white text-sm max-w-[90px] truncate text-center">
                     {face.friendName || 'Unknown'}

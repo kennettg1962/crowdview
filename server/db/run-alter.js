@@ -3,8 +3,9 @@ require('dotenv').config();
 
 // Columns to add if they don't already exist
 const alterations = [
-  { table: 'User', column: 'Password_Reset_Token',   definition: 'VARCHAR(255)' },
-  { table: 'User', column: 'Password_Reset_Expires', definition: 'DATETIME' }
+  { table: 'User',         column: 'Password_Reset_Token',   definition: 'VARCHAR(255)' },
+  { table: 'User',         column: 'Password_Reset_Expires', definition: 'DATETIME' },
+  { table: 'Friend_Photo', column: 'Rekognition_Face_Id',    definition: 'VARCHAR(255)' },
 ];
 
 (async () => {

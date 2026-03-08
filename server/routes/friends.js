@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const pool = require('../db/connection');
 const auth = require('../middleware/auth');
+const { indexFace, deleteFaces } = require('../rekognition/client');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -60,6 +61,16 @@ router.put('/:id', auth, async (req, res) => {
 // DELETE /api/friends/:id
 router.delete('/:id', auth, async (req, res) => {
   try {
+    // Collect all Rekognition face IDs for this friend's photos before deleting
+    const [photos] = await pool.execute(
+      'SELECT fp.Rekognition_Face_Id FROM Friend_Photo fp JOIN Friend f ON fp.Friend_Id = f.Friend_Id WHERE fp.Friend_Id = ? AND f.User_Id = ?',
+      [req.params.id, req.user.userId]
+    );
+    const faceIds = photos.map(r => r.Rekognition_Face_Id).filter(Boolean);
+    if (faceIds.length > 0) {
+      deleteFaces(faceIds).catch(err => console.error('Rekognition deleteFaces error:', err.message));
+    }
+
     const [result] = await pool.execute(
       'DELETE FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
       [req.params.id, req.user.userId]
@@ -112,7 +123,21 @@ router.post('/:id/photos', auth, upload.single('photo'), async (req, res) => {
       'INSERT INTO Friend_Photo (Friend_Id, Photo_Data, Photo_Mime_Type) VALUES (?, ?, ?)',
       [req.params.id, req.file.buffer, req.file.mimetype]
     );
-    res.status(201).json({ photoId: result.insertId });
+    const photoId = result.insertId;
+
+    // Index the face in Rekognition (non-fatal — log but don't fail the request)
+    indexFace(req.file.buffer, req.user.userId, req.params.id, photoId)
+      .then(faceId => {
+        if (faceId) {
+          return pool.execute(
+            'UPDATE Friend_Photo SET Rekognition_Face_Id = ? WHERE Friend_Photo_Id = ?',
+            [faceId, photoId]
+          );
+        }
+      })
+      .catch(err => console.error('Rekognition indexFace error:', err.message));
+
+    res.status(201).json({ photoId });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -122,6 +147,15 @@ router.post('/:id/photos', auth, upload.single('photo'), async (req, res) => {
 // DELETE /api/friends/:id/photos/:pid
 router.delete('/:id/photos/:pid', auth, async (req, res) => {
   try {
+    // Fetch Rekognition face ID before deleting the row
+    const [photoRows] = await pool.execute(
+      'SELECT fp.Rekognition_Face_Id FROM Friend_Photo fp JOIN Friend f ON fp.Friend_Id = f.Friend_Id WHERE fp.Friend_Photo_Id = ? AND fp.Friend_Id = ? AND f.User_Id = ?',
+      [req.params.pid, req.params.id, req.user.userId]
+    );
+    if (photoRows.length && photoRows[0].Rekognition_Face_Id) {
+      deleteFaces([photoRows[0].Rekognition_Face_Id]).catch(err => console.error('Rekognition deleteFaces error:', err.message));
+    }
+
     const [result] = await pool.execute(
       'DELETE fp FROM Friend_Photo fp JOIN Friend f ON fp.Friend_Id = f.Friend_Id WHERE fp.Friend_Photo_Id = ? AND fp.Friend_Id = ? AND f.User_Id = ?',
       [req.params.pid, req.params.id, req.user.userId]
