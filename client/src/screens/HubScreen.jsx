@@ -162,7 +162,7 @@ export default function HubScreen() {
         </button>
 
         {sourceName && (
-          <span className="text-white text-sm font-medium bg-blue-600 px-3 py-1 rounded-lg border border-blue-500 truncate max-w-[160px]">
+          <span className="text-white text-sm font-medium bg-blue-600 px-3 py-1 rounded-lg border border-blue-500 truncate max-w-[260px]">
             {sourceName}
           </span>
         )}
@@ -176,7 +176,7 @@ export default function HubScreen() {
         </button>
 
         {outletName && (
-          <span className="text-white text-sm font-medium bg-blue-600 px-3 py-1 rounded-lg border border-blue-500">
+          <span className="text-white text-sm font-medium bg-blue-600 px-3 py-1 rounded-lg border border-blue-500 truncate max-w-[260px]">
             {outletName}
           </span>
         )}
