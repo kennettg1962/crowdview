@@ -58,9 +58,10 @@ export default function HubScreen() {
         stopCapture(true);
         setIsStreamingOut(false);
       }
-      if (isRecordingAction) {
-        stopActionRecorder(true);
-        setIsRecordingAction(false);
+      // Action recorder: stop if still active — onstop handler saves and resets state
+      const actionRecorder = actionRecorderRef.current;
+      if (actionRecorder && actionRecorder.state !== 'inactive') {
+        actionRecorder.stop();
       }
     }
   }, [isStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -84,22 +85,6 @@ export default function HubScreen() {
     setTimeout(() => setCameraFlash(false), 400);
   }, [mediaStream]);
 
-  function stopActionRecorder(save = false) {
-    const recorder = actionRecorderRef.current;
-    if (!recorder || recorder.state === 'inactive') return;
-    if (save) {
-      recorder.onstop = () => {
-        const blob = new Blob(actionChunksRef.current, { type: 'video/webm' });
-        const formData = new FormData();
-        formData.append('media', blob, 'action.webm');
-        api.post('/api/media', formData).catch(console.error);
-        actionChunksRef.current = [];
-      };
-    }
-    recorder.stop();
-    actionRecorderRef.current = null;
-  }
-
   function handleAction() {
     if (!isStreaming || !mediaStream) return;
     actionChunksRef.current = [];
@@ -111,6 +96,17 @@ export default function HubScreen() {
       recorder.ondataavailable = e => {
         if (e.data.size > 0) actionChunksRef.current.push(e.data);
       };
+      // Set onstop once at start so it always fires, regardless of how recording ends
+      recorder.onstop = () => {
+        actionRecorderRef.current = null;
+        setIsRecordingAction(false);
+        if (actionChunksRef.current.length === 0) return;
+        const blob = new Blob(actionChunksRef.current, { type: 'video/webm' });
+        const formData = new FormData();
+        formData.append('media', blob, 'action.webm');
+        api.post('/api/media', formData).catch(console.error);
+        actionChunksRef.current = [];
+      };
       recorder.start(1000);
       actionRecorderRef.current = recorder;
       setIsRecordingAction(true);
@@ -120,8 +116,12 @@ export default function HubScreen() {
   }
 
   function handleCut() {
-    stopActionRecorder(true);
-    setIsRecordingAction(false);
+    const recorder = actionRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') {
+      setIsRecordingAction(false);
+      return;
+    }
+    recorder.stop(); // onstop handler saves the clip
   }
 
   const handleId = useCallback(() => {
