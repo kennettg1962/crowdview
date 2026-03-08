@@ -8,7 +8,7 @@ import SelectSourcePopup from './SelectSourcePopup';
 import StreamToPopup from './StreamToPopup';
 import {
   FriendsIcon, LibraryIcon, SelectSourceIcon, StreamToIcon,
-  IdIcon, ActionIcon, CameraIcon,
+  IdIcon, ActionIcon, CameraIcon, CutIcon,
   MovieCameraIcon, StreamIcon, StopCircleIcon
 } from '../components/Icons';
 import api from '../api/api';
@@ -34,9 +34,12 @@ export default function HubScreen() {
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
+  const actionRecorderRef = useRef(null);
+  const actionChunksRef = useRef([]);
   const [showSource, setShowSource] = useState(false);
   const [showOutlet, setShowOutlet] = useState(false);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
+  const [isRecordingAction, setIsRecordingAction] = useState(false);
   const [cameraFlash, setCameraFlash] = useState(false);
 
   // Attach live stream to video element
@@ -48,11 +51,17 @@ export default function HubScreen() {
     }
   }, [mediaStream]);
 
-  // If source disconnects while streaming out: stop and save recording
+  // If source disconnects: stop any active recordings
   useEffect(() => {
-    if (!isStreaming && isStreamingOut) {
-      stopCapture(true);
-      setIsStreamingOut(false);
+    if (!isStreaming) {
+      if (isStreamingOut) {
+        stopCapture(true);
+        setIsStreamingOut(false);
+      }
+      if (isRecordingAction) {
+        stopActionRecorder(true);
+        setIsRecordingAction(false);
+      }
     }
   }, [isStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -74,6 +83,46 @@ export default function HubScreen() {
     setCameraFlash(true);
     setTimeout(() => setCameraFlash(false), 400);
   }, [mediaStream]);
+
+  function stopActionRecorder(save = false) {
+    const recorder = actionRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') return;
+    if (save) {
+      recorder.onstop = () => {
+        const blob = new Blob(actionChunksRef.current, { type: 'video/webm' });
+        const formData = new FormData();
+        formData.append('media', blob, 'action.webm');
+        api.post('/api/media', formData).catch(console.error);
+        actionChunksRef.current = [];
+      };
+    }
+    recorder.stop();
+    actionRecorderRef.current = null;
+  }
+
+  function handleAction() {
+    if (!isStreaming || !mediaStream) return;
+    actionChunksRef.current = [];
+    try {
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm';
+      const recorder = new MediaRecorder(mediaStream, { mimeType });
+      recorder.ondataavailable = e => {
+        if (e.data.size > 0) actionChunksRef.current.push(e.data);
+      };
+      recorder.start(1000);
+      actionRecorderRef.current = recorder;
+      setIsRecordingAction(true);
+    } catch {
+      // MediaRecorder not supported
+    }
+  }
+
+  function handleCut() {
+    stopActionRecorder(true);
+    setIsRecordingAction(false);
+  }
 
   const handleId = useCallback(() => {
     if (!videoRef.current || !mediaStream) return;
@@ -211,7 +260,11 @@ export default function HubScreen() {
             className="text-white hover:bg-slate-600"
           />
           <div className="mx-3 border-t border-slate-600" />
-          <SideButton icon={ActionIcon} label="Action" onClick={() => {}} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
+          {!isRecordingAction ? (
+            <SideButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
+          ) : (
+            <SideButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-xl animate-pulse" />
+          )}
           <SideButton icon={CameraIcon} label="Camera" onClick={handleCamera} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
         </div>
 

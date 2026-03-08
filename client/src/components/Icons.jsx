@@ -191,6 +191,17 @@ export function ShareIcon({ className = iconClass }) {
   );
 }
 
+export function CutIcon({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <circle cx="6" cy="6" r="3" strokeWidth={2} />
+      <circle cx="6" cy="18" r="3" strokeWidth={2} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12" />
+    </svg>
+  );
+}
+
 export function StopCircleIcon({ className = iconClass }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor">
