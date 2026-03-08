@@ -58,6 +58,7 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
     try {
       if (friend?.Friend_Id) {
         await api.put(`/api/friends/${friend.Friend_Id}`, { name: name.trim(), note, group });
+        onSave && onSave({ name: name.trim(), friendId: friend.Friend_Id });
       } else {
         const res = await api.post('/api/friends', { name: name.trim(), note, group });
         if (capturedPhotoUrl && res.data?.friendId) {
@@ -68,8 +69,8 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
             headers: { 'Content-Type': 'multipart/form-data' },
           });
         }
+        onSave && onSave({ name: name.trim(), friendId: res.data?.friendId });
       }
-      onSave && onSave();
       onClose();
     } catch (err) {
       setErrors({ general: err.response?.data?.error || 'Save failed' });

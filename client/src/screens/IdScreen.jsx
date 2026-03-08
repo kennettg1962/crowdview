@@ -18,6 +18,7 @@ export default function IdScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const canvasRef = useRef(null);
+  const imgRef = useRef(null);
   const [faces, setFaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedFaceIndex, setSelectedFaceIndex] = useState(0);
@@ -82,6 +83,7 @@ export default function IdScreen() {
         api.post('/api/rekognition/identify', { imageData: photoDataUrl }),
         loadImage(photoDataUrl),
       ]);
+      imgRef.current = img;
       const rawFaces = res.data.faces || [];
       const facesWithThumbs = await cropFaceThumbnails(rawFaces, img);
       setFaces(facesWithThumbs);
@@ -240,7 +242,18 @@ export default function IdScreen() {
           friend={activeFace.friendId ? { Friend_Id: activeFace.friendId, Name_Txt: activeFace.friendName } : null}
           capturedPhotoUrl={activeFace.thumbnailUrl}
           onClose={() => setShowFriendForm(false)}
-          onSave={() => {}}
+          onSave={(saved) => {
+            if (!saved || !activeFace) return;
+            setFaces(prev => {
+              const updated = prev.map(f =>
+                f.faceId === activeFace.faceId
+                  ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId }
+                  : f
+              );
+              if (imgRef.current) drawBoundingBoxes(updated, imgRef.current);
+              return updated;
+            });
+          }}
         />
       )}
     </div>
