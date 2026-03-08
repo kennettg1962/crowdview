@@ -4,7 +4,7 @@ import { UploadIcon, XIcon, BackIcon } from './Icons';
 
 const GROUPS = ['Friend', 'Family', 'Friend of Friend', 'Friend of Family', 'Business'];
 
-export default function FriendFormPopup({ friend, onClose, onSave }) {
+export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onSave }) {
   const [name, setName] = useState(friend?.Name_Txt || '');
   const [note, setNote] = useState(friend?.Note_Multi_Line_Txt || '');
   const [group, setGroup] = useState(friend?.Friend_Group || 'Friend');
@@ -59,7 +59,15 @@ export default function FriendFormPopup({ friend, onClose, onSave }) {
       if (friend?.Friend_Id) {
         await api.put(`/api/friends/${friend.Friend_Id}`, { name: name.trim(), note, group });
       } else {
-        await api.post('/api/friends', { name: name.trim(), note, group });
+        const res = await api.post('/api/friends', { name: name.trim(), note, group });
+        if (capturedPhotoUrl && res.data?.friendId) {
+          const blob = await fetch(capturedPhotoUrl).then(r => r.blob());
+          const formData = new FormData();
+          formData.append('photo', blob, 'face.jpg');
+          await api.post(`/api/friends/${res.data.friendId}/photos`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+        }
       }
       onSave && onSave();
       onClose();
@@ -107,7 +115,9 @@ export default function FriendFormPopup({ friend, onClose, onSave }) {
 
   const photoUrl = friend?.Friend_Id && photos[photoIndex]
     ? `/api/friends/${friend.Friend_Id}/photos/${photos[photoIndex].Friend_Photo_Id}/data`
-    : null;
+    : (!friend?.Friend_Id && capturedPhotoUrl)
+      ? capturedPhotoUrl
+      : null;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">

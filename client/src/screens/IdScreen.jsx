@@ -226,6 +226,7 @@ export default function IdScreen() {
       {showFriendForm && activeFace && (
         <FriendFormPopup
           friend={activeFace.friendId ? { Friend_Id: activeFace.friendId, Name_Txt: activeFace.friendName } : null}
+          capturedPhotoUrl={activeFace.thumbnailUrl}
           onClose={() => setShowFriendForm(false)}
           onSave={() => {}}
         />
