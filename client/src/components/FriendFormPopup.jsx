@@ -113,11 +113,10 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
     }
   }
 
-  const photoUrl = friend?.Friend_Id && photos[photoIndex]
+  const storedPhotoUrl = friend?.Friend_Id && photos[photoIndex]
     ? `/api/friends/${friend.Friend_Id}/photos/${photos[photoIndex].Friend_Photo_Id}/data`
-    : (!friend?.Friend_Id && capturedPhotoUrl)
-      ? capturedPhotoUrl
-      : null;
+    : null;
+  const photoUrl = storedPhotoUrl || capturedPhotoUrl || null;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
