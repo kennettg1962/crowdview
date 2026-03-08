@@ -5,7 +5,7 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import FriendFormPopup from '../components/FriendFormPopup';
-import { MovieCameraIcon, PlusIcon } from '../components/Icons';
+import { MovieCameraIcon, PlusIcon, DeleteIcon } from '../components/Icons';
 import AuthImage from '../components/AuthImage';
 import api from '../api/api';
 
@@ -20,6 +20,7 @@ export default function ManageFriendsScreen() {
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [isNew, setIsNew] = useState(false);
+  const [deletingFriend, setDeletingFriend] = useState(null);
 
   const loadFriends = useCallback(async () => {
     setLoading(true);
@@ -46,6 +47,17 @@ export default function ManageFriendsScreen() {
     setSelectedFriend(friend);
     setIsNew(false);
     setShowForm(true);
+  }
+
+  async function confirmDeleteFriend() {
+    if (!deletingFriend) return;
+    try {
+      await api.delete(`/api/friends/${deletingFriend.Friend_Id}`);
+      setDeletingFriend(null);
+      loadFriends();
+    } catch (err) {
+      console.error('Delete failed', err);
+    }
   }
 
   function scrollToLetter(letter) {
@@ -124,33 +136,40 @@ export default function ManageFriendsScreen() {
                       {letter}
                     </div>
                     {letterFriends.map(friend => (
-                      <button
-                        key={friend.Friend_Id}
-                        onClick={() => handleFriendClick(friend)}
-                        className="w-full flex items-center gap-3 p-3 hover:bg-gray-800 rounded-lg text-left transition-colors"
-                      >
-                        {/* Photo wallet */}
-                        <div className="w-[60px] h-[60px] rounded-full bg-gray-700 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                          {friend.Primary_Photo_Mime ? (
-                            <AuthImage
-                              src={`/api/friends/${friend.Friend_Id}/photos/primary/data`}
-                              alt={friend.Name_Txt}
-                              className="w-full h-full object-cover"
-                              fallback={<span className="text-gray-500 text-[27px]">👤</span>}
-                            />
-                          ) : (
-                            <span className="text-gray-500 text-[27px]">👤</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-medium truncate">{friend.Name_Txt}</p>
-                          {friend.Note_Multi_Line_Txt && (
-                            <p className="text-gray-500 text-xs truncate">{friend.Note_Multi_Line_Txt}</p>
-                          )}
-                        </div>
-                        <span className="text-gray-600 text-xs flex-shrink-0">{friend.Friend_Group}</span>
-                        <span className="text-gray-600">›</span>
-                      </button>
+                      <div key={friend.Friend_Id} className="flex items-center gap-1 rounded-lg hover:bg-gray-800 transition-colors">
+                        <button
+                          onClick={() => handleFriendClick(friend)}
+                          className="flex-1 flex items-center gap-3 p-3 text-left"
+                        >
+                          <div className="w-[60px] h-[60px] rounded-full bg-gray-700 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                            {friend.Primary_Photo_Mime ? (
+                              <AuthImage
+                                src={`/api/friends/${friend.Friend_Id}/photos/primary/data`}
+                                alt={friend.Name_Txt}
+                                className="w-full h-full object-cover"
+                                fallback={<span className="text-gray-500 text-[27px]">👤</span>}
+                              />
+                            ) : (
+                              <span className="text-gray-500 text-[27px]">👤</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm font-medium truncate">{friend.Name_Txt}</p>
+                            {friend.Note_Multi_Line_Txt && (
+                              <p className="text-gray-500 text-xs truncate">{friend.Note_Multi_Line_Txt}</p>
+                            )}
+                          </div>
+                          <span className="text-gray-600 text-xs flex-shrink-0">{friend.Friend_Group}</span>
+                          <span className="text-gray-600">›</span>
+                        </button>
+                        <button
+                          onClick={() => setDeletingFriend(friend)}
+                          className="p-3 text-red-400/50 hover:text-red-400 transition-colors flex-shrink-0"
+                          title="Delete friend"
+                        >
+                          <DeleteIcon className="w-5 h-5" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 ))
@@ -168,7 +187,31 @@ export default function ManageFriendsScreen() {
           friend={isNew ? null : selectedFriend}
           onClose={() => setShowForm(false)}
           onSave={loadFriends}
+          onDelete={() => { setShowForm(false); loadFriends(); }}
         />
+      )}
+
+      {deletingFriend && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <p className="text-white font-medium mb-1">Delete {deletingFriend.Name_Txt}?</p>
+            <p className="text-gray-400 text-sm mb-4">This will permanently remove the friend and all their photos. This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingFriend(null)}
+                className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteFriend}
+                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

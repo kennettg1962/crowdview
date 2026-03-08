@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/api';
-import { UploadIcon, XIcon, BackIcon } from './Icons';
+import { UploadIcon, XIcon, BackIcon, DeleteIcon } from './Icons';
 import AuthImage from './AuthImage';
 
 const GROUPS = ['Friend', 'Family', 'Friend of Friend', 'Friend of Family', 'Business'];
 
-export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onSave }) {
+export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onSave, onDelete }) {
   const [name, setName] = useState(friend?.Name_Txt || '');
   const [note, setNote] = useState(friend?.Note_Multi_Line_Txt || '');
   const [group, setGroup] = useState(friend?.Friend_Group || 'Friend');
@@ -15,6 +15,8 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [confirmClose, setConfirmClose] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef(null);
 
   const isDirty = useRef(false);
@@ -108,6 +110,20 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
       setPhotoIndex(Math.max(0, photoIndex - 1));
     } catch (err) {
       setErrors({ photo: 'Failed to delete photo' });
+    }
+  }
+
+  async function handleDelete() {
+    if (!friend?.Friend_Id) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/api/friends/${friend.Friend_Id}`);
+      onDelete && onDelete();
+      onClose();
+    } catch (err) {
+      setErrors({ general: err.response?.data?.error || 'Delete failed' });
+      setDeleting(false);
+      setConfirmDelete(false);
     }
   }
 
@@ -237,7 +253,16 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 px-5 py-4 border-t border-gray-700">
+        <div className="flex gap-2 px-5 py-4 border-t border-gray-700">
+          {friend?.Friend_Id && (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="p-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition-colors"
+              title="Delete friend"
+            >
+              <DeleteIcon className="w-5 h-5" />
+            </button>
+          )}
           <button
             onClick={handleCloseRequest}
             className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
@@ -253,6 +278,31 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
           </button>
         </div>
       </div>
+
+      {/* Delete confirm dialog */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-60">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <p className="text-white font-medium mb-1">Delete {friend?.Name_Txt}?</p>
+            <p className="text-gray-400 text-sm mb-4">This will permanently remove the friend and all their photos. This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Dirty confirm dialog */}
       {confirmClose && (
