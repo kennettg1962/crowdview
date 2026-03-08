@@ -17,9 +17,15 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [pendingPhoto, setPendingPhoto] = useState(null);
+  const [pendingPhotoUrl, setPendingPhotoUrl] = useState(null);
   const fileInputRef = useRef(null);
 
   const isDirty = useRef(false);
+
+  useEffect(() => {
+    return () => { if (pendingPhotoUrl) URL.revokeObjectURL(pendingPhotoUrl); };
+  }, [pendingPhotoUrl]);
 
   // Track changes
   useEffect(() => {
@@ -50,7 +56,7 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
     if (!name.trim()) errs.name = 'Name is required';
     if (name.trim().length > 50) errs.name = 'Name must be 50 chars or less';
     if (!group) errs.group = 'Group is required';
-    if (!friend && photos.length === 0 && !capturedPhotoUrl) errs.photo = 'At least one photo is required';
+    if (!friend && photos.length === 0 && !capturedPhotoUrl && !pendingPhoto) errs.photo = 'At least one photo is required';
     return errs;
   }
 
@@ -64,13 +70,20 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
         onSave && onSave({ name: name.trim(), friendId: friend.Friend_Id });
       } else {
         const res = await api.post('/api/friends', { name: name.trim(), note, group });
-        if (capturedPhotoUrl && res.data?.friendId) {
-          const blob = await fetch(capturedPhotoUrl).then(r => r.blob());
-          const formData = new FormData();
-          formData.append('photo', blob, 'face.jpg');
-          await api.post(`/api/friends/${res.data.friendId}/photos`, formData);
+        const newId = res.data?.friendId;
+        if (newId) {
+          if (pendingPhoto) {
+            const formData = new FormData();
+            formData.append('photo', pendingPhoto);
+            await api.post(`/api/friends/${newId}/photos`, formData);
+          } else if (capturedPhotoUrl) {
+            const blob = await fetch(capturedPhotoUrl).then(r => r.blob());
+            const formData = new FormData();
+            formData.append('photo', blob, 'face.jpg');
+            await api.post(`/api/friends/${newId}/photos`, formData);
+          }
         }
-        onSave && onSave({ name: name.trim(), friendId: res.data?.friendId });
+        onSave && onSave({ name: name.trim(), friendId: newId });
       }
       onClose();
     } catch (err) {
@@ -90,7 +103,16 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
 
   async function handlePhotoUpload(e) {
     const file = e.target.files[0];
-    if (!file || !friend?.Friend_Id) return;
+    if (!file) return;
+    if (!friend?.Friend_Id) {
+      // New friend — store for upload on save
+      if (pendingPhotoUrl) URL.revokeObjectURL(pendingPhotoUrl);
+      setPendingPhoto(file);
+      setPendingPhotoUrl(URL.createObjectURL(file));
+      setErrors(prev => ({ ...prev, photo: undefined }));
+      return;
+    }
+    // Existing friend — upload immediately
     const formData = new FormData();
     formData.append('photo', file);
     try {
@@ -130,7 +152,7 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
   const storedPhotoUrl = friend?.Friend_Id && photos[photoIndex]
     ? `/api/friends/${friend.Friend_Id}/photos/${photos[photoIndex].Friend_Photo_Id}/data`
     : null;
-  const photoUrl = storedPhotoUrl || capturedPhotoUrl || null;
+  const photoUrl = storedPhotoUrl || pendingPhotoUrl || capturedPhotoUrl || null;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
@@ -187,20 +209,22 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
             <div className="flex gap-2">
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
               <button
-                onClick={() => {
-                  if (!friend?.Friend_Id) {
-                    setErrors({ photo: 'Save the friend first, then add photos' });
-                    return;
-                  }
-                  fileInputRef.current?.click();
-                }}
+                onClick={() => fileInputRef.current?.click()}
                 className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm"
               >
                 <UploadIcon className="w-4 h-4" /> Upload
               </button>
-              {photos.length > 0 && (
+              {(photos.length > 0 || pendingPhoto) && (
                 <button
-                  onClick={handleDeletePhoto}
+                  onClick={() => {
+                    if (pendingPhoto) {
+                      URL.revokeObjectURL(pendingPhotoUrl);
+                      setPendingPhoto(null);
+                      setPendingPhotoUrl(null);
+                    } else {
+                      handleDeletePhoto();
+                    }
+                  }}
                   className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-sm"
                 >
                   <XIcon className="w-4 h-4" /> Remove
