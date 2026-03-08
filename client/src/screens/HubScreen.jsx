@@ -37,6 +37,7 @@ export default function HubScreen() {
   const [showSource, setShowSource] = useState(false);
   const [showOutlet, setShowOutlet] = useState(false);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
+  const [cameraFlash, setCameraFlash] = useState(false);
 
   // Attach live stream to video element
   useEffect(() => {
@@ -70,6 +71,8 @@ export default function HubScreen() {
       formData.append('media', blob, 'photo.jpg');
       api.post('/api/media', formData).catch(console.error);
     }, 'image/jpeg');
+    setCameraFlash(true);
+    setTimeout(() => setCameraFlash(false), 400);
   }, [mediaStream]);
 
   const handleId = useCallback(() => {
@@ -214,7 +217,7 @@ export default function HubScreen() {
 
         {/* Center 70%: video container */}
         <div className="w-[70%] bg-white flex flex-col items-center justify-center p-3 border-t border-b border-gray-200">
-          <div className="w-full video-container bg-black border-2 border-white rounded-sm overflow-hidden">
+          <div className="w-full video-container bg-black border-2 border-white rounded-sm overflow-hidden relative">
             {mediaStream ? (
               <video
                 ref={videoRef}
@@ -229,6 +232,11 @@ export default function HubScreen() {
                 <p className="text-base font-medium">Video Stream Container</p>
                 <p className="text-sm text-gray-400">16:9 Aspect Ratio</p>
               </div>
+            )}
+            {cameraFlash && (
+              <div className="absolute inset-0 pointer-events-none"
+                style={{ background: 'white', animation: 'cameraFlash 0.4s ease-out forwards' }}
+              />
             )}
           </div>
         </div>

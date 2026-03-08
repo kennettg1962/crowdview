@@ -43,6 +43,12 @@ body {
   transition: transform 300ms ease-in-out;
 }
 
+/* Camera shutter flash */
+@keyframes cameraFlash {
+  0%   { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
 /* Video container aspect ratio */
 .video-container {
   position: relative;
