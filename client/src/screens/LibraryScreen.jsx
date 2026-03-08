@@ -226,14 +226,14 @@ export default function LibraryScreen() {
           <button
             onClick={() => singleSelected && setViewingItem(singleSelected)}
             disabled={!singleSelected}
-            className="flex items-center justify-center gap-1 h-8 px-3 flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+            className="flex items-center justify-center gap-1 h-8 w-[110px] whitespace-nowrap bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
           >
             View
           </button>
           <button
             onClick={() => selectedIds.size > 0 && setConfirmDelete(true)}
             disabled={selectedIds.size === 0}
-            className="flex items-center justify-center gap-1 h-8 px-3 flex-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+            className="flex items-center justify-center gap-1 h-8 w-[110px] whitespace-nowrap bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
           >
             <DeleteIcon className="w-4 h-4" />
             <span>Delete ({selectedIds.size})</span>
