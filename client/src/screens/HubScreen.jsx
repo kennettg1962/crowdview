@@ -11,6 +11,7 @@ import {
   IdIcon, ActionIcon, CameraIcon, ShareIcon, PostIcon,
   MovieCameraIcon, StreamIcon, StopCircleIcon
 } from '../components/Icons';
+import api from '../api/api';
 
 function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
   return (
@@ -64,7 +65,14 @@ export default function HubScreen() {
     canvas.width = videoRef.current.videoWidth || 640;
     canvas.height = videoRef.current.videoHeight || 480;
     canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
-    navigate('/id', { state: { photoDataUrl: canvas.toDataURL('image/jpeg') } });
+    const dataUrl = canvas.toDataURL('image/jpeg');
+    // Save to library (non-blocking)
+    canvas.toBlob(blob => {
+      const formData = new FormData();
+      formData.append('media', blob, 'photo.jpg');
+      api.post('/api/media', formData).catch(console.error);
+    }, 'image/jpeg');
+    navigate('/id', { state: { photoDataUrl: dataUrl } });
   }, [mediaStream, navigate]);
 
   function startCapture() {
@@ -91,12 +99,10 @@ export default function HubScreen() {
     if (save) {
       recorder.onstop = () => {
         const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `crowdview-${Date.now()}.webm`;
-        a.click();
-        URL.revokeObjectURL(url);
+        // Save to library
+        const formData = new FormData();
+        formData.append('media', blob, 'video.webm');
+        api.post('/api/media', formData).catch(console.error);
         recordedChunksRef.current = [];
       };
     }

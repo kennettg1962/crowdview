@@ -5,6 +5,7 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import { MovieCameraIcon, FriendsIcon, DeleteIcon } from '../components/Icons';
+import AuthImage from '../components/AuthImage';
 import api from '../api/api';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -154,15 +155,16 @@ export default function LibraryScreen() {
                       }`}
                     >
                       {item.Media_Type === 'video' ? (
-                        <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                          <span className="text-2xl">🎬</span>
+                        <div className="w-full h-full bg-gray-800 flex flex-col items-center justify-center gap-1">
+                          <span className="text-3xl">▶</span>
+                          <span className="text-gray-400 text-xs">Video</span>
                         </div>
                       ) : (
-                        <img
+                        <AuthImage
                           src={`/api/media/${item.User_Media_Id}/data`}
                           alt="Media"
                           className="w-full h-full object-cover"
-                          loading="lazy"
+                          fallback={<div className="w-full h-full bg-gray-700 flex items-center justify-center"><span className="text-gray-500 text-xs">Photo</span></div>}
                         />
                       )}
                       {selected && (

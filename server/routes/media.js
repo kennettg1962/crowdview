@@ -48,6 +48,13 @@ router.post('/', auth, upload.single('media'), async (req, res) => {
       'INSERT INTO User_Media (User_Id, Media_Data, Media_Mime_Type, Media_Type) VALUES (?, ?, ?, ?)',
       [req.user.userId, req.file.buffer, req.file.mimetype, mediaType]
     );
+    // Keep only the 20 most recent items per user
+    await pool.execute(
+      `DELETE FROM User_Media WHERE User_Id = ? AND User_Media_Id NOT IN (
+        SELECT id FROM (SELECT User_Media_Id AS id FROM User_Media WHERE User_Id = ? ORDER BY Created_At DESC LIMIT 20) t
+      )`,
+      [req.user.userId, req.user.userId]
+    );
     res.status(201).json({ mediaId: result.insertId, mediaType });
   } catch (err) {
     console.error(err);
