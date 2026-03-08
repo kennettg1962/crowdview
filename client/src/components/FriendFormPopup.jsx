@@ -47,7 +47,7 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
     if (!name.trim()) errs.name = 'Name is required';
     if (name.trim().length > 50) errs.name = 'Name must be 50 chars or less';
     if (!group) errs.group = 'Group is required';
-    if (!friend && photos.length === 0) errs.photo = 'At least one photo is required';
+    if (!friend && photos.length === 0 && !capturedPhotoUrl) errs.photo = 'At least one photo is required';
     return errs;
   }
 
