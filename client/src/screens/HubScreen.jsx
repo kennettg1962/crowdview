@@ -40,6 +40,7 @@ export default function HubScreen() {
   const [isStreamingOut, setIsStreamingOut] = useState(false);
   const [isRecordingAction, setIsRecordingAction] = useState(false);
   const [cameraFlash, setCameraFlash] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'saved' | 'error'
 
   // Attach live stream to video element
   useEffect(() => {
@@ -91,14 +92,24 @@ export default function HubScreen() {
         ? 'video/webm;codecs=vp9'
         : 'video/webm';
       const recorder = new MediaRecorder(mediaStream, { mimeType });
-      // With no timeslice, ondataavailable fires exactly once on stop() with all data
-      // Save directly here — avoids any onstop/ondataavailable ordering bugs in Chrome
       recorder.ondataavailable = e => {
+        console.log('[Action] ondataavailable fired, size:', e.data?.size);
         if (e.data.size > 0) {
-          const blob = new Blob([e.data], { type: 'video/webm' });
+          setSaveStatus('saving');
           const formData = new FormData();
-          formData.append('media', blob, 'action.webm');
-          api.post('/api/media', formData).catch(console.error);
+          formData.append('media', e.data, 'action.webm');
+          api.post('/api/media', formData, { timeout: 120000 })
+            .then(() => {
+              setSaveStatus('saved');
+              setTimeout(() => setSaveStatus(null), 2000);
+            })
+            .catch(err => {
+              console.error('[Action] save failed:', err?.response?.status, err?.message);
+              setSaveStatus('error');
+              setTimeout(() => setSaveStatus(null), 4000);
+            });
+        } else {
+          console.warn('[Action] ondataavailable fired with empty data');
         }
       };
       recorder.onstop = () => {
@@ -320,6 +331,16 @@ export default function HubScreen() {
 
       {showSource && <SelectSourcePopup onClose={() => setShowSource(false)} />}
       {showOutlet && <StreamToPopup onClose={() => setShowOutlet(false)} />}
+
+      {saveStatus && (
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-white text-sm font-medium z-50 ${
+          saveStatus === 'saving' ? 'bg-blue-600' :
+          saveStatus === 'saved'  ? 'bg-green-600' : 'bg-red-600'
+        }`}>
+          {saveStatus === 'saving' ? 'Saving clip...' :
+           saveStatus === 'saved'  ? 'Clip saved to library' : 'Save failed — check console'}
+        </div>
+      )}
 
       {cameraFlash && (
         <div
