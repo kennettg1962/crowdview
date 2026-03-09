@@ -40,7 +40,7 @@ export default function HubScreen() {
   const [isStreamingOut, setIsStreamingOut] = useState(false);
   const [isRecordingAction, setIsRecordingAction] = useState(false);
   const [cameraFlash, setCameraFlash] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'saved' | 'error'
+  const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'saved' | 'error' | 'toobig'
 
   // Attach live stream to video element
   useEffect(() => {
@@ -93,24 +93,25 @@ export default function HubScreen() {
         : 'video/webm';
       const recorder = new MediaRecorder(mediaStream, { mimeType });
       recorder.ondataavailable = e => {
-        console.log('[Action] ondataavailable fired, size:', e.data?.size);
-        if (e.data.size > 0) {
-          setSaveStatus('saving');
-          const formData = new FormData();
-          formData.append('media', e.data, 'action.webm');
-          api.post('/api/media', formData, { timeout: 120000 })
-            .then(() => {
-              setSaveStatus('saved');
-              setTimeout(() => setSaveStatus(null), 2000);
-            })
-            .catch(err => {
-              console.error('[Action] save failed:', err?.response?.status, err?.message);
-              setSaveStatus('error');
-              setTimeout(() => setSaveStatus(null), 4000);
-            });
-        } else {
-          console.warn('[Action] ondataavailable fired with empty data');
+        if (e.data.size === 0) return;
+        const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+        if (e.data.size > MAX_SIZE) {
+          setSaveStatus('toobig');
+          setTimeout(() => setSaveStatus(null), 4000);
+          return;
         }
+        setSaveStatus('saving');
+        const formData = new FormData();
+        formData.append('media', e.data, 'action.webm');
+        api.post('/api/media', formData, { timeout: 120000 })
+          .then(() => {
+            setSaveStatus('saved');
+            setTimeout(() => setSaveStatus(null), 2000);
+          })
+          .catch(err => {
+            setSaveStatus('error');
+            setTimeout(() => setSaveStatus(null), 4000);
+          });
       };
       recorder.onstop = () => {
         actionRecorderRef.current = null;
@@ -338,7 +339,8 @@ export default function HubScreen() {
           saveStatus === 'saved'  ? 'bg-green-600' : 'bg-red-600'
         }`}>
           {saveStatus === 'saving' ? 'Saving clip...' :
-           saveStatus === 'saved'  ? 'Clip saved to library' : 'Save failed — check console'}
+           saveStatus === 'saved'  ? 'Clip saved to library' :
+           saveStatus === 'toobig' ? 'Clip too large to save (50MB limit)' : 'Save failed'}
         </div>
       )}
 
