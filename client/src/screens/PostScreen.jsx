@@ -187,13 +187,13 @@ export default function PostScreen() {
         }
       />
 
-      <main className="flex-1 flex flex-col p-4 gap-4">
+      <main className="flex-1 flex flex-col p-3 gap-3">
 
         {/* Two-column: carousel + tagged friends */}
-        <div className="flex gap-4 items-start">
+        <div className="flex gap-3 items-start">
 
           {/* Carousel */}
-          <div className="flex-1 relative bg-black rounded-xl overflow-hidden aspect-video">
+          <div className="flex-1 relative bg-black rounded-xl overflow-hidden" style={{ maxHeight: '42vh', aspectRatio: '16/9' }}>
             {currentBlobUrl ? (
               currentItem?.Media_Type === 'video' ? (
                 <video src={currentBlobUrl} controls className="w-full h-full object-contain" />
@@ -260,15 +260,15 @@ export default function PostScreen() {
 
         {/* Select Platforms */}
         <div>
-          <h3 className="text-white font-semibold text-sm mb-3">Select Platforms To Post</h3>
-          <div className="flex gap-3 flex-wrap">
+          <h3 className="text-white font-semibold text-sm mb-2">Select Platforms To Post</h3>
+          <div className="flex gap-2 flex-wrap">
             {platforms.map(platform => {
               const { Icon } = platform;
               return (
                 <button
                   key={platform.id}
                   onClick={() => togglePlatform(platform)}
-                  className={`flex flex-col items-center gap-2 px-5 py-3 rounded-xl border-2 transition-all ${
+                  className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl border-2 transition-all ${
                     platform.chosen
                       ? 'border-blue-500 bg-blue-500/20 text-white'
                       : platform.authorized
@@ -276,7 +276,7 @@ export default function PostScreen() {
                       : 'border-gray-700 bg-gray-800 text-gray-600 hover:border-gray-500'
                   }`}
                 >
-                  <Icon className="w-7 h-7" />
+                  <Icon className="w-6 h-6" />
                   <span className="text-xs font-medium">{platform.name}</span>
                   {!platform.authorized && (
                     <span className="text-xs text-yellow-500">Authorize</span>
@@ -288,7 +288,7 @@ export default function PostScreen() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex justify-center gap-4 pt-2">
+        <div className="flex justify-center gap-4">
           <button
             onClick={() => navigate('/library')}
             className="px-8 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
