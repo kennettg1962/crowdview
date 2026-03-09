@@ -239,31 +239,20 @@ export default function LibraryScreen() {
     const supportsDirPicker  = !!window.showDirectoryPicker;
 
     try {
-      if (selectedItems.length === 1 && supportsFilePicker) {
-        // Single file — let user choose filename and location
-        const item = selectedItems[0];
-        const ext = getItemFilename(item).split('.').pop();
-        const mimeType = item.Media_Mime_Type || (ext === 'webm' ? 'video/webm' : 'image/jpeg');
-        const handle = await window.showSaveFilePicker({
-          suggestedName: getItemFilename(item),
-          types: [{ description: 'Media file', accept: { [mimeType]: [`.${ext}`] } }],
-        });
-        const res = await api.get(`/api/media/${item.User_Media_Id}/data`, { responseType: 'blob' });
-        const writable = await handle.createWritable();
-        await writable.write(res.data);
-        await writable.close();
-
-      } else if (selectedItems.length > 1 && supportsDirPicker) {
-        // Multiple files — let user choose destination directory
-        const dirHandle = await window.showDirectoryPicker();
+      if (supportsFilePicker) {
+        // Prompt save dialog for each file
         for (const item of selectedItems) {
+          const ext = getItemFilename(item).split('.').pop();
+          const mimeType = item.Media_Mime_Type || (ext === 'webm' ? 'video/webm' : 'image/jpeg');
+          const handle = await window.showSaveFilePicker({
+            suggestedName: getItemFilename(item),
+            types: [{ description: 'Media file', accept: { [mimeType]: [`.${ext}`] } }],
+          });
           const res = await api.get(`/api/media/${item.User_Media_Id}/data`, { responseType: 'blob' });
-          const fileHandle = await dirHandle.getFileHandle(getItemFilename(item), { create: true });
-          const writable = await fileHandle.createWritable();
+          const writable = await handle.createWritable();
           await writable.write(res.data);
           await writable.close();
         }
-
       } else {
         // Fallback for browsers without File System Access API
         for (const item of selectedItems) {
