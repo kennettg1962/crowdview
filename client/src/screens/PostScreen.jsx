@@ -261,7 +261,7 @@ export default function PostScreen() {
         {/* Select Platforms */}
         <div className="w-full max-w-4xl">
           <h3 className="text-white font-semibold text-sm mb-2">Select Platforms To Post To</h3>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap justify-center">
             {platforms.map(platform => {
               const { Icon } = platform;
               return (
@@ -291,14 +291,14 @@ export default function PostScreen() {
         <div className="flex justify-center gap-4">
           <button
             onClick={() => navigate('/library')}
-            className="px-8 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+            className="w-[130px] py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handlePost}
             disabled={chosenCount === 0 || posting}
-            className="px-8 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:opacity-40"
+            className="w-[130px] py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition-colors disabled:opacity-40"
           >
             {posting ? 'Posting...' : 'Confirm Post'}
           </button>
