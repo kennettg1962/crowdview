@@ -193,16 +193,16 @@ export default function PostScreen() {
         <div className="flex gap-3 items-start">
 
           {/* Carousel */}
-          <div className="flex-1 relative bg-black rounded-xl overflow-hidden" style={{ maxHeight: '42vh', aspectRatio: '16/9' }}>
+          <div className="flex-1 relative rounded-xl overflow-hidden flex items-center justify-center">
             {currentBlobUrl ? (
               currentItem?.Media_Type === 'video' ? (
-                <video src={currentBlobUrl} controls className="w-full h-full object-contain" />
+                <video src={currentBlobUrl} controls className="max-h-[42vh] w-full rounded-xl" />
               ) : (
-                <img src={currentBlobUrl} alt="Media" className="w-full h-full object-contain" />
+                <img src={currentBlobUrl} alt="Media" className="max-h-[42vh] max-w-full rounded-xl object-contain" />
               )
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-600">
-                <MovieCameraIcon className="w-16 h-16 opacity-40" />
+              <div className="w-full h-40 bg-gray-800 rounded-xl flex items-center justify-center text-gray-600">
+                <MovieCameraIcon className="w-12 h-12 opacity-40" />
               </div>
             )}
 
