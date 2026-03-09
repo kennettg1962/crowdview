@@ -224,26 +224,60 @@ export default function LibraryScreen() {
     }
   }
 
+  function getItemFilename(item) {
+    const ext = item.Media_Mime_Type === 'image/jpeg' ? 'jpg'
+      : item.Media_Mime_Type === 'image/png' ? 'png'
+      : item.Media_Mime_Type?.startsWith('video/') ? 'webm'
+      : 'bin';
+    const d = new Date(item.Created_At);
+    return `crowdview-${item.Media_Type}-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${item.User_Media_Id}.${ext}`;
+  }
+
   async function handleExport() {
     const selectedItems = filteredMedia.filter(m => selectedIds.has(m.User_Media_Id));
-    for (const item of selectedItems) {
-      try {
+    const supportsFilePicker = !!window.showSaveFilePicker;
+    const supportsDirPicker  = !!window.showDirectoryPicker;
+
+    try {
+      if (selectedItems.length === 1 && supportsFilePicker) {
+        // Single file — let user choose filename and location
+        const item = selectedItems[0];
+        const ext = getItemFilename(item).split('.').pop();
+        const mimeType = item.Media_Mime_Type || (ext === 'webm' ? 'video/webm' : 'image/jpeg');
+        const handle = await window.showSaveFilePicker({
+          suggestedName: getItemFilename(item),
+          types: [{ description: 'Media file', accept: { [mimeType]: [`.${ext}`] } }],
+        });
         const res = await api.get(`/api/media/${item.User_Media_Id}/data`, { responseType: 'blob' });
-        const ext = item.Media_Mime_Type === 'image/jpeg' ? 'jpg'
-          : item.Media_Mime_Type === 'image/png' ? 'png'
-          : item.Media_Mime_Type?.startsWith('video/') ? 'webm'
-          : 'bin';
-        const d = new Date(item.Created_At);
-        const filename = `crowdview-${item.Media_Type}-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${item.User_Media_Id}.${ext}`;
-        const url = URL.createObjectURL(res.data);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error('Export failed for item', item.User_Media_Id, err);
+        const writable = await handle.createWritable();
+        await writable.write(res.data);
+        await writable.close();
+
+      } else if (selectedItems.length > 1 && supportsDirPicker) {
+        // Multiple files — let user choose destination directory
+        const dirHandle = await window.showDirectoryPicker();
+        for (const item of selectedItems) {
+          const res = await api.get(`/api/media/${item.User_Media_Id}/data`, { responseType: 'blob' });
+          const fileHandle = await dirHandle.getFileHandle(getItemFilename(item), { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(res.data);
+          await writable.close();
+        }
+
+      } else {
+        // Fallback for browsers without File System Access API
+        for (const item of selectedItems) {
+          const res = await api.get(`/api/media/${item.User_Media_Id}/data`, { responseType: 'blob' });
+          const url = URL.createObjectURL(res.data);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = getItemFilename(item);
+          a.click();
+          URL.revokeObjectURL(url);
+        }
       }
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('Export failed', err);
     }
   }
 
