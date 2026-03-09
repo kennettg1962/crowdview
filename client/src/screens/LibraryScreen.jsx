@@ -254,7 +254,8 @@ export default function LibraryScreen() {
       />
 
       {/* Filter / action row */}
-      <div className="bg-gray-800 px-4 py-2 flex items-center justify-between gap-2">
+      <div className="bg-gray-800 px-4 py-2 relative flex items-center justify-between gap-2">
+        {/* Left: year filters */}
         <div className="flex items-center gap-2 overflow-x-auto flex-1">
           <button
             onClick={() => setFilter('all')}
@@ -272,22 +273,9 @@ export default function LibraryScreen() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={() => singleSelected && setViewingItem(singleSelected)}
-            disabled={!singleSelected}
-            className="flex items-center justify-center gap-1 h-8 w-[110px] whitespace-nowrap bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-          >
-            View
-          </button>
-          <button
-            onClick={() => selectedIds.size > 0 && setConfirmDelete(true)}
-            disabled={selectedIds.size === 0}
-            className="flex items-center justify-center gap-1 h-8 w-[110px] whitespace-nowrap bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-          >
-            <DeleteIcon className="w-4 h-4" />
-            <span>Delete ({selectedIds.size})</span>
-          </button>
+
+        {/* Center: Post / Square / Export */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
           <button
             disabled={selectedIds.size === 0}
             className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
@@ -305,6 +293,25 @@ export default function LibraryScreen() {
             className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
           >
             Export
+          </button>
+        </div>
+
+        {/* Right: View / Delete */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => singleSelected && setViewingItem(singleSelected)}
+            disabled={!singleSelected}
+            className="flex items-center justify-center gap-1 h-8 w-[110px] whitespace-nowrap bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+          >
+            View
+          </button>
+          <button
+            onClick={() => selectedIds.size > 0 && setConfirmDelete(true)}
+            disabled={selectedIds.size === 0}
+            className="flex items-center justify-center gap-1 h-8 w-[110px] whitespace-nowrap bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+          >
+            <DeleteIcon className="w-4 h-4" />
+            <span>Delete ({selectedIds.size})</span>
           </button>
         </div>
       </div>
