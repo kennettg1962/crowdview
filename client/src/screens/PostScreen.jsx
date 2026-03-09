@@ -260,7 +260,7 @@ export default function PostScreen() {
 
         {/* Select Platforms */}
         <div className="w-full max-w-4xl">
-          <h3 className="text-white font-semibold text-sm mb-2">Select Platforms To Post To</h3>
+          <h3 className="text-white font-semibold text-sm mb-2 text-center">Select Platforms To Post To</h3>
           <div className="flex gap-2 flex-wrap justify-center">
             {platforms.map(platform => {
               const { Icon } = platform;
