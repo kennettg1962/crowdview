@@ -189,8 +189,11 @@ export default function PostScreen() {
 
       <main className="flex-1 flex flex-col p-3 gap-3 items-center">
 
-        {/* Two-column: carousel + tagged friends */}
+        {/* Three-column: spacer + carousel + tagged friends (spacer balances tagged friends so carousel is truly centered) */}
         <div className="flex gap-3 items-start justify-center w-full max-w-4xl">
+
+          {/* Left spacer — same width as tagged friends panel */}
+          <div className="w-56 flex-shrink-0" />
 
           {/* Carousel */}
           <div className="flex-1 relative rounded-xl overflow-hidden flex items-center justify-center">
