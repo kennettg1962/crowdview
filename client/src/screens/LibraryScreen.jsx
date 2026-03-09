@@ -335,20 +335,20 @@ export default function LibraryScreen() {
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
           <button
             disabled={selectedIds.size === 0}
-            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-500 hover:bg-gray-400 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
           >
             Post
           </button>
           <button
             disabled={selectedIds.size === 0}
-            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-500 hover:bg-gray-400 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
           >
             Share
           </button>
           <button
             onClick={handleExport}
             disabled={selectedIds.size === 0}
-            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-500 hover:bg-gray-400 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
           >
             Export
           </button>
