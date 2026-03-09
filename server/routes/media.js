@@ -51,7 +51,7 @@ router.post('/', auth, upload.single('media'), async (req, res) => {
     // Keep only the 20 most recent items per user
     await pool.execute(
       `DELETE FROM User_Media WHERE User_Id = ? AND User_Media_Id NOT IN (
-        SELECT id FROM (SELECT User_Media_Id AS id FROM User_Media WHERE User_Id = ? ORDER BY Created_At DESC LIMIT 20) t
+        SELECT id FROM (SELECT User_Media_Id AS id FROM User_Media WHERE User_Id = ? ORDER BY User_Media_Id DESC LIMIT 20) t
       )`,
       [req.user.userId, req.user.userId]
     );
