@@ -253,33 +253,8 @@ export default function LibraryScreen() {
         }
       />
 
-      {/* Filter / action rows */}
-      <div className="bg-gray-800 px-4 pt-2 pb-2 flex flex-col gap-2">
-
-      {/* Row 2: Post / Square / Export */}
-      <div className="flex items-center justify-center gap-2">
-        <button
-          disabled={selectedIds.size === 0}
-          className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-        >
-          Post
-        </button>
-        <button
-          disabled={selectedIds.size === 0}
-          className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-        >
-          Square
-        </button>
-        <button
-          disabled={selectedIds.size === 0}
-          className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-        >
-          Export
-        </button>
-      </div>
-
-      {/* Row 1: filters + View/Delete */}
-      <div className="flex items-center justify-between gap-2">
+      {/* Filter / action row */}
+      <div className="bg-gray-800 px-4 py-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 overflow-x-auto flex-1">
           <button
             onClick={() => setFilter('all')}
@@ -313,8 +288,25 @@ export default function LibraryScreen() {
             <DeleteIcon className="w-4 h-4" />
             <span>Delete ({selectedIds.size})</span>
           </button>
+          <button
+            disabled={selectedIds.size === 0}
+            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+          >
+            Post
+          </button>
+          <button
+            disabled={selectedIds.size === 0}
+            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+          >
+            Square
+          </button>
+          <button
+            disabled={selectedIds.size === 0}
+            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+          >
+            Export
+          </button>
         </div>
-      </div>
       </div>
 
       {/* Media grid */}
