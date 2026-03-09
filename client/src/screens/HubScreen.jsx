@@ -101,8 +101,9 @@ export default function HubScreen() {
           return;
         }
         setSaveStatus('saving');
+        const videoBlob = new Blob([e.data], { type: 'video/webm' });
         const formData = new FormData();
-        formData.append('media', e.data, 'action.webm');
+        formData.append('media', videoBlob, 'action.webm');
         api.post('/api/media', formData, { timeout: 120000 })
           .then(() => {
             setSaveStatus('saved');
