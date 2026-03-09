@@ -35,7 +35,6 @@ export default function HubScreen() {
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const actionRecorderRef = useRef(null);
-  const actionChunksRef = useRef([]);
   const [showSource, setShowSource] = useState(false);
   const [showOutlet, setShowOutlet] = useState(false);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
@@ -87,27 +86,26 @@ export default function HubScreen() {
 
   function handleAction() {
     if (!isStreaming || !mediaStream) return;
-    actionChunksRef.current = [];
     try {
       const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
         ? 'video/webm;codecs=vp9'
         : 'video/webm';
       const recorder = new MediaRecorder(mediaStream, { mimeType });
+      // With no timeslice, ondataavailable fires exactly once on stop() with all data
+      // Save directly here — avoids any onstop/ondataavailable ordering bugs in Chrome
       recorder.ondataavailable = e => {
-        if (e.data.size > 0) actionChunksRef.current.push(e.data);
+        if (e.data.size > 0) {
+          const blob = new Blob([e.data], { type: 'video/webm' });
+          const formData = new FormData();
+          formData.append('media', blob, 'action.webm');
+          api.post('/api/media', formData).catch(console.error);
+        }
       };
-      // Set onstop once at start so it always fires, regardless of how recording ends
       recorder.onstop = () => {
         actionRecorderRef.current = null;
         setIsRecordingAction(false);
-        if (actionChunksRef.current.length === 0) return;
-        const blob = new Blob(actionChunksRef.current, { type: 'video/webm' });
-        const formData = new FormData();
-        formData.append('media', blob, 'action.webm');
-        api.post('/api/media', formData).catch(console.error);
-        actionChunksRef.current = [];
       };
-      recorder.start(); // No timeslice — all data collected in one ondataavailable on stop()
+      recorder.start(); // No timeslice — all data delivered in single ondataavailable on stop()
       actionRecorderRef.current = recorder;
       setIsRecordingAction(true);
     } catch {
