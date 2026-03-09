@@ -9,6 +9,56 @@ import api from '../api/api';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+function VideoThumbnail({ mediaId, className }) {
+  const [thumbUrl, setThumbUrl] = useState(null);
+  const videoRef = useRef(null);
+  const blobUrlRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get(`/api/media/${mediaId}/data`, { responseType: 'blob' })
+      .then(res => {
+        if (cancelled) return;
+        const blobUrl = URL.createObjectURL(res.data);
+        blobUrlRef.current = blobUrl;
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.muted = true;
+        video.playsInline = true;
+        video.src = blobUrl;
+        video.currentTime = 0.1;
+        video.onseeked = () => {
+          if (cancelled) return;
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth || 320;
+          canvas.height = video.videoHeight || 180;
+          canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+          setThumbUrl(canvas.toDataURL('image/jpeg'));
+          video.src = '';
+        };
+        videoRef.current = video;
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    };
+  }, [mediaId]);
+
+  return (
+    <div className={`relative ${className}`}>
+      {thumbUrl ? (
+        <img src={thumbUrl} alt="Video thumbnail" className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full bg-gray-800" />
+      )}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-white text-2xl opacity-80 drop-shadow">▶</span>
+      </div>
+    </div>
+  );
+}
+
 function groupMedia(items) {
   const groups = {};
   items.forEach(item => {
@@ -270,10 +320,7 @@ export default function LibraryScreen() {
                       }`}
                     >
                       {item.Media_Type === 'video' ? (
-                        <div className="w-full h-full bg-gray-800 flex flex-col items-center justify-center gap-1">
-                          <span className="text-3xl text-white">▶</span>
-                          <span className="text-gray-400 text-xs">Video</span>
-                        </div>
+                        <VideoThumbnail mediaId={item.User_Media_Id} className="w-full h-full" />
                       ) : (
                         <AuthImage
                           src={`/api/media/${item.User_Media_Id}/data`}
