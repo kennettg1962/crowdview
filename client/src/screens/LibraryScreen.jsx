@@ -286,7 +286,7 @@ export default function LibraryScreen() {
             disabled={selectedIds.size === 0}
             className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
           >
-            Square
+            Share
           </button>
           <button
             disabled={selectedIds.size === 0}
