@@ -53,7 +53,7 @@ function VideoThumbnail({ mediaId, className }) {
         <div className="w-full h-full bg-gray-800" />
       )}
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-white text-2xl opacity-80 drop-shadow">▶</span>
+        <span className="text-white text-5xl opacity-80 drop-shadow">▶</span>
       </div>
     </div>
   );
