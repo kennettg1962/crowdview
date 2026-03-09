@@ -187,10 +187,10 @@ export default function PostScreen() {
         }
       />
 
-      <main className="flex-1 flex flex-col p-3 gap-3">
+      <main className="flex-1 flex flex-col p-3 gap-3 items-center">
 
         {/* Two-column: carousel + tagged friends */}
-        <div className="flex gap-3 items-start">
+        <div className="flex gap-3 items-start justify-center w-full max-w-4xl">
 
           {/* Carousel */}
           <div className="flex-1 relative rounded-xl overflow-hidden flex items-center justify-center">
@@ -259,7 +259,7 @@ export default function PostScreen() {
         </div>
 
         {/* Select Platforms */}
-        <div>
+        <div className="w-full max-w-4xl">
           <h3 className="text-white font-semibold text-sm mb-2">Select Platforms To Post</h3>
           <div className="flex gap-2 flex-wrap">
             {platforms.map(platform => {
