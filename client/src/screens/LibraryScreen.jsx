@@ -224,6 +224,29 @@ export default function LibraryScreen() {
     }
   }
 
+  async function handleExport() {
+    const selectedItems = filteredMedia.filter(m => selectedIds.has(m.User_Media_Id));
+    for (const item of selectedItems) {
+      try {
+        const res = await api.get(`/api/media/${item.User_Media_Id}/data`, { responseType: 'blob' });
+        const ext = item.Media_Mime_Type === 'image/jpeg' ? 'jpg'
+          : item.Media_Mime_Type === 'image/png' ? 'png'
+          : item.Media_Mime_Type?.startsWith('video/') ? 'webm'
+          : 'bin';
+        const d = new Date(item.Created_At);
+        const filename = `crowdview-${item.Media_Type}-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${item.User_Media_Id}.${ext}`;
+        const url = URL.createObjectURL(res.data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Export failed for item', item.User_Media_Id, err);
+      }
+    }
+  }
+
   const years = [...new Set(media.map(m => new Date(m.Created_At).getFullYear()))].sort((a, b) => b - a);
 
   const filteredMedia = media.filter(m => {
@@ -289,6 +312,7 @@ export default function LibraryScreen() {
             Share
           </button>
           <button
+            onClick={handleExport}
             disabled={selectedIds.size === 0}
             className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
           >
