@@ -336,7 +336,7 @@ export default function LibraryScreen() {
           ))}
         </div>
 
-        {/* Center: Id / Post / Export */}
+        {/* Center: Id / Export */}
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
           <button
             onClick={handleId}
@@ -344,16 +344,6 @@ export default function LibraryScreen() {
             className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-500 hover:bg-gray-400 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
           >
             Id
-          </button>
-          <button
-            onClick={() => {
-              const selectedItems = filteredMedia.filter(m => selectedIds.has(m.User_Media_Id));
-              navigate('/post', { state: { mediaItems: selectedItems } });
-            }}
-            disabled={selectedIds.size === 0}
-            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-500 hover:bg-gray-400 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-          >
-            Post
           </button>
           <button
             onClick={handleExport}
