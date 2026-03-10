@@ -9,6 +9,8 @@ import ProfileScreen from './screens/ProfileScreen';
 import IdScreen from './screens/IdScreen';
 import LibraryScreen from './screens/LibraryScreen';
 import PostScreen from './screens/PostScreen';
+import StreamsScreen from './screens/StreamsScreen';
+import StreamWatchScreen from './screens/StreamWatchScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
 
 function AuthGuard({ children }) {
@@ -29,6 +31,8 @@ function AppRoutes() {
       <Route path="/id" element={<AuthGuard><IdScreen /></AuthGuard>} />
       <Route path="/library" element={<AuthGuard><LibraryScreen /></AuthGuard>} />
       <Route path="/post" element={<AuthGuard><PostScreen /></AuthGuard>} />
+      <Route path="/streams" element={<AuthGuard><StreamsScreen /></AuthGuard>} />
+      <Route path="/streams/watch" element={<AuthGuard><StreamWatchScreen /></AuthGuard>} />
       <Route path="/reset-password" element={<ResetPasswordScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

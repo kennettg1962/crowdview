@@ -23,6 +23,7 @@ app.use("/api/friends", require("./routes/friends"));
 app.use("/api/media", require("./routes/media"));
 app.use("/api/devices", require("./routes/devices"));
 app.use("/api/rekognition", require("./routes/rekognition"));
+app.use("/api/stream",     require("./routes/stream"));
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 

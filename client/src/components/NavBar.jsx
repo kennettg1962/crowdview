@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { HomeIcon, FriendsIcon, LibraryIcon, UserProfileIcon } from './Icons';
+import { HomeIcon, FriendsIcon, LibraryIcon, BroadcastIcon, UserProfileIcon } from './Icons';
 
 export default function NavBar() {
   const navigate = useNavigate();
@@ -38,6 +38,16 @@ export default function NavBar() {
       >
         <LibraryIcon className="w-5 h-5" />
         <span>Library</span>
+      </button>
+
+      <button
+        onClick={() => navigate('/streams')}
+        className={`flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors ${
+          location.pathname === '/streams' ? 'text-blue-600 border-t-2 border-blue-600' : 'text-gray-500 hover:text-gray-800'
+        }`}
+      >
+        <BroadcastIcon className="w-5 h-5" />
+        <span>Streams</span>
       </button>
 
       <button

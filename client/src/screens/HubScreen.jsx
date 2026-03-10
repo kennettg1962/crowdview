@@ -35,6 +35,9 @@ export default function HubScreen() {
   const recordedChunksRef = useRef([]);
   const actionRecorderRef = useRef(null);
   const autoConnectAttempted = useRef(false);
+  const pcRef = useRef(null);
+
+  const WHIP_BASE = `${window.location.protocol}//${window.location.hostname}/whip`;
   const [showSource, setShowSource] = useState(false);
   const [showOutlet, setShowOutlet] = useState(false);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
@@ -77,11 +80,12 @@ export default function HubScreen() {
     }
   }, [mediaStream]);
 
-  // If source disconnects: stop any active recordings
+  // If source disconnects: stop any active recordings/streams
   useEffect(() => {
     if (!isStreaming) {
       if (isStreamingOut) {
-        stopCapture(true);
+        pcRef.current?.close();
+        pcRef.current = null;
         setIsStreamingOut(false);
       }
       // Action recorder: stop if still active — onstop handler saves and resets state
@@ -212,16 +216,56 @@ export default function HubScreen() {
     mediaRecorderRef.current = null;
   }
 
-  function handleStream() {
+  async function handleStream() {
     if (!canStream) return;
-    startCapture();
-    // TODO: connect to outlet RTMP API
-    setIsStreamingOut(true);
+    try {
+      // Get (or generate) stream key
+      const keyRes = await api.get('/api/stream/key');
+      const { streamKey } = keyRes.data;
+
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+      });
+      pcRef.current = pc;
+
+      // Add all tracks from the live mediaStream
+      mediaStream.getTracks().forEach(track => pc.addTrack(track, mediaStream));
+
+      // Create WebRTC offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      // Wait for ICE gathering to complete (max 3 s)
+      await new Promise(resolve => {
+        if (pc.iceGatheringState === 'complete') { resolve(); return; }
+        const onchange = () => { if (pc.iceGatheringState === 'complete') resolve(); };
+        pc.addEventListener('icegatheringstatechange', onchange);
+        setTimeout(resolve, 3000);
+      });
+
+      // POST SDP offer to MediaMTX WHIP endpoint
+      const whipUrl = `${WHIP_BASE}/live/${streamKey}`;
+      const res = await fetch(whipUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/sdp' },
+        body: pc.localDescription.sdp,
+      });
+      if (!res.ok) throw new Error(`WHIP error ${res.status}`);
+
+      const answerSdp = await res.text();
+      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
+      setIsStreamingOut(true);
+    } catch (err) {
+      console.error('Stream failed:', err);
+      pcRef.current?.close();
+      pcRef.current = null;
+    }
   }
 
   function handleStopStream() {
-    stopCapture(true);
-    // TODO: disconnect from outlet RTMP API
+    pcRef.current?.close();
+    pcRef.current = null;
     setIsStreamingOut(false);
   }
 
