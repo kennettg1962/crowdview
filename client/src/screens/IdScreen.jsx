@@ -165,13 +165,12 @@ export default function IdScreen() {
         </div>
 
         {photoDataUrl ? (
-          <div className="flex-1 min-h-0 flex items-center justify-center w-full">
-          <div className="relative inline-block max-h-full max-w-full">
+          <div className="flex-1 min-h-0 flex items-center justify-center w-full overflow-hidden">
+          <div className="relative h-full">
             <img
               src={photoDataUrl}
               alt="Captured"
-              className="rounded-xl block max-h-full max-w-full"
-              style={{ maxHeight: '100%' }}
+              className="h-full w-auto max-w-full rounded-xl block"
               draggable={false}
             />
 
