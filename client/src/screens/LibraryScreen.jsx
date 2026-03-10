@@ -282,6 +282,22 @@ export default function LibraryScreen() {
   const singleSelected = selectedIds.size === 1
     ? filteredMedia.find(m => m.User_Media_Id === [...selectedIds][0])
     : null;
+  const singlePhotoSelected = singleSelected?.Media_Type === 'photo' ? singleSelected : null;
+
+  async function handleId() {
+    if (!singlePhotoSelected) return;
+    try {
+      const res = await api.get(`/api/media/${singlePhotoSelected.User_Media_Id}/data`, { responseType: 'blob' });
+      const dataUrl = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(res.data);
+      });
+      navigate('/id', { state: { photoDataUrl: dataUrl } });
+    } catch (err) {
+      console.error('Failed to load photo for Id', err);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
@@ -320,8 +336,15 @@ export default function LibraryScreen() {
           ))}
         </div>
 
-        {/* Center: Post / Square / Export */}
+        {/* Center: Id / Post / Export */}
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+          <button
+            onClick={handleId}
+            disabled={!singlePhotoSelected}
+            className="flex items-center justify-center h-8 w-[110px] whitespace-nowrap bg-gray-500 hover:bg-gray-400 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
+          >
+            Id
+          </button>
           <button
             onClick={() => {
               const selectedItems = filteredMedia.filter(m => selectedIds.has(m.User_Media_Id));
