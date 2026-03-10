@@ -3,9 +3,7 @@ import { useApp } from '../context/AppContext';
 import { XIcon, CheckIcon } from '../components/Icons';
 
 const OUTLETS = [
-  { id: 'instagram', name: 'Instagram Live', icon: '📸', color: 'from-purple-500 to-pink-500' },
-  { id: 'facebook', name: 'Facebook Live', icon: '📘', color: 'from-blue-600 to-blue-700' },
-  { id: 'youtube', name: 'YouTube Live', icon: '▶️', color: 'from-red-500 to-red-700' },
+  { id: 'crowdview', name: 'CrowdView Live', icon: '📡', color: 'from-blue-500 to-blue-700' },
 ];
 
 export default function StreamToPopup({ onClose }) {
