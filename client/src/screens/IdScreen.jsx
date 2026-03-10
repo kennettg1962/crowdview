@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import AppHeader from '../components/AppHeader';
+import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import FriendFormPopup from '../components/FriendFormPopup';
 import { MovieCameraIcon, FriendsIcon, BackIcon } from '../components/Icons';
@@ -241,6 +242,7 @@ export default function IdScreen() {
         )}
       </main>
 
+      <NavBar />
       <TrueFooter />
 
       {showFriendForm && activeFace && (
