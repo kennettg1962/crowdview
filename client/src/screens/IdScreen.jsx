@@ -99,6 +99,7 @@ export default function IdScreen() {
   function buildTooltip(face) {
     const a = face.attributes || {};
     const attrs = [
+      face.friendGroup ? `Group: ${face.friendGroup}` : null,
       a.ageRange   ? `Age: ${a.ageRange}`   : null,
       a.gender     ? a.gender               : null,
       a.emotion    ? a.emotion              : null,

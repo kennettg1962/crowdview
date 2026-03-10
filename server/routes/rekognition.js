@@ -58,6 +58,7 @@ router.post('/identify', auth, async (req, res) => {
       let friendId = null;
       let friendName = null;
       let note = null;
+      let friendGroup = null;
       let faceId = `face_${i + 1}`;
       let status = 'unknown';
       let matchedLabel = 'Unrecognized';
@@ -75,12 +76,13 @@ router.post('/identify', auth, async (req, res) => {
 
           // DB lookup for friend name/note
           const [rows] = await pool.execute(
-            'SELECT Name_Txt, Note_Multi_Line_Txt FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
+            'SELECT Name_Txt, Note_Multi_Line_Txt, Friend_Group FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
             [friendId, userId]
           );
           if (rows.length) {
             friendName = rows[0].Name_Txt;
             note = rows[0].Note_Multi_Line_Txt || null;
+            friendGroup = rows[0].Friend_Group || null;
             status = 'known';
             matchedLabel = `Friend: ${friendName}`;
           }
@@ -113,6 +115,7 @@ router.post('/identify', auth, async (req, res) => {
         status,
         friendId,
         friendName,
+        friendGroup,
         note,
         matchedLabel,
         attributes,
