@@ -129,7 +129,7 @@ export default function IdScreen() {
       />
 
       {/* Main: photo with bounding box overlays */}
-      <main className="flex-1 flex flex-col items-center p-3 gap-2">
+      <main className="flex-1 flex flex-col items-center p-3 gap-2 overflow-hidden min-h-0">
 
         {/* Summary row: Back button left, message centered */}
         <div className="w-full flex items-center">
@@ -163,12 +163,13 @@ export default function IdScreen() {
         </div>
 
         {photoDataUrl ? (
-          <div className="relative inline-block max-w-full">
+          <div className="flex-1 min-h-0 flex items-center justify-center w-full">
+          <div className="relative inline-block max-h-full max-w-full">
             <img
               src={photoDataUrl}
               alt="Captured"
-              className="rounded-xl block max-w-full"
-              style={{ maxHeight: '70vh' }}
+              className="rounded-xl block max-h-full max-w-full"
+              style={{ maxHeight: 'calc(100vh - 220px)' }}
               draggable={false}
             />
 
@@ -246,6 +247,7 @@ export default function IdScreen() {
               );
             })}
 
+          </div>
           </div>
         ) : (
           <div className="text-gray-500 text-center">
