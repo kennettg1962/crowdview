@@ -184,6 +184,17 @@ export default function IdScreen() {
                   }}
                   className="rounded cursor-pointer hover:bg-white/10 transition-colors"
                 >
+                  {/* Name label at bottom of box */}
+                  <span className={`absolute bottom-0 left-0 right-0 text-center text-xs px-1 py-0.5 truncate ${
+                    face.status === 'known'
+                      ? 'bg-green-700/80 text-green-100'
+                      : face.status === 'identified'
+                      ? 'bg-orange-700/80 text-orange-100'
+                      : 'bg-red-700/80 text-red-100'
+                  }`}>
+                    {face.friendName || 'Unknown'}
+                  </span>
+
                   {/* Hover tooltip */}
                   {isHovered && (
                     <div
