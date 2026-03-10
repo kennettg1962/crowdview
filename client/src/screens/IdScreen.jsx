@@ -144,6 +144,8 @@ export default function IdScreen() {
           <div className="flex-1 flex justify-center">
             {!loading && faces.length > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg text-sm flex-wrap justify-center">
+                <span className="text-white font-semibold">Identify Friends</span>
+                <span className="text-gray-600">·</span>
                 <span className="text-gray-300 font-medium">{faces.length} face{faces.length !== 1 ? 's' : ''} found</span>
                 <span className="text-gray-600">·</span>
                 <span className="text-green-400">{faces.filter(f => f.status === 'known').length} friend{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
