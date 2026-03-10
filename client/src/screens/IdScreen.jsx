@@ -129,34 +129,37 @@ export default function IdScreen() {
       />
 
       {/* Main: photo with bounding box overlays */}
-      <main className="flex-1 relative flex items-center justify-center p-3">
-        {/* Back button + face summary */}
-        <div className="absolute top-4 left-4 right-4 z-10 flex items-center gap-3">
+      <main className="flex-1 flex flex-col items-center p-3 gap-2">
+
+        {/* Summary row: Back button left, message centered */}
+        <div className="w-full flex items-center">
           <button
             onClick={() => navigate('/hub')}
-            className="flex items-center gap-1 px-3 py-1.5 bg-gray-800/90 hover:bg-gray-700 text-white rounded-lg text-sm flex-shrink-0"
+            className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm flex-shrink-0"
           >
             <BackIcon className="w-6 h-6" />
             <span>Back</span>
           </button>
 
-          {!loading && faces.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/90 rounded-lg text-xs flex-wrap">
-              <span className="text-gray-300 font-medium">{faces.length} face{faces.length !== 1 ? 's' : ''} found</span>
-              <span className="text-gray-600">·</span>
-              <span className="text-green-400">{faces.filter(f => f.status === 'known').length} friend{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
-              <span className="text-gray-600">·</span>
-              <span className="text-orange-400">{faces.filter(f => f.status === 'identified').length} identified</span>
-              <span className="text-gray-600">·</span>
-              <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
-            </div>
-          )}
+          <div className="flex-1 flex justify-center">
+            {!loading && faces.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg text-xs flex-wrap justify-center">
+                <span className="text-gray-300 font-medium">{faces.length} face{faces.length !== 1 ? 's' : ''} found</span>
+                <span className="text-gray-600">·</span>
+                <span className="text-green-400">{faces.filter(f => f.status === 'known').length} friend{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
+                <span className="text-gray-600">·</span>
+                <span className="text-orange-400">{faces.filter(f => f.status === 'identified').length} identified</span>
+                <span className="text-gray-600">·</span>
+                <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
+              </div>
+            )}
+            {!loading && faces.length === 0 && (
+              <span className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs text-gray-400">No faces detected</span>
+            )}
+          </div>
 
-          {!loading && faces.length === 0 && (
-            <div className="px-3 py-1.5 bg-gray-800/90 rounded-lg text-xs text-gray-400">
-              No faces detected
-            </div>
-          )}
+          {/* Right spacer to balance the Back button */}
+          <div className="flex-shrink-0" style={{ width: '72px' }} />
         </div>
 
         {photoDataUrl ? (
@@ -165,7 +168,7 @@ export default function IdScreen() {
               src={photoDataUrl}
               alt="Captured"
               className="rounded-xl block max-w-full"
-              style={{ maxHeight: '75vh' }}
+              style={{ maxHeight: '70vh' }}
               draggable={false}
             />
 
