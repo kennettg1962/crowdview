@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
+import MenuSlideout from './components/MenuSlideout';
 import SplashScreen from './screens/SplashScreen';
 import HubScreen from './screens/HubScreen';
 import ManageFriendsScreen from './screens/ManageFriendsScreen';
@@ -18,6 +19,8 @@ function AuthGuard({ children }) {
 
 function AppRoutes() {
   return (
+    <>
+    <MenuSlideout />
     <Routes>
       <Route path="/" element={<SplashScreen />} />
       <Route path="/hub" element={<AuthGuard><HubScreen /></AuthGuard>} />
@@ -29,6 +32,7 @@ function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }
 

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
-import MenuSlideout from '../components/MenuSlideout';
 import SelectSourcePopup from './SelectSourcePopup';
 import StreamToPopup from './StreamToPopup';
 import {
@@ -204,8 +203,6 @@ export default function HubScreen() {
 
   return (
     <div className="min-h-screen bg-slate-700 flex flex-col">
-      <MenuSlideout />
-
       {/* Header */}
       <header className="bg-slate-700 px-6 py-3 flex items-center justify-between">
         <button
