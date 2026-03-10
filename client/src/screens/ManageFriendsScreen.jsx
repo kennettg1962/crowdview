@@ -55,6 +55,11 @@ export default function ManageFriendsScreen() {
       reader.readAsDataURL(file);
     });
 
+    // Save to library (non-blocking)
+    const formData = new FormData();
+    formData.append('media', file, file.name || 'photo.jpg');
+    api.post('/api/media', formData).catch(() => {});
+
     navigate('/id', { state: { photoDataUrl: imageDataUrl } });
   }
 
