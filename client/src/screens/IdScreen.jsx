@@ -134,7 +134,7 @@ export default function IdScreen() {
         {/* Summary row: Back button left, message centered */}
         <div className="w-full flex items-center">
           <button
-            onClick={() => navigate('/hub')}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm flex-shrink-0"
           >
             <BackIcon className="w-6 h-6" />
@@ -255,7 +255,7 @@ export default function IdScreen() {
         ) : (
           <div className="text-gray-500 text-center">
             <p>No photo to display</p>
-            <button onClick={() => navigate('/hub')} className="text-blue-400 hover:text-blue-300 mt-2 underline text-sm">
+            <button onClick={() => navigate(-1)} className="text-blue-400 hover:text-blue-300 mt-2 underline text-sm">
               Return to Hub
             </button>
           </div>
