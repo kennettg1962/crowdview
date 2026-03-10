@@ -5,7 +5,6 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import FriendFormPopup from '../components/FriendFormPopup';
-import FacePickerPopup from '../components/FacePickerPopup';
 import { MovieCameraIcon, PlusIcon, DeleteIcon } from '../components/Icons';
 import AuthImage from '../components/AuthImage';
 import api from '../api/api';
@@ -22,9 +21,6 @@ export default function ManageFriendsScreen() {
   const [showForm, setShowForm] = useState(false);
   const [isNew, setIsNew] = useState(false);
   const [deletingFriend, setDeletingFriend] = useState(null);
-  const [identifying, setIdentifying] = useState(false);
-  const [identifyError, setIdentifyError] = useState(null);
-  const [facePickerData, setFacePickerData] = useState(null); // { imageDataUrl, faces }
   const [capturedFaceUrl, setCapturedFaceUrl] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -50,35 +46,16 @@ export default function ManageFriendsScreen() {
 
   async function handleFileSelected(e) {
     const file = e.target.files[0];
-    e.target.value = ''; // reset so same file can be re-selected
+    e.target.value = '';
     if (!file) return;
 
-    // Read as data URL
     const imageDataUrl = await new Promise(resolve => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result);
       reader.readAsDataURL(file);
     });
 
-    setIdentifying(true);
-    setIdentifyError(null);
-    try {
-      const res = await api.post('/api/rekognition/identify', { imageData: imageDataUrl });
-      const faces = res.data.faces || [];
-      setFacePickerData({ imageDataUrl, faces });
-    } catch (err) {
-      setIdentifyError('Face identification failed. Please try again.');
-    } finally {
-      setIdentifying(false);
-    }
-  }
-
-  function handleFaceSelected(croppedDataUrl) {
-    setFacePickerData(null);
-    setCapturedFaceUrl(croppedDataUrl);
-    setSelectedFriend(null);
-    setIsNew(true);
-    setShowForm(true);
+    navigate('/id', { state: { photoDataUrl: imageDataUrl } });
   }
 
   function handleFormClose() {
@@ -242,35 +219,6 @@ export default function ManageFriendsScreen() {
           onSave={loadFriends}
           onDelete={() => { setShowForm(false); setCapturedFaceUrl(null); loadFriends(); }}
         />
-      )}
-
-      {/* Face picker popup */}
-      {facePickerData && (
-        <FacePickerPopup
-          imageDataUrl={facePickerData.imageDataUrl}
-          faces={facePickerData.faces}
-          onSelectFace={handleFaceSelected}
-          onCancel={() => setFacePickerData(null)}
-        />
-      )}
-
-      {/* Identifying spinner */}
-      {identifying && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl p-8 max-w-sm w-full mx-4 shadow-2xl flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400" />
-            <p className="text-white font-medium text-center">Identifying Faces</p>
-            <p className="text-gray-400 text-sm text-center">Scanning your photo...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Identify error toast */}
-      {identifyError && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium z-50">
-          {identifyError}
-          <button onClick={() => setIdentifyError(null)} className="ml-3 underline text-red-200">Dismiss</button>
-        </div>
       )}
 
       {deletingFriend && (
