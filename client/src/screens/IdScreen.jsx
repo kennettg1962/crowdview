@@ -112,7 +112,7 @@ export default function IdScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
       {/* Header */}
       <AppHeader
         left={
@@ -171,7 +171,7 @@ export default function IdScreen() {
               src={photoDataUrl}
               alt="Captured"
               className="rounded-xl block max-h-full max-w-full"
-              style={{ maxHeight: 'calc(100vh - 180px)' }}
+              style={{ maxHeight: '100%' }}
               draggable={false}
             />
 
