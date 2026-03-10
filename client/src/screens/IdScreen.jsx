@@ -130,14 +130,34 @@ export default function IdScreen() {
 
       {/* Main: photo with bounding box overlays */}
       <main className="flex-1 relative flex items-center justify-center p-3">
-        {/* Back button */}
-        <button
-          onClick={() => navigate('/hub')}
-          className="absolute top-4 left-4 z-10 flex items-center gap-1 px-3 py-1.5 bg-gray-800/90 hover:bg-gray-700 text-white rounded-lg text-sm"
-        >
-          <BackIcon className="w-6 h-6" />
-          <span>Back</span>
-        </button>
+        {/* Back button + face summary */}
+        <div className="absolute top-4 left-4 right-4 z-10 flex items-center gap-3">
+          <button
+            onClick={() => navigate('/hub')}
+            className="flex items-center gap-1 px-3 py-1.5 bg-gray-800/90 hover:bg-gray-700 text-white rounded-lg text-sm flex-shrink-0"
+          >
+            <BackIcon className="w-6 h-6" />
+            <span>Back</span>
+          </button>
+
+          {!loading && faces.length > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/90 rounded-lg text-xs flex-wrap">
+              <span className="text-gray-300 font-medium">{faces.length} face{faces.length !== 1 ? 's' : ''} found</span>
+              <span className="text-gray-600">·</span>
+              <span className="text-green-400">{faces.filter(f => f.status === 'known').length} friend{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
+              <span className="text-gray-600">·</span>
+              <span className="text-orange-400">{faces.filter(f => f.status === 'identified').length} identified</span>
+              <span className="text-gray-600">·</span>
+              <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
+            </div>
+          )}
+
+          {!loading && faces.length === 0 && (
+            <div className="px-3 py-1.5 bg-gray-800/90 rounded-lg text-xs text-gray-400">
+              No faces detected
+            </div>
+          )}
+        </div>
 
         {photoDataUrl ? (
           <div className="relative inline-block max-w-full">
@@ -223,14 +243,6 @@ export default function IdScreen() {
               );
             })}
 
-            {/* No faces found message */}
-            {!loading && faces.length === 0 && (
-              <div className="absolute inset-0 flex items-end justify-center pb-4 pointer-events-none">
-                <span className="bg-gray-900/80 text-gray-400 text-sm px-4 py-2 rounded-lg">
-                  No faces detected
-                </span>
-              </div>
-            )}
           </div>
         ) : (
           <div className="text-gray-500 text-center">
