@@ -29,7 +29,7 @@ function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
 
 export default function HubScreen() {
   const navigate = useNavigate();
-  const { isStreaming, mediaStream, currentSource, currentOutlet } = useApp();
+  const { isStreaming, mediaStream, currentSource, setCurrentSource, currentOutlet, startStream } = useApp();
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
