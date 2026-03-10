@@ -166,7 +166,8 @@ export default function IdScreen() {
 
         {photoDataUrl ? (
           <div className="flex-1 min-h-0 flex items-center justify-center w-full overflow-hidden">
-          <div className="relative h-full border-2 border-white rounded-xl overflow-hidden">
+          <div className="h-full bg-white p-3 flex items-center justify-center">
+          <div className="relative h-full overflow-hidden">
             <img
               src={photoDataUrl}
               alt="Captured"
@@ -248,6 +249,7 @@ export default function IdScreen() {
               );
             })}
 
+          </div>
           </div>
           </div>
         ) : (
