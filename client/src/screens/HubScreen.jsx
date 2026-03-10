@@ -34,12 +34,39 @@ export default function HubScreen() {
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const actionRecorderRef = useRef(null);
+  const autoConnectAttempted = useRef(false);
   const [showSource, setShowSource] = useState(false);
   const [showOutlet, setShowOutlet] = useState(false);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
   const [isRecordingAction, setIsRecordingAction] = useState(false);
   const [cameraFlash, setCameraFlash] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'saved' | 'error' | 'toobig'
+
+  // Auto-connect to last used source if flag is set and not already streaming
+  useEffect(() => {
+    if (isStreaming || autoConnectAttempted.current) return;
+    autoConnectAttempted.current = true;
+    (async () => {
+      try {
+        const profile = await api.get('/api/users/profile');
+        const { Connect_Last_Used_Device_After_Login_Fl, Last_Source_Device_Id } = profile.data;
+        if (Connect_Last_Used_Device_After_Login_Fl !== 'Y' || !Last_Source_Device_Id) return;
+        // Request permission then enumerate
+        try { await navigator.mediaDevices.getUserMedia({ video: true }).then(s => s.getTracks().forEach(t => t.stop())); } catch {}
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const device = devices.find(d => d.kind === 'videoinput' && d.deviceId === Last_Source_Device_Id);
+        if (!device) return;
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: device.deviceId } },
+          audio: true,
+        });
+        startStream(stream);
+        setCurrentSource(device);
+      } catch {
+        // Auto-connect failed silently — user can connect manually
+      }
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Attach live stream to video element
   useEffect(() => {

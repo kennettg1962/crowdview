@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { XIcon, CheckIcon } from '../components/Icons';
+import api from '../api/api';
 
 function DeviceList({ devices, selected, onSelect, onConnect, onDisconnect, connected }) {
   return (
@@ -86,6 +87,8 @@ export default function SelectSourcePopup({ onClose }) {
       startStream(stream);
       setConnectedVideo(device);
       setCurrentSource(device);
+      // Persist last used device so auto-connect can restore it
+      api.put('/api/users/profile', { lastSourceDeviceId: device.deviceId }).catch(() => {});
     } catch (err) {
       setError('Could not connect to camera: ' + err.message);
     }
