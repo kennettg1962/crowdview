@@ -37,6 +37,7 @@ export default function HubScreen() {
   const autoConnectAttempted = useRef(false);
   const [showSource, setShowSource] = useState(false);
   const [showOutlet, setShowOutlet] = useState(false);
+  const [liveStreams, setLiveStreams] = useState([]);
   const [isRecordingAction, setIsRecordingAction] = useState(false);
   const [cameraFlash, setCameraFlash] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'saved' | 'error' | 'toobig'
@@ -66,6 +67,16 @@ export default function HubScreen() {
       }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch live friend streams
+  useEffect(() => {
+    const fetchLive = () => {
+      api.get('/api/stream/live').then(r => setLiveStreams(r.data)).catch(() => {});
+    };
+    fetchLive();
+    const id = setInterval(fetchLive, 30000);
+    return () => clearInterval(id);
+  }, []);
 
   // Attach live stream to video element
   useEffect(() => {
@@ -318,7 +329,7 @@ export default function HubScreen() {
           </div>
         </div>
 
-        {/* Right 15%: Stream / Stop Stream */}
+        {/* Right 15%: Stream / Stop Stream + live friends */}
         <div className="w-[15%] bg-slate-700 rounded-r-xl flex flex-col items-center">
           {!isStreamingOut ? (
             <SideButton
@@ -342,6 +353,34 @@ export default function HubScreen() {
                 </span>
               )}
             </>
+          )}
+
+          {/* Live friend streams */}
+          {liveStreams.filter(s => s.Friend_Id).length > 0 && (
+            <div className="mt-3 w-full px-2 flex flex-col items-center gap-2">
+              <span className="text-gray-400 text-xs font-medium">Live</span>
+              {liveStreams.filter(s => s.Friend_Id).map(s => (
+                <button
+                  key={s.Stream_Id}
+                  onClick={() => navigate('/streams/watch', { state: { stream: s, isLive: true } })}
+                  className="flex flex-col items-center gap-1 group"
+                  title={s.Streamer_Name}
+                >
+                  {s.Friend_Photo_Id ? (
+                    <img
+                      src={`/api/friends/${s.Friend_Id}/photos/${s.Friend_Photo_Id}/data`}
+                      alt={s.Streamer_Name}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-red-500 group-hover:border-red-400"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-slate-600 border-2 border-red-500 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">{s.Streamer_Name?.[0] || '?'}</span>
+                    </div>
+                  )}
+                  <span className="text-gray-400 text-xs truncate w-full text-center">{s.Streamer_Name}</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </main>

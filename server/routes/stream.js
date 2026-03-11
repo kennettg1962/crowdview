@@ -99,19 +99,15 @@ router.get('/live', auth, async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt, s.Started_At,
-              u.Name_Txt AS Streamer_Name
+              u.Name_Txt AS Streamer_Name, s.User_Id AS Streamer_User_Id,
+              f.Friend_Id,
+              (SELECT fp2.Friend_Photo_Id FROM Friend_Photo fp2
+                WHERE fp2.Friend_Id = f.Friend_Id LIMIT 1) AS Friend_Photo_Id
          FROM Stream s
          JOIN User u ON u.User_Id = s.User_Id
+         LEFT JOIN Friend f ON f.User_Id = ? AND f.Friend_User_Id = s.User_Id
         WHERE s.Status_Fl = 'live'
-          AND (
-            s.User_Id = ?
-            OR s.User_Id IN (
-              SELECT DISTINCT f.Friend_User_Id
-                FROM Friend f
-               WHERE f.User_Id = ?
-                 AND f.Friend_User_Id IS NOT NULL
-            )
-          )
+          AND (s.User_Id = ? OR f.Friend_Id IS NOT NULL)
         ORDER BY s.Started_At DESC`,
       [req.user.userId, req.user.userId]
     );
