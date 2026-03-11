@@ -30,6 +30,18 @@ router.post('/identify', auth, async (req, res) => {
     const imgH = meta.height;
 
     const userId = req.user.userId;
+
+    // Pre-fetch friend user IDs for friends-of-friends lookup (one level)
+    const [friendUserRows] = await pool.execute(
+      'SELECT Friend_Id, Friend_User_Id, Name_Txt FROM Friend WHERE User_Id = ? AND Friend_User_Id IS NOT NULL',
+      [userId]
+    );
+    // Map: friendUserId → { friendId, name } (user's direct friend who owns that account)
+    const friendUserMap = {};
+    for (const row of friendUserRows) {
+      friendUserMap[row.Friend_User_Id] = { friendId: row.Friend_Id, name: row.Name_Txt };
+    }
+
     const faces = [];
 
     for (let i = 0; i < faceDetails.length; i++) {
@@ -69,12 +81,10 @@ router.post('/identify', auth, async (req, res) => {
 
         // Parse friendId from ExternalImageId: u{userId}_f{friendId}_p{photoId}
         const parts = best.Face.ExternalImageId.split('_');
-        // parts: ['u123', 'f45', 'p67']
         const fPart = parts.find(p => p.startsWith('f'));
         if (fPart) {
           friendId = parseInt(fPart.slice(1), 10);
 
-          // DB lookup for friend name/note
           const [rows] = await pool.execute(
             'SELECT Name_Txt, Note_Multi_Line_Txt, Friend_Group FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
             [friendId, userId]
@@ -86,6 +96,37 @@ router.post('/identify', auth, async (req, res) => {
             status = 'known';
             matchedLabel = `Friend: ${friendName}`;
           }
+        }
+      } else if (Object.keys(friendUserMap).length > 0) {
+        // Friends-of-friends: check if any match belongs to a friend's collection
+        for (const match of matches) {
+          const extId = match.Face.ExternalImageId;
+          const matchedFriendUserId = Object.keys(friendUserMap).find(fuid =>
+            extId.startsWith(`u${fuid}_`)
+          );
+          if (!matchedFriendUserId) continue;
+
+          faceId = match.Face.FaceId;
+          const mutualFriend = friendUserMap[matchedFriendUserId];
+
+          // Look up matched person's name from the friend's own Friend table
+          const parts = extId.split('_');
+          const fPart = parts.find(p => p.startsWith('f'));
+          if (fPart) {
+            const fofFriendId = parseInt(fPart.slice(1), 10);
+            const [fofRows] = await pool.execute(
+              'SELECT Name_Txt, Friend_Group FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
+              [fofFriendId, matchedFriendUserId]
+            );
+            if (fofRows.length) {
+              friendName = fofRows[0].Name_Txt;
+              friendGroup = fofRows[0].Friend_Group || null;
+              status = 'identified';
+              matchedLabel = `Friend of ${mutualFriend.name}: ${friendName}`;
+              note = `Known by ${mutualFriend.name}`;
+            }
+          }
+          break;
         }
       }
 
