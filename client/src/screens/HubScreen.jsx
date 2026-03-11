@@ -37,7 +37,7 @@ export default function HubScreen() {
   const autoConnectAttempted = useRef(false);
   const pcRef = useRef(null);
 
-  const WHIP_BASE = `${window.location.protocol}//${window.location.hostname}/whip`;
+  const WHIP_BASE = `${window.location.protocol}//${window.location.hostname}`;
   const [showSource, setShowSource] = useState(false);
   const [showOutlet, setShowOutlet] = useState(false);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
@@ -244,7 +244,7 @@ export default function HubScreen() {
       });
 
       // POST SDP offer to MediaMTX WHIP endpoint
-      const whipUrl = `${WHIP_BASE}/live/${streamKey}`;
+      const whipUrl = `${WHIP_BASE}/live/${streamKey}/whip`;
       const res = await fetch(whipUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/sdp' },
