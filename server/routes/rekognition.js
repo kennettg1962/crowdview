@@ -62,15 +62,19 @@ router.post('/identify', auth, async (req, res) => {
       // 3. Search collection for this face crop
       const matches = await searchFace(cropBuf);
 
+      const userPrefix = `u${userId}_`;
+      console.log(`[identify] face ${i + 1} — userId=${userId} prefix=${userPrefix}`);
+      console.log(`[identify] all matches:`, JSON.stringify(matches.map(m => ({ id: m.Face.ExternalImageId, sim: m.Similarity }))));
+
       // Own friends: lower threshold (0.62) — always prefer over friends-of-friends
       // Friends-of-friends: higher threshold (0.72) to avoid false positives
-      const userPrefix = `u${userId}_`;
       const userMatches = matches.filter(m =>
         m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 62
       );
       const fofMatches = matches.filter(m =>
         !m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 72
       );
+      console.log(`[identify] userMatches: ${userMatches.length}, fofMatches: ${fofMatches.length}`);
 
       let friendId = null;
       let friendName = null;
