@@ -88,8 +88,11 @@ export function AppProvider({ children }) {
           const transceiver = pc.getTransceivers().find(t => t.sender === sender);
           if (transceiver && RTCRtpSender.getCapabilities) {
             const caps = RTCRtpSender.getCapabilities('video');
-            const h264 = caps?.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
-            if (h264?.length) transceiver.setCodecPreferences(h264);
+            if (caps) {
+              const h264 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/h264');
+              const rest = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/h264');
+              transceiver.setCodecPreferences([...h264, ...rest]);
+            }
           }
         }
       });
