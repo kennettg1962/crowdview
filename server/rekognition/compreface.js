@@ -137,6 +137,7 @@ async function searchFace(buf) {
   const results = data.result?.[0]?.subjects || [];
 
   // Return all candidates above a low floor — the route applies per-context thresholds
+  console.log('[searchFace] raw results:', JSON.stringify(results.map(s => ({ id: s.subject, sim: Math.round(s.similarity * 10000) / 100 }))));
   return results
     .filter(s => s.similarity >= 0.45)
     .map(s => ({
