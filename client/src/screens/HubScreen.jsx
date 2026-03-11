@@ -29,18 +29,14 @@ function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
 
 export default function HubScreen() {
   const navigate = useNavigate();
-  const { isStreaming, mediaStream, currentSource, setCurrentSource, currentOutlet, startStream } = useApp();
+  const { isStreaming, mediaStream, currentSource, setCurrentSource, currentOutlet, startStream, isStreamingOut, startWhipStream, stopWhipStream } = useApp();
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
   const actionRecorderRef = useRef(null);
   const autoConnectAttempted = useRef(false);
-  const pcRef = useRef(null);
-
-  const WHIP_BASE = `${window.location.protocol}//${window.location.hostname}`;
   const [showSource, setShowSource] = useState(false);
   const [showOutlet, setShowOutlet] = useState(false);
-  const [isStreamingOut, setIsStreamingOut] = useState(false);
   const [isRecordingAction, setIsRecordingAction] = useState(false);
   const [cameraFlash, setCameraFlash] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'saved' | 'error' | 'toobig'
@@ -84,9 +80,7 @@ export default function HubScreen() {
   useEffect(() => {
     if (!isStreaming) {
       if (isStreamingOut) {
-        pcRef.current?.close();
-        pcRef.current = null;
-        setIsStreamingOut(false);
+        stopWhipStream();
       }
       // Action recorder: stop if still active — onstop handler saves and resets state
       const actionRecorder = actionRecorderRef.current;
@@ -216,57 +210,13 @@ export default function HubScreen() {
     mediaRecorderRef.current = null;
   }
 
-  async function handleStream() {
+  function handleStream() {
     if (!canStream) return;
-    try {
-      // Get (or generate) stream key
-      const keyRes = await api.get('/api/stream/key');
-      const { streamKey } = keyRes.data;
-
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-      });
-      pcRef.current = pc;
-
-      // Add all tracks from the live mediaStream
-      mediaStream.getTracks().forEach(track => pc.addTrack(track, mediaStream));
-
-      // Create WebRTC offer
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      // Wait for ICE gathering to complete (max 3 s)
-      await new Promise(resolve => {
-        if (pc.iceGatheringState === 'complete') { resolve(); return; }
-        const onchange = () => { if (pc.iceGatheringState === 'complete') resolve(); };
-        pc.addEventListener('icegatheringstatechange', onchange);
-        setTimeout(resolve, 3000);
-      });
-
-      // POST SDP offer to MediaMTX WHIP endpoint
-      const whipUrl = `${WHIP_BASE}/live/${streamKey}/whip`;
-      const res = await fetch(whipUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/sdp' },
-        body: pc.localDescription.sdp,
-      });
-      if (!res.ok) throw new Error(`WHIP error ${res.status}`);
-
-      const answerSdp = await res.text();
-      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
-
-      setIsStreamingOut(true);
-    } catch (err) {
-      console.error('Stream failed:', err);
-      pcRef.current?.close();
-      pcRef.current = null;
-    }
+    startWhipStream(mediaStream);
   }
 
   function handleStopStream() {
-    pcRef.current?.close();
-    pcRef.current = null;
-    setIsStreamingOut(false);
+    stopWhipStream();
   }
 
   const sourceName = currentSource?.label || currentSource?.name || null;

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import api from '../api/api';
 
 const AppContext = createContext(null);
 
@@ -10,6 +11,9 @@ export function AppProvider({ children }) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [mediaStream, setMediaStream] = useState(null);
   const [slideoutOpen, setSlideoutOpen] = useState(false);
+  const [isStreamingOut, setIsStreamingOut] = useState(false);
+  const pcRef = useRef(null);
+  const WHIP_BASE = `${window.location.protocol}//${window.location.hostname}`;
 
   // Restore session from sessionStorage on mount
   useEffect(() => {
@@ -39,6 +43,9 @@ export function AppProvider({ children }) {
     setUser(null);
     setIsAuthenticated(false);
     setIsStreaming(false);
+    pcRef.current?.close();
+    pcRef.current = null;
+    setIsStreamingOut(false);
     if (mediaStream) {
       mediaStream.getTracks().forEach(t => t.stop());
       setMediaStream(null);
@@ -53,11 +60,61 @@ export function AppProvider({ children }) {
   };
 
   const stopStream = () => {
+    // Stop WHIP stream if active
+    pcRef.current?.close();
+    pcRef.current = null;
+    setIsStreamingOut(false);
     if (mediaStream) {
       mediaStream.getTracks().forEach(t => t.stop());
       setMediaStream(null);
     }
     setIsStreaming(false);
+  };
+
+  const startWhipStream = async (stream) => {
+    try {
+      const keyRes = await api.get('/api/stream/key');
+      const { streamKey } = keyRes.data;
+
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+      });
+      pcRef.current = pc;
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      await new Promise(resolve => {
+        if (pc.iceGatheringState === 'complete') { resolve(); return; }
+        const onchange = () => { if (pc.iceGatheringState === 'complete') resolve(); };
+        pc.addEventListener('icegatheringstatechange', onchange);
+        setTimeout(resolve, 3000);
+      });
+
+      const res = await fetch(`${WHIP_BASE}/live/${streamKey}/whip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/sdp' },
+        body: pc.localDescription.sdp,
+      });
+      if (!res.ok) throw new Error(`WHIP error ${res.status}`);
+
+      const answerSdp = await res.text();
+      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+
+      setIsStreamingOut(true);
+    } catch (err) {
+      console.error('Stream failed:', err);
+      pcRef.current?.close();
+      pcRef.current = null;
+    }
+  };
+
+  const stopWhipStream = () => {
+    pcRef.current?.close();
+    pcRef.current = null;
+    setIsStreamingOut(false);
   };
 
   return (
@@ -69,7 +126,8 @@ export function AppProvider({ children }) {
       currentOutlet, setCurrentOutlet,
       isStreaming, startStream, stopStream,
       mediaStream, setMediaStream,
-      slideoutOpen, setSlideoutOpen
+      slideoutOpen, setSlideoutOpen,
+      isStreamingOut, startWhipStream, stopWhipStream
     }}>
       {children}
     </AppContext.Provider>
