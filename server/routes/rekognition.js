@@ -31,16 +31,8 @@ router.post('/identify', auth, async (req, res) => {
 
     const userId = req.user.userId;
 
-    // Pre-fetch friend user IDs for friends-of-friends lookup (one level)
-    const [friendUserRows] = await pool.execute(
-      'SELECT Friend_Id, Friend_User_Id, Name_Txt FROM Friend WHERE User_Id = ? AND Friend_User_Id IS NOT NULL',
-      [userId]
-    );
-    // Map: friendUserId → { friendId, name } (user's direct friend who owns that account)
+    // Friends-of-friends lookup requires Linked_User_Id column on Friend table (not yet added)
     const friendUserMap = {};
-    for (const row of friendUserRows) {
-      friendUserMap[row.Friend_User_Id] = { friendId: row.Friend_Id, name: row.Name_Txt };
-    }
 
     const faces = [];
 
