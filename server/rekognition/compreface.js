@@ -101,7 +101,8 @@ async function detectFaces(buf) {
       AgeRange:   age    ? { Low: Math.max(0, age.low  || age - 5), High: age.high || age + 5 } : null,
       Gender:     gender ? { Value: gender.value?.charAt(0).toUpperCase() + gender.value?.slice(1).toLowerCase() } : null,
       Emotions:   emotion
-        ? Object.entries(emotion)
+        ? Object.entries(emotion.emotion || emotion)
+            .filter(([, v]) => typeof v === 'number')
             .map(([type, confidence]) => ({ Type: type.toUpperCase(), Confidence: confidence * 100 }))
             .sort((a, b) => b.Confidence - a.Confidence)
         : [],
