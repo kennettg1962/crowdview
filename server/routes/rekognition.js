@@ -31,8 +31,15 @@ router.post('/identify', auth, async (req, res) => {
 
     const userId = req.user.userId;
 
-    // Friends-of-friends lookup requires Linked_User_Id column on Friend table (not yet added)
+    // Build friends-of-friends map: { friendUserId -> { name } }
+    const [linkedFriends] = await pool.execute(
+      'SELECT Friend_User_Id, Name_Txt FROM Friend WHERE User_Id = ? AND Friend_User_Id IS NOT NULL',
+      [userId]
+    );
     const friendUserMap = {};
+    for (const row of linkedFriends) {
+      friendUserMap[row.Friend_User_Id] = { name: row.Name_Txt };
+    }
 
     const faces = [];
 

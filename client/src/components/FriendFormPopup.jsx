@@ -19,6 +19,11 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
   const [deleting, setDeleting] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState(null);
   const [pendingPhotoUrl, setPendingPhotoUrl] = useState(null);
+  const [linkEmail, setLinkEmail] = useState('');
+  const [linking, setLinking] = useState(false);
+  const [linkError, setLinkError] = useState(null);
+  const [linkedUserName, setLinkedUserName] = useState(friend?.Linked_User_Name || null);
+  const [linkedUserEmail, setLinkedUserEmail] = useState(friend?.Linked_User_Email || null);
   const fileInputRef = useRef(null);
 
   const isDirty = useRef(false);
@@ -90,6 +95,36 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
       setErrors({ general: err.response?.data?.error || 'Save failed' });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleLink() {
+    if (!linkEmail.trim()) return;
+    setLinking(true);
+    setLinkError(null);
+    try {
+      const res = await api.patch(`/api/friends/${friend.Friend_Id}/link`, { email: linkEmail.trim() });
+      setLinkedUserName(res.data.linkedUserName);
+      setLinkedUserEmail(res.data.linkedUserEmail);
+      setLinkEmail('');
+    } catch (err) {
+      setLinkError(err.response?.data?.error || 'Link failed');
+    } finally {
+      setLinking(false);
+    }
+  }
+
+  async function handleUnlink() {
+    setLinking(true);
+    setLinkError(null);
+    try {
+      await api.patch(`/api/friends/${friend.Friend_Id}/unlink`);
+      setLinkedUserName(null);
+      setLinkedUserEmail(null);
+    } catch (err) {
+      setLinkError(err.response?.data?.error || 'Unlink failed');
+    } finally {
+      setLinking(false);
     }
   }
 
@@ -272,6 +307,47 @@ export default function FriendFormPopup({ friend, capturedPhotoUrl, onClose, onS
             </select>
             {errors.group && <p className="text-red-400 text-xs mt-1">{errors.group}</p>}
           </div>
+
+          {/* CrowdView Account Link — only for existing friends */}
+          {friend?.Friend_Id && (
+            <div>
+              <label className="text-gray-300 text-sm block mb-1">CrowdView Account</label>
+              {linkedUserName ? (
+                <div className="flex items-center justify-between bg-gray-700 rounded-lg px-3 py-2">
+                  <div>
+                    <p className="text-green-400 text-sm font-medium">{linkedUserName}</p>
+                    <p className="text-gray-500 text-xs">{linkedUserEmail}</p>
+                  </div>
+                  <button
+                    onClick={handleUnlink}
+                    disabled={linking}
+                    className="text-xs text-red-400 hover:text-red-300 disabled:opacity-40"
+                  >
+                    Unlink
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={linkEmail}
+                    onChange={e => { setLinkEmail(e.target.value); setLinkError(null); }}
+                    onKeyDown={e => e.key === 'Enter' && handleLink()}
+                    placeholder="Their CrowdView email"
+                    className="flex-1 bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    onClick={handleLink}
+                    disabled={linking || !linkEmail.trim()}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40"
+                  >
+                    {linking ? '...' : 'Link'}
+                  </button>
+                </div>
+              )}
+              {linkError && <p className="text-red-400 text-xs mt-1">{linkError}</p>}
+            </div>
+          )}
 
           {errors.general && <p className="text-red-400 text-sm">{errors.general}</p>}
         </div>

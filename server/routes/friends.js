@@ -14,7 +14,13 @@ const upload = multer({
 router.get('/', auth, async (req, res) => {
   try {
     const { group } = req.query;
-    let query = 'SELECT f.*, (SELECT Photo_Mime_Type FROM Friend_Photo fp WHERE fp.Friend_Id = f.Friend_Id ORDER BY fp.Friend_Photo_Id ASC LIMIT 1) AS Primary_Photo_Mime FROM Friend f WHERE f.User_Id = ?';
+    let query = `SELECT f.*,
+      (SELECT Photo_Mime_Type FROM Friend_Photo fp WHERE fp.Friend_Id = f.Friend_Id ORDER BY fp.Friend_Photo_Id ASC LIMIT 1) AS Primary_Photo_Mime,
+      u2.Name_Txt AS Linked_User_Name,
+      u2.Email   AS Linked_User_Email
+      FROM Friend f
+      LEFT JOIN User u2 ON u2.User_Id = f.Friend_User_Id
+      WHERE f.User_Id = ?`;
     const params = [req.user.userId];
     if (group && group !== 'All') { query += ' AND f.Friend_Group = ?'; params.push(group); }
     query += ' ORDER BY f.Name_Txt ASC';
@@ -178,6 +184,57 @@ router.delete('/:id/photos/:pid', auth, async (req, res) => {
     );
     if (!result.affectedRows) return res.status(404).json({ error: 'Photo not found' });
     res.json({ message: 'Photo deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PATCH /api/friends/:id/link  — link friend to a CrowdView account by email
+router.patch('/:id/link', auth, async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  try {
+    // Verify this friend belongs to the caller
+    const [friends] = await pool.execute(
+      'SELECT Friend_Id FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
+      [req.params.id, req.user.userId]
+    );
+    if (!friends.length) return res.status(404).json({ error: 'Friend not found' });
+
+    // Look up the target user
+    const [users] = await pool.execute(
+      'SELECT User_Id, Name_Txt, Email FROM User WHERE Email = ?',
+      [email.trim().toLowerCase()]
+    );
+    if (!users.length) return res.status(404).json({ error: 'No CrowdView account found for that email' });
+
+    const target = users[0];
+    if (target.User_Id === req.user.userId) {
+      return res.status(400).json({ error: 'You cannot link a friend to your own account' });
+    }
+
+    await pool.execute(
+      'UPDATE Friend SET Friend_User_Id = ? WHERE Friend_Id = ? AND User_Id = ?',
+      [target.User_Id, req.params.id, req.user.userId]
+    );
+
+    res.json({ linkedUserId: target.User_Id, linkedUserName: target.Name_Txt, linkedUserEmail: target.Email });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PATCH /api/friends/:id/unlink  — remove link to CrowdView account
+router.patch('/:id/unlink', auth, async (req, res) => {
+  try {
+    const [result] = await pool.execute(
+      'UPDATE Friend SET Friend_User_Id = NULL WHERE Friend_Id = ? AND User_Id = ?',
+      [req.params.id, req.user.userId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ error: 'Friend not found' });
+    res.json({ message: 'Unlinked' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
