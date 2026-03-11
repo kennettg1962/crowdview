@@ -62,9 +62,15 @@ router.post('/identify', auth, async (req, res) => {
       // 3. Search collection for this face crop
       const matches = await searchFace(cropBuf);
 
-      // Filter matches belonging to this user (ExternalImageId starts with u{userId}_)
+      // Own friends: lower threshold (0.62) — always prefer over friends-of-friends
+      // Friends-of-friends: higher threshold (0.72) to avoid false positives
       const userPrefix = `u${userId}_`;
-      const userMatches = matches.filter(m => m.Face.ExternalImageId.startsWith(userPrefix));
+      const userMatches = matches.filter(m =>
+        m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 62
+      );
+      const fofMatches = matches.filter(m =>
+        !m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 72
+      );
 
       let friendId = null;
       let friendName = null;
@@ -97,8 +103,8 @@ router.post('/identify', auth, async (req, res) => {
           }
         }
       } else if (Object.keys(friendUserMap).length > 0) {
-        // Friends-of-friends: check if any match belongs to a friend's collection
-        for (const match of matches) {
+        // Friends-of-friends: only high-confidence matches not in user's own collection
+        for (const match of fofMatches) {
           const extId = match.Face.ExternalImageId;
           const matchedFriendUserId = Object.keys(friendUserMap).find(fuid =>
             extId.startsWith(`u${fuid}_`)

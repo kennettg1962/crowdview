@@ -124,7 +124,7 @@ async function searchFace(buf) {
   form.append('file', buf, { filename: 'face.jpg', contentType: 'image/jpeg' });
 
   const res = await fetch(
-    `${VERIFY_URL}?limit=5&det_prob_threshold=0.8`,
+    `${VERIFY_URL}?limit=10&det_prob_threshold=0.75`,
     {
       method: 'POST',
       headers: { 'x-api-key': RECOGNIZE_KEY, ...form.getHeaders() },
@@ -136,10 +136,9 @@ async function searchFace(buf) {
   const data = await res.json();
   const results = data.result?.[0]?.subjects || [];
 
-  // Normalise to Rekognition FaceMatches shape
-  // ExternalImageId convention: u{userId}_f{friendId}_p{photoId} (same as rekognition.js)
+  // Return all candidates above a low floor — the route applies per-context thresholds
   return results
-    .filter(s => s.similarity >= 0.7)
+    .filter(s => s.similarity >= 0.55)
     .map(s => ({
       Similarity: s.similarity * 100,
       Face: {
