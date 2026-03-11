@@ -1,6 +1,7 @@
 'use strict';
 
 const fetch = require('node-fetch');
+const sharp = require('sharp');
 
 const BASE_URL       = process.env.COMPREFACE_URL || 'http://localhost:8000';
 const DETECT_KEY     = process.env.COMPREFACE_DETECT_KEY || '';
@@ -59,6 +60,11 @@ async function deleteFaces(faceIds) {
 // detectFaces — detect faces and return Rekognition-compatible structure
 // ---------------------------------------------------------------------------
 async function detectFaces(buf) {
+  // Get actual image dimensions for correct normalization
+  const meta = await sharp(buf).metadata();
+  const imgW = meta.width;
+  const imgH = meta.height;
+
   const form = new (require('form-data'))();
   form.append('file', buf, { filename: 'photo.jpg', contentType: 'image/jpeg' });
 
@@ -79,23 +85,17 @@ async function detectFaces(buf) {
   // Normalise to Rekognition-compatible shape
   return (data.result || []).map(face => {
     const box = face.box; // { x_min, y_min, x_max, y_max, probability }
-    const imgW = box.x_max - box.x_min + (face.img_width  || 1);
-    const imgH = box.y_max - box.y_min + (face.img_height || 1);
-    // CompreFace returns absolute pixel coords; we need them for cropping
-    // Store raw box on _raw for the route to use directly
-    const plugins = face.plugins_versions ? {} : (face.subjects?.[0] || {});
     const age     = face.age;
     const gender  = face.gender;
     const emotion = face.emotion;
 
     return {
       BoundingBox: {
-        Left:   box.x_min  / (face.img_width  || box.x_max),
-        Top:    box.y_min  / (face.img_height || box.y_max),
-        Width:  (box.x_max - box.x_min) / (face.img_width  || box.x_max),
-        Height: (box.y_max - box.y_min) / (face.img_height || box.y_max),
+        Left:   box.x_min / imgW,
+        Top:    box.y_min / imgH,
+        Width:  (box.x_max - box.x_min) / imgW,
+        Height: (box.y_max - box.y_min) / imgH,
       },
-      _rawBox: box, // pixel coords for accurate cropping
       Confidence: (box.probability || 0.9) * 100,
       AgeRange:   age    ? { Low: Math.max(0, age.low  || age - 5), High: age.high || age + 5 } : null,
       Gender:     gender ? { Value: gender.value?.charAt(0).toUpperCase() + gender.value?.slice(1).toLowerCase() } : null,
