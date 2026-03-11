@@ -103,7 +103,17 @@ router.get('/live', auth, async (req, res) => {
          FROM Stream s
          JOIN User u ON u.User_Id = s.User_Id
         WHERE s.Status_Fl = 'live'
-        ORDER BY s.Started_At DESC`
+          AND (
+            s.User_Id = ?
+            OR s.User_Id IN (
+              SELECT DISTINCT f.Friend_User_Id
+                FROM Friend f
+               WHERE f.User_Id = ?
+                 AND f.Friend_User_Id IS NOT NULL
+            )
+          )
+        ORDER BY s.Started_At DESC`,
+      [req.user.userId, req.user.userId]
     );
     res.json(rows);
   } catch (err) {
@@ -123,8 +133,18 @@ router.get('/past', auth, async (req, res) => {
          FROM Stream s
          JOIN User u ON u.User_Id = s.User_Id
         WHERE s.Status_Fl = 'ended'
+          AND (
+            s.User_Id = ?
+            OR s.User_Id IN (
+              SELECT DISTINCT f.Friend_User_Id
+                FROM Friend f
+               WHERE f.User_Id = ?
+                 AND f.Friend_User_Id IS NOT NULL
+            )
+          )
         ORDER BY s.Started_At DESC
-        LIMIT 100`
+        LIMIT 100`,
+      [req.user.userId, req.user.userId]
     );
 
     // Attach recording file URLs for each past stream
