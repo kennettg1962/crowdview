@@ -9,7 +9,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
 const mysql = require('mysql2/promise');
-const { indexFace, ensureCollection } = require('./client');
+const { indexFace, ensureCollection } = require('.');
 
 (async () => {
   const pool = await mysql.createPool({
