@@ -103,6 +103,7 @@ export default function IdScreen() {
       a.ageRange   ? `Age: ${a.ageRange}`   : null,
       a.gender     ? a.gender               : null,
       a.emotion    ? a.emotion              : null,
+      a.mask       ? 'Wearing mask'         : null,
       a.eyeglasses ? 'Eyeglasses'           : null,
       a.sunglasses ? 'Sunglasses'           : null,
       a.beard      ? 'Beard'                : null,

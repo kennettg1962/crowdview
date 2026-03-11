@@ -69,7 +69,7 @@ async function detectFaces(buf) {
   form.append('file', buf, { filename: 'photo.jpg', contentType: 'image/jpeg' });
 
   const res = await fetch(
-    `${DETECT_URL}?face_plugins=age,gender,emotion,landmarks`,
+    `${DETECT_URL}?face_plugins=age,gender,emotion,mask`,
     {
       method: 'POST',
       headers: { 'x-api-key': DETECT_KEY, ...form.getHeaders() },
@@ -88,6 +88,7 @@ async function detectFaces(buf) {
     const age     = face.age;
     const gender  = face.gender;
     const emotion = face.emotion;
+    const mask    = face.mask;
 
     return {
       BoundingBox: {
@@ -104,6 +105,7 @@ async function detectFaces(buf) {
             .map(([type, confidence]) => ({ Type: type.toUpperCase(), Confidence: confidence * 100 }))
             .sort((a, b) => b.Confidence - a.Confidence)
         : [],
+      Mask:        mask ? { Value: mask.value === true, Confidence: (mask.probability || 0) * 100 } : null,
       Smile:       { Value: false },
       Eyeglasses:  { Value: false },
       Sunglasses:  { Value: false },

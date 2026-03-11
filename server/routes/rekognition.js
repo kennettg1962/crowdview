@@ -130,6 +130,7 @@ router.post('/identify', auth, async (req, res) => {
         ageRange: detail.AgeRange ? `${detail.AgeRange.Low}–${detail.AgeRange.High}` : null,
         gender:   detail.Gender?.Value || null,
         emotion:  topEmotion?.Type ? topEmotion.Type.charAt(0) + topEmotion.Type.slice(1).toLowerCase() : null,
+        mask:       detail.Mask?.Value || false,
         smile:      detail.Smile?.Value || false,
         eyeglasses: detail.Eyeglasses?.Value || false,
         sunglasses: detail.Sunglasses?.Value || false,
