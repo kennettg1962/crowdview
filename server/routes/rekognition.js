@@ -41,10 +41,10 @@ router.post('/identify', auth, async (req, res) => {
       friendUserMap[row.Friend_User_Id] = { name: row.Name_Txt };
     }
 
-    const faces = [];
+    const userPrefix = `u${userId}_`;
 
-    for (let i = 0; i < faceDetails.length; i++) {
-      const detail = faceDetails[i];
+    // Crop all faces and search CompreFace in parallel
+    const faces = await Promise.all(faceDetails.map(async (detail, i) => {
       const bb = detail.BoundingBox; // left, top, width, height — all normalized 0-1
 
       // 2. Crop face region with 15% padding
@@ -62,17 +62,14 @@ router.post('/identify', auth, async (req, res) => {
       // 3. Search collection for this face crop
       const matches = await searchFace(cropBuf);
 
-      const userPrefix = `u${userId}_`;
       console.log(`[identify] face ${i + 1} — userId=${userId} prefix=${userPrefix}`);
       console.log(`[identify] all matches:`, JSON.stringify(matches.map(m => ({ id: m.Face.ExternalImageId, sim: m.Similarity }))));
 
-      // Own friends: lower threshold (0.62) — always prefer over friends-of-friends
-      // Friends-of-friends: higher threshold (0.72) to avoid false positives
       const userMatches = matches.filter(m =>
-        m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 62
+        m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 55
       );
       const fofMatches = matches.filter(m =>
-        !m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 72
+        !m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 65
       );
       console.log(`[identify] userMatches: ${userMatches.length}, fofMatches: ${fofMatches.length}`);
 
@@ -154,7 +151,7 @@ router.post('/identify', auth, async (req, res) => {
         beard:      detail.Beard?.Value || false,
       };
 
-      faces.push({
+      return {
         faceId,
         boundingBox: {
           left:   bb.Left,
@@ -170,8 +167,8 @@ router.post('/identify', auth, async (req, res) => {
         note,
         matchedLabel,
         attributes,
-      });
-    }
+      };
+    }));
 
     res.json({
       jobId: `job_${Date.now()}`,

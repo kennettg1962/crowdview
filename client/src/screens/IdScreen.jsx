@@ -5,6 +5,7 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import FriendFormPopup from '../components/FriendFormPopup';
+import AddPhotoToFriendPopup from '../components/AddPhotoToFriendPopup';
 import { MovieCameraIcon, FriendsIcon, BackIcon } from '../components/Icons';
 import useVoiceCommands from '../hooks/useVoiceCommands';
 import api from '../api/api';
@@ -46,6 +47,8 @@ export default function IdScreen() {
   const [showFriendForm, setShowFriendForm] = useState(false);
   const [activeFace, setActiveFace] = useState(null);
   const [activeFaceCrop, setActiveFaceCrop] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, face, index }
+  const [showAddPhotoPopup, setShowAddPhotoPopup] = useState(null); // { face, faceCrop }
   const photoDataUrl = location.state?.photoDataUrl;
 
   const handlePrev = useCallback(() => {
@@ -94,6 +97,20 @@ export default function IdScreen() {
   function handleFaceClick(face, index) {
     setSelectedFaceIndex(index);
     openFaceForm(face);
+  }
+
+  async function handleFaceRightClick(e, face, index) {
+    if (face.status !== 'unknown') return;
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, face, index });
+  }
+
+  async function handleAddPhotoToFriend() {
+    const { face } = contextMenu;
+    setContextMenu(null);
+    const cropped = await cropFace(photoDataUrl, face.boundingBox);
+    setShowAddPhotoPopup({ face, faceCrop: cropped });
   }
 
   function buildTooltip(face) {
@@ -199,7 +216,8 @@ export default function IdScreen() {
                   key={face.faceId || i}
                   onMouseEnter={() => setHoveredFaceIndex(i)}
                   onMouseLeave={() => setHoveredFaceIndex(null)}
-                  onClick={() => handleFaceClick(face, i)}
+                  onClick={() => { setContextMenu(null); handleFaceClick(face, i); }}
+                  onContextMenu={e => handleFaceRightClick(e, face, i)}
                   title={face.friendName || 'Unknown — click to add as friend'}
                   style={{
                     position: 'absolute',
@@ -243,7 +261,7 @@ export default function IdScreen() {
                         <p key={j} className="text-gray-300">{attr}</p>
                       ))}
                       <p className="text-gray-500 mt-1 italic">
-                        {face.status === 'known' ? 'Click to view / edit' : 'Click to add as friend'}
+                        {face.status === 'known' ? 'Click to view / edit' : face.status === 'unknown' ? 'Click to add · Right-click to assign to existing friend' : 'Click to view'}
                       </p>
                     </div>
                   )}
@@ -266,6 +284,39 @@ export default function IdScreen() {
 
       <NavBar />
       <TrueFooter />
+
+      {/* Right-click context menu */}
+      {contextMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
+          <div
+            className="fixed z-50 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl py-1 min-w-max"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+          >
+            <button
+              onClick={handleAddPhotoToFriend}
+              className="w-full px-4 py-2 text-sm text-white hover:bg-gray-700 text-left"
+            >
+              Add photo to existing friend
+            </button>
+          </div>
+        </>
+      )}
+
+      {showAddPhotoPopup && (
+        <AddPhotoToFriendPopup
+          faceCrop={showAddPhotoPopup.faceCrop}
+          onClose={() => setShowAddPhotoPopup(null)}
+          onSave={(saved) => {
+            const face = showAddPhotoPopup.face;
+            setFaces(prev => prev.map(f =>
+              f.faceId === face.faceId
+                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId, friendGroup: saved.group }
+                : f
+            ));
+          }}
+        />
+      )}
 
       {showFriendForm && activeFace && (
         <FriendFormPopup
