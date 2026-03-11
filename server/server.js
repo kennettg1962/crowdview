@@ -28,7 +28,7 @@ app.use("/api/stream",     require("./routes/stream"));
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
 // Ensure Rekognition collection exists at startup (non-fatal if AWS not configured)
-require("./rekognition/client").ensureCollection().catch(console.error);
+require("./rekognition").ensureCollection().catch(console.error);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`CrowdView API running on port ${PORT}`));

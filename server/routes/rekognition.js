@@ -5,7 +5,7 @@ const router = express.Router();
 const sharp = require('sharp');
 const pool = require('../db/connection');
 const auth = require('../middleware/auth');
-const { detectFaces, searchFace } = require('../rekognition/client');
+const { detectFaces, searchFace } = require('../rekognition');
 
 // POST /api/rekognition/identify
 router.post('/identify', auth, async (req, res) => {

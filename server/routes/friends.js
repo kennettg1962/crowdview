@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const pool = require('../db/connection');
 const auth = require('../middleware/auth');
-const { indexFace, deleteFaces } = require('../rekognition/client');
+const { indexFace, deleteFaces } = require('../rekognition');
 
 const upload = multer({
   storage: multer.memoryStorage(),
