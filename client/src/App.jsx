@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import MenuSlideout from './components/MenuSlideout';
+import GlobalVoiceCommands from './components/GlobalVoiceCommands';
 import SplashScreen from './screens/SplashScreen';
 import HubScreen from './screens/HubScreen';
 import ManageFriendsScreen from './screens/ManageFriendsScreen';
@@ -23,6 +24,7 @@ function AppRoutes() {
   return (
     <>
     <MenuSlideout />
+    <GlobalVoiceCommands />
     <Routes>
       <Route path="/" element={<SplashScreen />} />
       <Route path="/hub" element={<AuthGuard><HubScreen /></AuthGuard>} />
