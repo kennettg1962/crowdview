@@ -66,10 +66,10 @@ router.post('/identify', auth, async (req, res) => {
       console.log(`[identify] all matches:`, JSON.stringify(matches.map(m => ({ id: m.Face.ExternalImageId, sim: m.Similarity }))));
 
       const userMatches = matches.filter(m =>
-        m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 55
+        m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 62
       );
       const fofMatches = matches.filter(m =>
-        !m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 65
+        !m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 72
       );
       console.log(`[identify] userMatches: ${userMatches.length}, fofMatches: ${fofMatches.length}`);
 
