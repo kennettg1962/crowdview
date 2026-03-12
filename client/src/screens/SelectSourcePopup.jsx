@@ -61,13 +61,16 @@ export default function SelectSourcePopup({ onClose }) {
 
   async function enumerateDevices() {
     try {
-      // Request permission first
-      await navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(s => s.getTracks().forEach(t => t.stop()));
-    } catch {
-      // Permission may not be granted
-    }
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
+      let devices = await navigator.mediaDevices.enumerateDevices();
+      // If labels are missing, request video permission to unlock them
+      if (!devices.some(d => d.label)) {
+        try {
+          await navigator.mediaDevices.getUserMedia({ video: true }).then(s => s.getTracks().forEach(t => t.stop()));
+          devices = await navigator.mediaDevices.enumerateDevices();
+        } catch {
+          // Permission denied — show unlabelled devices
+        }
+      }
       setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
       setAudioInputDevices(devices.filter(d => d.kind === 'audioinput'));
       setAudioOutputDevices(devices.filter(d => d.kind === 'audiooutput'));
