@@ -259,15 +259,7 @@ export default function HubScreen() {
       {/* Select Source / Select Outlet row */}
       <div className="bg-slate-700 px-4 pb-3 flex items-center justify-center gap-2 flex-wrap">
         <button
-          onClick={async () => {
-            // Pre-request mic permission here (user gesture context) so audio devices
-            // appear with labels in SelectSourcePopup. Chrome blocks mic without a gesture.
-            try {
-              const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-              s.getTracks().forEach(t => t.stop());
-            } catch { /* mic unavailable or denied — popup will handle it */ }
-            setShowSource(true);
-          }}
+          onClick={() => setShowSource(true)}
           className="flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm font-medium transition-colors border border-slate-500"
         >
           <SelectSourceIcon className="w-4 h-4" />
