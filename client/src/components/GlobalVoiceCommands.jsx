@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 export default function GlobalVoiceCommands() {
-  const { mediaStream } = useApp();
+  const { mediaStream, isAuthenticated } = useApp();
   const navigate = useNavigate();
   const mediaStreamRef = useRef(mediaStream);
   const activeRef = useRef(true);
@@ -13,6 +13,7 @@ export default function GlobalVoiceCommands() {
   }, [mediaStream]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
@@ -43,7 +44,6 @@ export default function GlobalVoiceCommands() {
           canvas.height = video.videoHeight;
           canvas.getContext('2d').drawImage(video, 0, 0);
           video.pause();
-          video.srcObject = null;
           const dataUrl = canvas.toDataURL('image/jpeg');
           navigate('/id', { state: { photoDataUrl: dataUrl } });
         };
@@ -70,7 +70,7 @@ export default function GlobalVoiceCommands() {
       activeRef.current = false;
       try { recognition.stop(); } catch { /* already stopped */ }
     };
-  }, [navigate]);
+  }, [navigate, isAuthenticated]);
 
   return null;
 }
