@@ -124,7 +124,7 @@ async function searchFace(buf) {
   form.append('file', buf, { filename: 'face.jpg', contentType: 'image/jpeg' });
 
   const res = await fetch(
-    `${VERIFY_URL}?limit=0&prediction_count=20&det_prob_threshold=0.75`,
+    `${VERIFY_URL}?limit=1&prediction_count=20&det_prob_threshold=0.75`,
     {
       method: 'POST',
       headers: { 'x-api-key': RECOGNIZE_KEY, ...form.getHeaders() },
@@ -137,7 +137,6 @@ async function searchFace(buf) {
   const results = data.result?.[0]?.subjects || [];
 
   // Return all candidates above a low floor — the route applies per-context thresholds
-  console.log('[searchFace] raw results:', JSON.stringify(results.map(s => ({ id: s.subject, sim: Math.round(s.similarity * 10000) / 100 }))));
   return results
     .filter(s => s.similarity >= 0.45)
     .map(s => ({
