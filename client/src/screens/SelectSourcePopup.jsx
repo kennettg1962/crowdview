@@ -194,8 +194,10 @@ export default function SelectSourcePopup({ onClose }) {
                     try {
                       const s = await navigator.mediaDevices.getUserMedia({ audio: true });
                       s.getTracks().forEach(t => t.stop());
-                    } catch { /* denied */ }
-                    await enumerateDevices();
+                      await enumerateDevices();
+                    } catch (err) {
+                      setError('Microphone access denied: ' + err.message);
+                    }
                   }}
                   className="py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm"
                 >
