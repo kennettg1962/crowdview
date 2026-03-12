@@ -188,7 +188,12 @@ export default function ManageFriendsScreen() {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm font-medium truncate">{friend.Name_Txt}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-white text-sm font-medium truncate">{friend.Name_Txt}</p>
+                              {friend.Linked_User_Name && (
+                                <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded bg-blue-600/30 text-blue-400 border border-blue-600/40">linked</span>
+                              )}
+                            </div>
                             {friend.Note_Multi_Line_Txt && (
                               <p className="text-gray-500 text-xs truncate">{friend.Note_Multi_Line_Txt}</p>
                             )}
