@@ -44,7 +44,8 @@ export default function SplashScreen() {
       if (connectLastDevice === 'Y' && lastSourceDeviceId) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: { exact: lastSourceDeviceId } }
+            video: { deviceId: { exact: lastSourceDeviceId } },
+            audio: true,
           });
           startStream(stream);
           // Enumerate to get the device object (needed for source badge + SelectSource checkmark)

@@ -61,16 +61,19 @@ export default function SelectSourcePopup({ onClose }) {
 
   async function enumerateDevices() {
     try {
-      // Camera permission must be granted to get stable video device IDs.
-      // Web Speech API grants audio-only permission — labels appear but video IDs
-      // remain anonymized, causing getUserMedia({ exact }) to fail.
-      // Use the Permissions API to check; only request camera if not yet granted.
-      const perm = await navigator.permissions.query({ name: 'camera' }).catch(() => null);
-      if (!perm || perm.state !== 'granted') {
+      // Need both camera and microphone permissions to get stable device IDs and labels.
+      // Check each independently so we only request what's not yet granted.
+      const [camPerm, micPerm] = await Promise.all([
+        navigator.permissions.query({ name: 'camera' }).catch(() => null),
+        navigator.permissions.query({ name: 'microphone' }).catch(() => null),
+      ]);
+      const needCam = !camPerm || camPerm.state !== 'granted';
+      const needMic = !micPerm || micPerm.state !== 'granted';
+      if (needCam || needMic) {
         try {
-          const s = await navigator.mediaDevices.getUserMedia({ video: true });
+          const s = await navigator.mediaDevices.getUserMedia({ video: needCam, audio: needMic });
           s.getTracks().forEach(t => t.stop());
-        } catch { /* permission denied — proceed with whatever IDs are available */ }
+        } catch { /* permission denied — proceed with whatever is available */ }
       }
       const devices = await navigator.mediaDevices.enumerateDevices();
       setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
