@@ -93,10 +93,19 @@ export default function SelectSourcePopup({ onClose }) {
     if (!device) return;
     try {
       if (mediaStream) stopStream();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: device.deviceId } },
-        audio: connectedAudioIn ? { deviceId: { exact: connectedAudioIn.deviceId } } : true
-      });
+      const audioConstraint = connectedAudioIn ? { deviceId: { exact: connectedAudioIn.deviceId } } : true;
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: device.deviceId } },
+          audio: audioConstraint,
+        });
+      } catch {
+        // Audio may be blocked (OS mic permissions) — connect video-only
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: device.deviceId } },
+        });
+      }
       startStream(stream);
       setConnectedVideo(device);
       setCurrentSource(device);

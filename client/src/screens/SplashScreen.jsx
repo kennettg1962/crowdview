@@ -43,10 +43,18 @@ export default function SplashScreen() {
       // If flag is set, try to reconnect the last used video device
       if (connectLastDevice === 'Y' && lastSourceDeviceId) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: { exact: lastSourceDeviceId } },
-            audio: true,
-          });
+          let stream;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { deviceId: { exact: lastSourceDeviceId } },
+              audio: true,
+            });
+          } catch {
+            // Mic may be blocked at OS level — connect video-only
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { deviceId: { exact: lastSourceDeviceId } },
+            });
+          }
           startStream(stream);
           // Enumerate to get the device object (needed for source badge + SelectSource checkmark)
           const devices = await navigator.mediaDevices.enumerateDevices();
