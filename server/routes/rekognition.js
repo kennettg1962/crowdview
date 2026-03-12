@@ -151,6 +151,8 @@ router.post('/identify', auth, async (req, res) => {
         beard:      detail.Beard?.Value || false,
       };
 
+      console.log(`[identify] face ${i + 1} result — status=${status} name=${friendName || 'unknown'} attrs=${JSON.stringify(attributes)}`);
+
       return {
         faceId,
         boundingBox: {
