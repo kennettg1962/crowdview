@@ -61,20 +61,25 @@ export default function SelectSourcePopup({ onClose }) {
 
   async function enumerateDevices() {
     try {
-      // Need both camera and microphone permissions to get stable device IDs and labels.
-      // Check each independently so we only request what's not yet granted.
-      const [camPerm, micPerm] = await Promise.all([
-        navigator.permissions.query({ name: 'camera' }).catch(() => null),
-        navigator.permissions.query({ name: 'microphone' }).catch(() => null),
-      ]);
-      const needCam = !camPerm || camPerm.state !== 'granted';
-      const needMic = !micPerm || micPerm.state !== 'granted';
-      if (needCam || needMic) {
+      // Chrome only returns stable device IDs for types where permission is actively held.
+      // If a live stream is already open we already have that permission; otherwise request it.
+      // Video and audio are requested in separate calls so one failure doesn't block the other.
+      const hasLiveVideo = mediaStream?.getVideoTracks().some(t => t.readyState === 'live');
+      const hasLiveAudio = mediaStream?.getAudioTracks().some(t => t.readyState === 'live');
+
+      if (!hasLiveVideo) {
         try {
-          const s = await navigator.mediaDevices.getUserMedia({ video: needCam, audio: needMic });
+          const s = await navigator.mediaDevices.getUserMedia({ video: true });
           s.getTracks().forEach(t => t.stop());
-        } catch { /* permission denied — proceed with whatever is available */ }
+        } catch { /* camera denied */ }
       }
+      if (!hasLiveAudio) {
+        try {
+          const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+          s.getTracks().forEach(t => t.stop());
+        } catch { /* mic denied or in use */ }
+      }
+
       const devices = await navigator.mediaDevices.enumerateDevices();
       setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
       setAudioInputDevices(devices.filter(d => d.kind === 'audioinput'));
