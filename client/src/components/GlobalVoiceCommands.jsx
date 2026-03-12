@@ -21,7 +21,23 @@ export default function GlobalVoiceCommands() {
     recognition.continuous = true;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
-    activeRef.current = true;
+
+    const startRecognition = () => {
+      activeRef.current = true;
+      try { recognition.start(); } catch (err) {
+        console.warn('[GlobalVoice] Could not start:', err);
+      }
+    };
+
+    // Chrome requires a user gesture before speech recognition is permitted.
+    // Wait for the first interaction on the page before starting.
+    const onFirstInteraction = () => {
+      document.removeEventListener('click', onFirstInteraction);
+      document.removeEventListener('keydown', onFirstInteraction);
+      startRecognition();
+    };
+    document.addEventListener('click', onFirstInteraction);
+    document.addEventListener('keydown', onFirstInteraction);
 
     recognition.onresult = (event) => {
       const last = event.results[event.results.length - 1];
@@ -67,12 +83,10 @@ export default function GlobalVoiceCommands() {
       }
     };
 
-    try { recognition.start(); } catch (err) {
-      console.warn('[GlobalVoice] Could not start:', err);
-    }
-
     return () => {
       activeRef.current = false;
+      document.removeEventListener('click', onFirstInteraction);
+      document.removeEventListener('keydown', onFirstInteraction);
       try { recognition.stop(); } catch { /* already stopped */ }
     };
   }, [navigate, isAuthenticated]);
