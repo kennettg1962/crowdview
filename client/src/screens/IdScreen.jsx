@@ -42,6 +42,7 @@ export default function IdScreen() {
   const location = useLocation();
   const [faces, setFaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [identifyError, setIdentifyError] = useState(null);
   const [selectedFaceIndex, setSelectedFaceIndex] = useState(0);
   const [hoveredFaceIndex, setHoveredFaceIndex] = useState(null);
   const [showFriendForm, setShowFriendForm] = useState(false);
@@ -76,12 +77,15 @@ export default function IdScreen() {
 
   async function identifyFaces() {
     setLoading(true);
+    setIdentifyError(null);
     try {
       const res = await api.post('/api/rekognition/identify', { imageData: photoDataUrl });
       setFaces(res.data.faces || []);
     } catch (err) {
       console.error('Identification failed', err);
       setFaces([]);
+      const status = err.response?.status;
+      setIdentifyError(status === 500 ? 'Server error — identification failed. Please try again.' : 'Identification failed. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -174,7 +178,13 @@ export default function IdScreen() {
                 <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
               </div>
             )}
-            {!loading && faces.length === 0 && (
+            {!loading && identifyError && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-red-900/50 border border-red-700 rounded-lg">
+                <span className="text-sm text-red-400">{identifyError}</span>
+                <button onClick={identifyFaces} className="text-sm text-white bg-red-700 hover:bg-red-600 px-2 py-0.5 rounded">Retry</button>
+              </div>
+            )}
+            {!loading && !identifyError && faces.length === 0 && (
               <span className="px-3 py-1.5 bg-gray-800 rounded-lg text-sm text-gray-400">No faces detected</span>
             )}
           </div>
