@@ -124,10 +124,26 @@ export default function SelectSourcePopup({ onClose }) {
 
   async function handleConnectAudioIn(device) {
     if (!device) return;
-    setConnectedAudioIn(device);
+    try {
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: { exact: device.deviceId } },
+      });
+      const [audioTrack] = audioStream.getAudioTracks();
+      if (audioTrack && mediaStream) {
+        // Replace any existing audio tracks on the live stream
+        mediaStream.getAudioTracks().forEach(t => { t.stop(); mediaStream.removeTrack(t); });
+        mediaStream.addTrack(audioTrack);
+      }
+      setConnectedAudioIn(device);
+    } catch (err) {
+      setError('Could not connect microphone: ' + err.message);
+    }
   }
 
   function handleDisconnectAudioIn() {
+    if (mediaStream) {
+      mediaStream.getAudioTracks().forEach(t => { t.stop(); mediaStream.removeTrack(t); });
+    }
     setConnectedAudioIn(null);
   }
 
