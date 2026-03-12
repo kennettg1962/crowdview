@@ -203,7 +203,13 @@ export default function IdScreen() {
             )}
 
             {/* Face bounding box overlays */}
-            {!loading && faces.map((face, i) => {
+            {!loading && (() => {
+              let unknownCount = 0;
+              const unknownLabels = faces.reduce((acc, f, i) => {
+                if (f.status === 'unknown') acc[i] = ++unknownCount;
+                return acc;
+              }, {});
+              return faces.map((face, i) => {
               const { left, top, width, height } = face.boundingBox;
               const color = STATUS_COLORS[face.status]?.border || '#ffffff';
               const isHovered = hoveredFaceIndex === i;
@@ -239,7 +245,7 @@ export default function IdScreen() {
                       ? 'bg-orange-700/80 text-orange-100'
                       : 'bg-red-700/80 text-red-100'
                   }`}>
-                    {face.friendName || 'Unknown'}
+                    {face.friendName || `Unknown ${unknownLabels[i]}`}
                   </span>
 
                   {/* Hover tooltip */}
@@ -255,7 +261,7 @@ export default function IdScreen() {
                         className="font-semibold mb-1"
                         style={{ color }}
                       >
-                        {face.friendName || 'Unknown'}
+                        {face.friendName || `Unknown ${unknownLabels[i]}`}
                       </p>
                       {tooltipAttrs.map((attr, j) => (
                         <p key={j} className="text-gray-300">{attr}</p>
@@ -267,7 +273,8 @@ export default function IdScreen() {
                   )}
                 </button>
               );
-            })}
+            });
+            })()}
 
           </div>
           </div>
