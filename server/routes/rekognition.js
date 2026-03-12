@@ -66,7 +66,7 @@ router.post('/identify', auth, async (req, res) => {
       console.log(`[identify] all matches:`, JSON.stringify(matches.map(m => ({ id: m.Face.ExternalImageId, sim: m.Similarity }))));
 
       const userMatches = matches.filter(m =>
-        m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 62
+        m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 70
       );
       const fofMatches = matches.filter(m =>
         !m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 72
