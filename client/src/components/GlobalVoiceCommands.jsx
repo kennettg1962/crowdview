@@ -6,7 +6,8 @@ export default function GlobalVoiceCommands() {
   const { mediaStream, isAuthenticated } = useApp();
   const navigate = useNavigate();
   const mediaStreamRef = useRef(mediaStream);
-  const activeRef = useRef(true);
+  const activeRef = useRef(false);
+  const retryTimerRef = useRef(null);
 
   useEffect(() => {
     mediaStreamRef.current = mediaStream;
@@ -68,8 +69,12 @@ export default function GlobalVoiceCommands() {
 
     recognition.onerror = (event) => {
       if (event.error === 'not-allowed') {
-        // Microphone permission denied — stop trying to restart
-        activeRef.current = false;
+        // Mic not yet granted — retry after a delay (will succeed once permission is given)
+        retryTimerRef.current = setTimeout(() => {
+          if (activeRef.current) {
+            try { recognition.start(); } catch { /* already started */ }
+          }
+        }, 5000);
         return;
       }
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
@@ -85,6 +90,7 @@ export default function GlobalVoiceCommands() {
 
     return () => {
       activeRef.current = false;
+      clearTimeout(retryTimerRef.current);
       document.removeEventListener('click', onFirstInteraction);
       document.removeEventListener('keydown', onFirstInteraction);
       try { recognition.stop(); } catch { /* already stopped */ }

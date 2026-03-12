@@ -186,14 +186,32 @@ export default function SelectSourcePopup({ onClose }) {
           {/* Voice/Audio Inputs */}
           <div>
             <h3 className="text-blue-400 font-medium text-sm mb-2 uppercase tracking-wide">Voice Sources</h3>
-            <DeviceList
-              devices={audioInputDevices}
-              selected={selectedAudioIn}
-              onSelect={setSelectedAudioIn}
-              onConnect={handleConnectAudioIn}
-              onDisconnect={handleDisconnectAudioIn}
-              connected={connectedAudioIn}
-            />
+            {audioInputDevices.length === 0 ? (
+              <div className="bg-gray-900 rounded-lg p-3 flex flex-col gap-2">
+                <p className="text-gray-500 text-sm">Microphone access required to list devices.</p>
+                <button
+                  onClick={async () => {
+                    try {
+                      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+                      s.getTracks().forEach(t => t.stop());
+                    } catch { /* denied */ }
+                    await enumerateDevices();
+                  }}
+                  className="py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm"
+                >
+                  Grant Microphone Access
+                </button>
+              </div>
+            ) : (
+              <DeviceList
+                devices={audioInputDevices}
+                selected={selectedAudioIn}
+                onSelect={setSelectedAudioIn}
+                onConnect={handleConnectAudioIn}
+                onDisconnect={handleDisconnectAudioIn}
+                connected={connectedAudioIn}
+              />
+            )}
           </div>
 
           {/* Audio Outputs */}
