@@ -51,6 +51,11 @@ export default function GlobalVoiceCommands() {
     };
 
     recognition.onerror = (event) => {
+      if (event.error === 'not-allowed') {
+        // Microphone permission denied — stop trying to restart
+        activeRef.current = false;
+        return;
+      }
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
         console.warn('[GlobalVoice] Error:', event.error);
       }

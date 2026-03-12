@@ -8,7 +8,7 @@ const inputClass = "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm
 const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
 export default function SplashScreen() {
-  const { login, isAuthenticated, startStream } = useApp();
+  const { login, isAuthenticated, startStream, setCurrentSource } = useApp();
   const navigate = useNavigate();
   const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot'
   const [email, setEmail] = useState('');
@@ -47,6 +47,10 @@ export default function SplashScreen() {
             video: { deviceId: { exact: lastSourceDeviceId } }
           });
           startStream(stream);
+          // Enumerate to get the device object (needed for source badge + SelectSource checkmark)
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const device = devices.find(d => d.kind === 'videoinput' && d.deviceId === lastSourceDeviceId);
+          if (device) setCurrentSource(device);
         } catch {
           // device unavailable or permission denied — proceed without stream
         }
