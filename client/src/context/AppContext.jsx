@@ -7,6 +7,7 @@ export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentSource, setCurrentSource] = useState(null);
+  const [currentAudioIn, setCurrentAudioIn] = useState(null);
   const [currentOutlet, setCurrentOutlet] = useState(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [mediaStream, setMediaStream] = useState(null);
@@ -51,6 +52,7 @@ export function AppProvider({ children }) {
       setMediaStream(null);
     }
     setCurrentSource(null);
+    setCurrentAudioIn(null);
     setCurrentOutlet(null);
   };
 
@@ -137,6 +139,7 @@ export function AppProvider({ children }) {
       isAuthenticated,
       login, logout,
       currentSource, setCurrentSource,
+      currentAudioIn, setCurrentAudioIn,
       currentOutlet, setCurrentOutlet,
       isStreaming, startStream, stopStream,
       mediaStream, setMediaStream,

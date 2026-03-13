@@ -43,7 +43,7 @@ function DeviceList({ devices, selected, onSelect, onConnect, onDisconnect, conn
 }
 
 export default function SelectSourcePopup({ onClose }) {
-  const { currentSource, setCurrentSource, startStream, stopStream, mediaStream } = useApp();
+  const { currentSource, setCurrentSource, currentAudioIn, setCurrentAudioIn, startStream, stopStream, mediaStream } = useApp();
   const [videoDevices, setVideoDevices] = useState([]);
   const [audioInputDevices, setAudioInputDevices] = useState([]);
   const [audioOutputDevices, setAudioOutputDevices] = useState([]);
@@ -51,7 +51,7 @@ export default function SelectSourcePopup({ onClose }) {
   const [selectedAudioIn, setSelectedAudioIn] = useState(null);
   const [selectedAudioOut, setSelectedAudioOut] = useState(null);
   const [connectedVideo, setConnectedVideo] = useState(currentSource);
-  const [connectedAudioIn, setConnectedAudioIn] = useState(null);
+  const [connectedAudioIn, setConnectedAudioIn] = useState(currentAudioIn);
   const [connectedAudioOut, setConnectedAudioOut] = useState(null);
   const [error, setError] = useState('');
 
@@ -135,6 +135,7 @@ export default function SelectSourcePopup({ onClose }) {
         mediaStream.addTrack(audioTrack);
       }
       setConnectedAudioIn(device);
+      setCurrentAudioIn(device);
     } catch (err) {
       setError('Could not connect microphone: ' + err.message);
     }
@@ -145,6 +146,7 @@ export default function SelectSourcePopup({ onClose }) {
       mediaStream.getAudioTracks().forEach(t => { t.stop(); mediaStream.removeTrack(t); });
     }
     setConnectedAudioIn(null);
+    setCurrentAudioIn(null);
   }
 
   function handleConnectAudioOut(device) {
