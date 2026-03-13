@@ -89,12 +89,12 @@ export default function HubScreen() {
     return () => clearInterval(id);
   }, []);
 
-  // Attach live stream to video element — also runs on mount to restore after navigation
+  // Attach live stream to video element
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.srcObject = mediaStream ?? null;
     }
-  }); // no deps — runs every render to ensure srcObject stays in sync
+  }, [mediaStream]);
 
   // If source disconnects: stop any active recordings/streams
   useEffect(() => {

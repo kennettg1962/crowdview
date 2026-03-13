@@ -61,23 +61,23 @@ export default function SelectSourcePopup({ onClose }) {
 
   async function enumerateDevices() {
     try {
-      // Chrome only returns stable device IDs for types where permission is actively held.
-      // If a live stream is already open we already have that permission; otherwise request it.
-      // Video and audio are requested in separate calls so one failure doesn't block the other.
+      // Pass 1: enumerate immediately so the popup is never blank
+      const snap = await navigator.mediaDevices.enumerateDevices();
+      setVideoDevices(snap.filter(d => d.kind === 'videoinput'));
+      setAudioInputDevices(snap.filter(d => d.kind === 'audioinput'));
+      setAudioOutputDevices(snap.filter(d => d.kind === 'audiooutput'));
+
+      // Pass 2: request any missing permissions (with timeout) then re-enumerate
+      // for stable device IDs and labels.
       const hasLiveVideo = mediaStream?.getVideoTracks().some(t => t.readyState === 'live');
       const hasLiveAudio = mediaStream?.getAudioTracks().some(t => t.readyState === 'live');
+      const race = (p) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 4000))]);
 
       if (!hasLiveVideo) {
-        try {
-          const s = await navigator.mediaDevices.getUserMedia({ video: true });
-          s.getTracks().forEach(t => t.stop());
-        } catch { /* camera denied */ }
+        try { const s = await race(navigator.mediaDevices.getUserMedia({ video: true })); s.getTracks().forEach(t => t.stop()); } catch { /* denied/timeout */ }
       }
       if (!hasLiveAudio) {
-        try {
-          const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-          s.getTracks().forEach(t => t.stop());
-        } catch { /* mic denied or in use */ }
+        try { const s = await race(navigator.mediaDevices.getUserMedia({ audio: true })); s.getTracks().forEach(t => t.stop()); } catch { /* denied/timeout */ }
       }
 
       const devices = await navigator.mediaDevices.enumerateDevices();
