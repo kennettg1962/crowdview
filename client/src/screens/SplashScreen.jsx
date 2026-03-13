@@ -45,12 +45,18 @@ export default function SplashScreen() {
         try {
           let stream;
           try {
-            stream = await navigator.mediaDevices.getUserMedia({
+            // Race audio request against a 4s timeout — a hanging permission
+            // prompt (no user gesture) can otherwise block for 30+ seconds
+            const videoAudio = navigator.mediaDevices.getUserMedia({
               video: { deviceId: { exact: lastSourceDeviceId } },
               audio: true,
             });
+            const timeout = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('timeout')), 4000)
+            );
+            stream = await Promise.race([videoAudio, timeout]);
           } catch {
-            // Mic may be blocked at OS level — connect video-only
+            // Mic blocked, denied, or timed out — connect video-only
             stream = await navigator.mediaDevices.getUserMedia({
               video: { deviceId: { exact: lastSourceDeviceId } },
             });

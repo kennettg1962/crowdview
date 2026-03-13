@@ -56,10 +56,21 @@ export default function HubScreen() {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const device = devices.find(d => d.kind === 'videoinput' && d.deviceId === Last_Source_Device_Id);
         if (!device) return;
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: device.deviceId } },
-          audio: true,
-        });
+        let stream;
+        try {
+          const videoAudio = navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: device.deviceId } },
+            audio: true,
+          });
+          const timeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), 4000)
+          );
+          stream = await Promise.race([videoAudio, timeout]);
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: device.deviceId } },
+          });
+        }
         startStream(stream);
         setCurrentSource(device);
       } catch {
@@ -78,14 +89,12 @@ export default function HubScreen() {
     return () => clearInterval(id);
   }, []);
 
-  // Attach live stream to video element
+  // Attach live stream to video element — also runs on mount to restore after navigation
   useEffect(() => {
-    if (videoRef.current && mediaStream) {
-      videoRef.current.srcObject = mediaStream;
-    } else if (videoRef.current && !mediaStream) {
-      videoRef.current.srcObject = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = mediaStream ?? null;
     }
-  }, [mediaStream]);
+  }); // no deps — runs every render to ensure srcObject stays in sync
 
   // If source disconnects: stop any active recordings/streams
   useEffect(() => {
