@@ -174,12 +174,7 @@ export default function HubScreen() {
     canvas.height = videoRef.current.videoHeight || 480;
     canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
     const dataUrl = canvas.toDataURL('image/jpeg');
-    // Save to library (non-blocking)
-    canvas.toBlob(blob => {
-      const formData = new FormData();
-      formData.append('media', blob, 'photo.jpg');
-      api.post('/api/media', formData).catch(console.error);
-    }, 'image/jpeg');
+    // IdScreen.identifyFaces() saves to library — no need to save here
     navigate('/id', { state: { photoDataUrl: dataUrl } });
   }, [mediaStream, navigate]);
 

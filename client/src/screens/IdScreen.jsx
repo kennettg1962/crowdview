@@ -40,6 +40,7 @@ function cropFace(photoDataUrl, box) {
 export default function IdScreen() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setVoicePaused } = useApp();
   const [faces, setFaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [identifyError, setIdentifyError] = useState(null);
@@ -71,6 +72,12 @@ export default function IdScreen() {
     commands: { prev: handlePrev, next: handleNext, show: handleShow }
   });
 
+  // Pause GlobalVoiceCommands while this screen runs its own useVoiceCommands
+  useEffect(() => {
+    setVoicePaused(true);
+    return () => setVoicePaused(false);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (photoDataUrl) identifyFaces();
   }, [photoDataUrl]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -78,6 +85,12 @@ export default function IdScreen() {
   async function identifyFaces() {
     setLoading(true);
     setIdentifyError(null);
+    // Save photo to library (fire-and-forget, all capture paths go through here)
+    fetch(photoDataUrl).then(r => r.blob()).then(blob => {
+      const fd = new FormData();
+      fd.append('media', blob, 'photo.jpg');
+      api.post('/api/media', fd).catch(() => {});
+    }).catch(() => {});
     try {
       const res = await api.post('/api/rekognition/identify', { imageData: photoDataUrl });
       setFaces(res.data.faces || []);
