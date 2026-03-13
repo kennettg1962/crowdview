@@ -12,6 +12,7 @@ export function AppProvider({ children }) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [mediaStream, setMediaStream] = useState(null);
   const [slideoutOpen, setSlideoutOpen] = useState(false);
+  const [voicePaused, setVoicePaused] = useState(false);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
   const pcRef = useRef(null);
   const WHIP_BASE = `${window.location.protocol}//${window.location.hostname}`;
@@ -144,6 +145,7 @@ export function AppProvider({ children }) {
       isStreaming, startStream, stopStream,
       mediaStream, setMediaStream,
       slideoutOpen, setSlideoutOpen,
+      voicePaused, setVoicePaused,
       isStreamingOut, startWhipStream, stopWhipStream
     }}>
       {children}

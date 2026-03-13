@@ -3,15 +3,27 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 export default function GlobalVoiceCommands() {
-  const { mediaStream, isAuthenticated } = useApp();
+  const { mediaStream, isAuthenticated, voicePaused } = useApp();
   const navigate = useNavigate();
   const mediaStreamRef = useRef(mediaStream);
   const activeRef = useRef(false);
   const retryTimerRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const voicePausedRef = useRef(voicePaused);
 
   useEffect(() => {
     mediaStreamRef.current = mediaStream;
   }, [mediaStream]);
+
+  // Pause/resume recognition when voicePaused changes
+  useEffect(() => {
+    voicePausedRef.current = voicePaused;
+    if (voicePaused) {
+      try { recognitionRef.current?.stop(); } catch {}
+    } else if (activeRef.current) {
+      try { recognitionRef.current?.start(); } catch {}
+    }
+  }, [voicePaused]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -22,8 +34,10 @@ export default function GlobalVoiceCommands() {
     recognition.continuous = true;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
+    recognitionRef.current = recognition;
 
     const startRecognition = () => {
+      if (voicePausedRef.current) return;
       activeRef.current = true;
       try { recognition.start(); } catch (err) {
         console.warn('[GlobalVoice] Could not start:', err);
@@ -31,7 +45,6 @@ export default function GlobalVoiceCommands() {
     };
 
     // Chrome requires a user gesture before speech recognition is permitted.
-    // Wait for the first interaction on the page before starting.
     const onFirstInteraction = () => {
       document.removeEventListener('click', onFirstInteraction);
       document.removeEventListener('keydown', onFirstInteraction);
@@ -48,9 +61,8 @@ export default function GlobalVoiceCommands() {
 
       if (transcript === 'scan' || transcript.includes('scan faces')) {
         const stream = mediaStreamRef.current;
-        if (!stream) return; // no active camera — ignore
+        if (!stream) return;
 
-        // Capture frame from live stream via off-screen video element
         const video = document.createElement('video');
         video.srcObject = stream;
         video.muted = true;
@@ -70,9 +82,8 @@ export default function GlobalVoiceCommands() {
 
     recognition.onerror = (event) => {
       if (event.error === 'not-allowed') {
-        // Mic not yet granted — retry after a delay (will succeed once permission is given)
         retryTimerRef.current = setTimeout(() => {
-          if (activeRef.current) {
+          if (activeRef.current && !voicePausedRef.current) {
             try { recognition.start(); } catch { /* already started */ }
           }
         }, 5000);
@@ -84,13 +95,14 @@ export default function GlobalVoiceCommands() {
     };
 
     recognition.onend = () => {
-      if (activeRef.current) {
+      if (activeRef.current && !voicePausedRef.current) {
         try { recognition.start(); } catch { /* already started */ }
       }
     };
 
     return () => {
       activeRef.current = false;
+      recognitionRef.current = null;
       clearTimeout(retryTimerRef.current);
       document.removeEventListener('click', onFirstInteraction);
       document.removeEventListener('keydown', onFirstInteraction);

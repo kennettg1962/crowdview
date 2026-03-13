@@ -43,7 +43,7 @@ function DeviceList({ devices, selected, onSelect, onConnect, onDisconnect, conn
 }
 
 export default function SelectSourcePopup({ onClose }) {
-  const { currentSource, setCurrentSource, currentAudioIn, setCurrentAudioIn, startStream, stopStream, mediaStream } = useApp();
+  const { currentSource, setCurrentSource, currentAudioIn, setCurrentAudioIn, startStream, stopStream, mediaStream, setVoicePaused } = useApp();
   const [videoDevices, setVideoDevices] = useState([]);
   const [audioInputDevices, setAudioInputDevices] = useState([]);
   const [audioOutputDevices, setAudioOutputDevices] = useState([]);
@@ -56,8 +56,11 @@ export default function SelectSourcePopup({ onClose }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    // Pause SpeechRecognition so it doesn't hold the mic while we're managing devices
+    setVoicePaused(true);
     enumerateDevices();
-  }, []);
+    return () => setVoicePaused(false);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function enumerateDevices() {
     try {
