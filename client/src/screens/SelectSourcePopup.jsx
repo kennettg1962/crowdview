@@ -196,7 +196,10 @@ export default function SelectSourcePopup({ onClose }) {
                       s.getTracks().forEach(t => t.stop());
                       await enumerateDevices();
                     } catch (err) {
-                      setError('Microphone access denied: ' + err.message);
+                      const isNotFound = err.name === 'NotFoundError' || err.message.includes('not found');
+                      setError(isNotFound
+                        ? 'No microphone found. On macOS, go to System Settings → Privacy & Security → Microphone and enable access for your browser.'
+                        : 'Microphone access denied: ' + err.message);
                     }
                   }}
                   className="py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm"
