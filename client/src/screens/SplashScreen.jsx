@@ -43,24 +43,10 @@ export default function SplashScreen() {
       // If flag is set, try to reconnect the last used video device
       if (connectLastDevice === 'Y' && lastSourceDeviceId) {
         try {
-          let stream;
-          try {
-            // Race audio request against a 4s timeout — a hanging permission
-            // prompt (no user gesture) can otherwise block for 30+ seconds
-            const videoAudio = navigator.mediaDevices.getUserMedia({
-              video: { deviceId: { exact: lastSourceDeviceId } },
-              audio: true,
-            });
-            const timeout = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('timeout')), 4000)
-            );
-            stream = await Promise.race([videoAudio, timeout]);
-          } catch {
-            // Mic blocked, denied, or timed out — connect video-only
-            stream = await navigator.mediaDevices.getUserMedia({
-              video: { deviceId: { exact: lastSourceDeviceId } },
-            });
-          }
+          // Auto-connect video-only — mic can be added via Select Source
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: lastSourceDeviceId } },
+          });
           startStream(stream);
           // Enumerate to get the device object (needed for source badge + SelectSource checkmark)
           const devices = await navigator.mediaDevices.enumerateDevices();

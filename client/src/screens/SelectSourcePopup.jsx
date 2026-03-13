@@ -61,25 +61,6 @@ export default function SelectSourcePopup({ onClose }) {
 
   async function enumerateDevices() {
     try {
-      // Pass 1: enumerate immediately so the popup is never blank
-      const snap = await navigator.mediaDevices.enumerateDevices();
-      setVideoDevices(snap.filter(d => d.kind === 'videoinput'));
-      setAudioInputDevices(snap.filter(d => d.kind === 'audioinput'));
-      setAudioOutputDevices(snap.filter(d => d.kind === 'audiooutput'));
-
-      // Pass 2: request any missing permissions (with timeout) then re-enumerate
-      // for stable device IDs and labels.
-      const hasLiveVideo = mediaStream?.getVideoTracks().some(t => t.readyState === 'live');
-      const hasLiveAudio = mediaStream?.getAudioTracks().some(t => t.readyState === 'live');
-      const race = (p) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 4000))]);
-
-      if (!hasLiveVideo) {
-        try { const s = await race(navigator.mediaDevices.getUserMedia({ video: true })); s.getTracks().forEach(t => t.stop()); } catch { /* denied/timeout */ }
-      }
-      if (!hasLiveAudio) {
-        try { const s = await race(navigator.mediaDevices.getUserMedia({ audio: true })); s.getTracks().forEach(t => t.stop()); } catch { /* denied/timeout */ }
-      }
-
       const devices = await navigator.mediaDevices.enumerateDevices();
       setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
       setAudioInputDevices(devices.filter(d => d.kind === 'audioinput'));
@@ -125,8 +106,9 @@ export default function SelectSourcePopup({ onClose }) {
   async function handleConnectAudioIn(device) {
     if (!device) return;
     try {
+      // Use ideal (not exact) so empty/anonymised device IDs don't cause NotFoundError
       const audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: { exact: device.deviceId } },
+        audio: device.deviceId ? { deviceId: { ideal: device.deviceId } } : true,
       });
       const [audioTrack] = audioStream.getAudioTracks();
       if (audioTrack && mediaStream) {
@@ -136,6 +118,8 @@ export default function SelectSourcePopup({ onClose }) {
       }
       setConnectedAudioIn(device);
       setCurrentAudioIn(device);
+      // Re-enumerate now that mic permission is granted — real labels/IDs will appear
+      await enumerateDevices();
     } catch (err) {
       setError('Could not connect microphone: ' + err.message);
     }
@@ -198,10 +182,11 @@ export default function SelectSourcePopup({ onClose }) {
                       s.getTracks().forEach(t => t.stop());
                       await enumerateDevices();
                     } catch (err) {
-                      const isNotFound = err.name === 'NotFoundError' || err.message.includes('not found');
-                      setError(isNotFound
-                        ? 'No microphone found. On macOS, go to System Settings → Privacy & Security → Microphone and enable access for your browser.'
-                        : 'Microphone access denied: ' + err.message);
+                      setError(
+                        err.name === 'NotFoundError'
+                          ? 'No microphone found. Check System Settings → Privacy & Security → Microphone and ensure your browser is enabled.'
+                          : 'Microphone access denied: ' + err.message
+                      );
                     }
                   }}
                   className="py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm"
