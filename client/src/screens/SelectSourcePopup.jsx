@@ -182,11 +182,13 @@ export default function SelectSourcePopup({ onClose }) {
                       s.getTracks().forEach(t => t.stop());
                       await enumerateDevices();
                     } catch (err) {
-                      setError(
-                        err.name === 'NotFoundError'
-                          ? 'No microphone found. Check System Settings → Privacy & Security → Microphone and ensure your browser is enabled.'
-                          : 'Microphone access denied: ' + err.message
-                      );
+                      if (err.name === 'NotFoundError') {
+                        setError('macOS is blocking microphone access. Go to System Settings → Privacy & Security → Microphone, find Google Chrome, toggle it OFF then ON, then quit and reopen Chrome.');
+                      } else if (err.name === 'NotAllowedError') {
+                        setError('Microphone permission denied. Click the lock icon in the Chrome address bar and set Microphone to Allow.');
+                      } else {
+                        setError('Microphone error (' + err.name + '): ' + err.message);
+                      }
                     }
                   }}
                   className="py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm"
