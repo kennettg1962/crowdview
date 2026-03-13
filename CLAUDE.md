@@ -164,3 +164,18 @@ Three GitHub repository secrets must be set for this to work: `SSH_PRIVATE_KEY`,
 - `server/.env` (gitignored — contains DB credentials and JWT secret)
 - `node_modules/` (gitignored in both `server/` and `client/`)
 - `client/dist/` (Vite build output, gitignored)
+
+## Requirements Tracking
+
+After every prompt, update the appropriate file in `docs/requirements/`:
+
+- `docs/requirements/user-requirements.md` — log what was asked for, with timestamp and category
+- `docs/requirements/business-requirements.md` — update if the prompt reveals a business rule, constraint, compliance need, or stakeholder goal
+- `docs/requirements/process-flow-requirements.md` — update with screen descriptions (fields, text, buttons), transitions between screens, interface data on transitions. Order by screen. Must be detailed enough to create a wireframe.
+- `docs/requirements/system-requirements.md` — update if a technical decision, data contract, or system behaviour is established or changed
+
+**Rules:**
+- A single prompt may update more than one file
+- Business, process-flow, and system requirements are **durable specs** — rewrite/merge entries rather than appending
+- Check for consistency across files and between files and code; flag conflicts with a ⚠ comment for the user to resolve
+- `user-requirements.md` is a log (append-only with timestamps); the other three are living specs (merge/rewrite)

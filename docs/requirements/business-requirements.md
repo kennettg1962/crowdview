@@ -1,0 +1,63 @@
+# Business Requirements
+
+Living specification. Entries are merged/rewritten as requirements evolve. Last updated: 2026-03-13.
+
+---
+
+## 1. Product Vision
+
+CrowdView is a real-time crowd face-identification and live-streaming web application. The core value proposition is: point your camera at a crowd, identify who is there, and share the moment live with your social network.
+
+---
+
+## 2. User Goals
+
+| ID | Goal |
+|----|------|
+| BG-01 | Identify known friends and contacts from a live or captured camera feed in real time. |
+| BG-02 | Stream live video to friends and followers via the CrowdView platform. |
+| BG-03 | Build and maintain a personal contacts database (friends list) with photos. |
+| BG-04 | Store and review captured photos and video clips in a personal library. |
+| BG-05 | Use voice commands hands-free while viewing a crowd. |
+| BG-06 | Share captured moments to external social platforms (Facebook, Instagram, YouTube, TikTok). |
+
+---
+
+## 3. Business Rules
+
+| ID | Rule |
+|----|------|
+| BR-01 | All data (friends, media, streams) is scoped to the authenticated user. A user may never access another user's data through the API. |
+| BR-02 | Face identification uses a tiered trust model: the user's own friends match at ≥70% similarity; friends-of-friends (linked CrowdView accounts) match at ≥72% similarity. |
+| BR-03 | Face status values are: `known` (friend in the user's own list), `identified` (friend-of-friend via linked account), `unknown` (no match). |
+| BR-04 | A user may link a friend record to another CrowdView account by email. This enables friends-of-friends identification. A user cannot link a friend to their own account. |
+| BR-05 | The media library retains only the 20 most recent items per user. Older items are automatically pruned on upload. |
+| BR-06 | Video clips have a 50 MB upload size limit. |
+| BR-07 | Fresh photo captures (Id button, Camera button, voice scan command) are saved to the user's library. Re-viewing an existing library photo on the ID screen does not create a duplicate. |
+| BR-08 | The "Connect Last Used Device on Login" preference is per-user and stored server-side. When enabled, the app automatically attempts to reconnect the last-used video device on login. |
+| BR-09 | Stream keys are unique per user (UUID). Only MediaMTX webhook endpoints bypass authentication; all other API endpoints require a valid JWT. |
+| BR-10 | Live stream visibility: a user sees their own live stream and live streams from friends whose CrowdView accounts are linked. |
+| BR-11 | Password reset links expire after a fixed period (implementation-defined; currently stored as `Password_Reset_Expires` in DB). |
+
+---
+
+## 4. Stakeholder Goals
+
+| ID | Stakeholder | Goal |
+|----|-------------|------|
+| SG-01 | Owner/Developer | Ship a working MVP suitable for personal and small-group use. |
+| SG-02 | Owner/Developer | All user data is private by default; no cross-user data leakage. |
+| SG-03 | Owner/Developer | System must operate on a single VPS (crowdview.tv) with minimal infrastructure cost. |
+| SG-04 | End User | The app must be usable hands-free via voice commands when the user's hands are occupied. |
+| SG-05 | End User | Device reconnection on login must be fast (< 5 seconds for video). |
+
+---
+
+## 5. Compliance & Constraints
+
+| ID | Constraint |
+|----|------------|
+| BC-01 | Microphone and camera access requires explicit browser permission (HTTPS required in production). macOS additionally requires system-level permission grants separate from browser permissions. |
+| BC-02 | Face recognition data (Rekognition Face IDs) is stored in the DB and must be cleaned up when a friend photo is deleted. |
+| BC-03 | Social platform tokens (Facebook, Instagram, YouTube, TikTok) are stored per user but the posting feature is currently a stub — no actual OAuth or API integration is implemented. ⚠ Confirm whether social posting is in scope for MVP. |
+| BC-04 | The production site runs at `https://crowdview.tv` (and `www.`). Both must be whitelisted in CORS and Vite preview allowedHosts. |
