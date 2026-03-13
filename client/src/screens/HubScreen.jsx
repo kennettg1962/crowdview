@@ -174,8 +174,7 @@ export default function HubScreen() {
     canvas.height = videoRef.current.videoHeight || 480;
     canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
     const dataUrl = canvas.toDataURL('image/jpeg');
-    // IdScreen.identifyFaces() saves to library — no need to save here
-    navigate('/id', { state: { photoDataUrl: dataUrl } });
+    navigate('/id', { state: { photoDataUrl: dataUrl, saveToLibrary: true } });
   }, [mediaStream, navigate]);
 
   function startCapture() {

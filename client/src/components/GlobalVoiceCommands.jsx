@@ -75,7 +75,7 @@ export default function GlobalVoiceCommands() {
           canvas.getContext('2d').drawImage(video, 0, 0);
           video.pause();
           const dataUrl = canvas.toDataURL('image/jpeg');
-          navigate('/id', { state: { photoDataUrl: dataUrl } });
+          navigate('/id', { state: { photoDataUrl: dataUrl, saveToLibrary: true } });
         };
       }
     };

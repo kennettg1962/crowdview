@@ -52,6 +52,7 @@ export default function IdScreen() {
   const [contextMenu, setContextMenu] = useState(null); // { x, y, face, index }
   const [showAddPhotoPopup, setShowAddPhotoPopup] = useState(null); // { face, faceCrop }
   const photoDataUrl = location.state?.photoDataUrl;
+  const saveToLibrary = location.state?.saveToLibrary ?? false;
 
   const handlePrev = useCallback(() => {
     setSelectedFaceIndex(i => Math.max(0, i - 1));
@@ -85,12 +86,14 @@ export default function IdScreen() {
   async function identifyFaces() {
     setLoading(true);
     setIdentifyError(null);
-    // Save photo to library (fire-and-forget, all capture paths go through here)
-    fetch(photoDataUrl).then(r => r.blob()).then(blob => {
-      const fd = new FormData();
-      fd.append('media', blob, 'photo.jpg');
-      api.post('/api/media', fd).catch(() => {});
-    }).catch(() => {});
+    // Save photo to library only for fresh captures (not when re-viewing from Library)
+    if (saveToLibrary) {
+      fetch(photoDataUrl).then(r => r.blob()).then(blob => {
+        const fd = new FormData();
+        fd.append('media', blob, 'photo.jpg');
+        api.post('/api/media', fd).catch(() => {});
+      }).catch(() => {});
+    }
     try {
       const res = await api.post('/api/rekognition/identify', { imageData: photoDataUrl });
       setFaces(res.data.faces || []);
