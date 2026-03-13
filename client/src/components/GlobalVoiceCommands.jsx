@@ -44,6 +44,7 @@ export default function GlobalVoiceCommands() {
       const last = event.results[event.results.length - 1];
       if (!last.isFinal) return;
       const transcript = last[0].transcript.trim().toLowerCase();
+      console.log('[GlobalVoice] heard:', transcript);
 
       if (transcript === 'scan' || transcript.includes('scan faces')) {
         const stream = mediaStreamRef.current;
