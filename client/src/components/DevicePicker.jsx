@@ -14,9 +14,21 @@ export default function DevicePicker({ icon: Icon, kind, current, placeholder, o
   async function handleToggle() {
     if (disabled) return;
     if (!open) {
-      const all = await navigator.mediaDevices.enumerateDevices();
-      // Only show devices with real labels (permission already granted)
-      setDevices(all.filter(d => d.kind === kind && d.deviceId && d.label));
+      let all = await navigator.mediaDevices.enumerateDevices();
+      let filtered = all.filter(d => d.kind === kind && d.deviceId && d.label);
+
+      // Mic: if no labeled devices, permission hasn't been exercised this session.
+      // This click IS a user gesture — request it inline so Chrome will enumerate properly.
+      if (kind === 'audioinput' && filtered.length === 0) {
+        try {
+          const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+          s.getTracks().forEach(t => t.stop()); // release immediately — just needed to unlock enumeration
+          all = await navigator.mediaDevices.enumerateDevices();
+          filtered = all.filter(d => d.kind === kind && d.deviceId && d.label);
+        } catch { /* permission denied — filtered stays empty, dropdown shows "No devices found" */ }
+      }
+
+      setDevices(filtered);
     }
     setOpen(v => !v);
   }

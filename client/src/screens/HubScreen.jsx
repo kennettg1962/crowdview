@@ -59,10 +59,16 @@ export default function HubScreen() {
           }
         } catch { /* profile fetch failure is non-fatal */ }
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraint,
-          audio: true,
-        });
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: videoConstraint,
+            audio: true,
+          });
+        } catch {
+          // Mic may be blocked — connect video-only so camera is never held hostage
+          stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint });
+        }
 
         startStream(stream);
 
