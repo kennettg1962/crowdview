@@ -8,7 +8,7 @@ const inputClass = "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm
 const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
 export default function SplashScreen() {
-  const { login, isAuthenticated, startStream, setCurrentSource } = useApp();
+  const { login, isAuthenticated } = useApp();
   const navigate = useNavigate();
   const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot'
   const [email, setEmail] = useState('');
@@ -37,25 +37,8 @@ export default function SplashScreen() {
     setLoading(true); setError('');
     try {
       const res = await api.post('/api/auth/login', { email, password });
-      const { token, userId, email: userEmail, name: userName, connectLastDevice, lastSourceDeviceId } = res.data;
-      login({ userId, email: userEmail, name: userName, connectLastDevice, lastSourceDeviceId }, token);
-
-      // If flag is set, try to reconnect the last used video device
-      if (connectLastDevice === 'Y' && lastSourceDeviceId) {
-        try {
-          // Auto-connect video-only — mic can be added via Select Source
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { deviceId: { exact: lastSourceDeviceId } },
-          });
-          startStream(stream);
-          // Enumerate to get the device object (needed for source badge + SelectSource checkmark)
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const device = devices.find(d => d.kind === 'videoinput' && d.deviceId === lastSourceDeviceId);
-          if (device) setCurrentSource(device);
-        } catch {
-          // device unavailable or permission denied — proceed without stream
-        }
-      }
+      const { token, userId, email: userEmail, name: userName } = res.data;
+      login({ userId, email: userEmail, name: userName }, token);
       navigate('/hub', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please check your credentials.');

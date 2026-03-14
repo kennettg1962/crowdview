@@ -263,6 +263,32 @@ export function BroadcastIcon({ className = iconClass }) {
   );
 }
 
+export function MicIcon({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3zM19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
+    </svg>
+  );
+}
+
+export function ChevronDownIcon({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+}
+
+export function VideoOffIcon({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8zM3 3l18 18" />
+    </svg>
+  );
+}
+
 // Icon button wrapper
 export function IconButton({ icon: Icon, label, onClick, disabled, className = '', variant = 'default', title }) {
   const base = 'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors text-xs font-medium';
