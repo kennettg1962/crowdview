@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
-import StreamToPopup from './StreamToPopup';
 import DevicePicker from '../components/DevicePicker';
 import {
-  FriendsIcon, LibraryIcon, StreamToIcon,
+  FriendsIcon, LibraryIcon,
   IdIcon, ActionIcon, CameraIcon, CutIcon, MicIcon,
   MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon
 } from '../components/Icons';
@@ -32,13 +31,12 @@ export default function HubScreen() {
   const {
     isStreaming, mediaStream, currentSource, setCurrentSource,
     currentAudioIn, setCurrentAudioIn,
-    currentOutlet, startStream, stopStream,
+    startStream, stopStream,
     isStreamingOut, startWhipStream, stopWhipStream,
   } = useApp();
   const videoRef = useRef(null);
   const actionRecorderRef = useRef(null);
   const autoConnectAttempted = useRef(false);
-  const [showOutlet, setShowOutlet] = useState(false);
   const [liveStreams, setLiveStreams] = useState([]);
   const [isRecordingAction, setIsRecordingAction] = useState(false);
   const [cameraFlash, setCameraFlash] = useState(false);
@@ -237,12 +235,10 @@ export default function HubScreen() {
     navigate('/id', { state: { photoDataUrl: dataUrl, saveToLibrary: true } });
   }, [mediaStream, navigate]);
 
-  function handleStream() { if (canStream) startWhipStream(mediaStream); }
+  function handleStream() { if (isStreaming) startWhipStream(mediaStream); }
   function handleStopStream() { stopWhipStream(); }
 
   const canId = isStreaming;
-  const canStream = isStreaming && !!currentOutlet;
-  const outletName = currentOutlet?.name || null;
 
   // Permission error message
   function permissionMessage() {
@@ -299,21 +295,6 @@ export default function HubScreen() {
           disabled={!isStreaming}
         />
 
-        <div className="w-px h-5 bg-slate-500 mx-1" />
-
-        <button
-          onClick={() => setShowOutlet(true)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm font-medium transition-colors border border-slate-500"
-        >
-          <StreamToIcon className="w-4 h-4" />
-          <span>Outlet</span>
-        </button>
-
-        {outletName && (
-          <span className="text-white text-sm font-medium bg-blue-600 px-3 py-1 rounded-lg border border-blue-500 truncate max-w-[200px]">
-            {outletName}
-          </span>
-        )}
       </div>
 
       {/* Main 3-column layout */}
@@ -364,13 +345,11 @@ export default function HubScreen() {
         {/* Right 15%: Stream + live friends */}
         <div className="w-[15%] bg-slate-700 rounded-r-xl flex flex-col items-center">
           {!isStreamingOut ? (
-            <SideButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!canStream} className="text-white hover:bg-slate-600" />
+            <SideButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
           ) : (
             <>
               <SideButton icon={StopCircleIcon} label="Stop Stream" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-xl" />
-              {outletName && (
-                <span className="text-red-400 text-xs font-semibold text-center px-2 mt-1 leading-snug">{outletName}</span>
-              )}
+              <span className="text-red-400 text-xs font-semibold text-center px-2 mt-1 leading-snug">CrowdView Live</span>
             </>
           )}
 
@@ -401,8 +380,6 @@ export default function HubScreen() {
 
       <NavBar />
       <TrueFooter />
-
-      {showOutlet && <StreamToPopup onClose={() => setShowOutlet(false)} />}
 
       {saveStatus && (
         <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-white text-sm font-medium z-50 ${
