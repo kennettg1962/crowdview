@@ -14,21 +14,8 @@ export default function DevicePicker({ icon: Icon, kind, current, placeholder, o
   async function handleToggle() {
     if (disabled) return;
     if (!open) {
-      let all = await navigator.mediaDevices.enumerateDevices();
-      let filtered = all.filter(d => d.kind === kind && d.deviceId && d.label);
-
-      // Mic: if no labeled devices, permission hasn't been exercised this session.
-      // This click IS a user gesture — request it inline so Chrome will enumerate properly.
-      if (kind === 'audioinput' && filtered.length === 0) {
-        try {
-          const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-          s.getTracks().forEach(t => t.stop()); // release immediately — just needed to unlock enumeration
-          all = await navigator.mediaDevices.enumerateDevices();
-          filtered = all.filter(d => d.kind === kind && d.deviceId && d.label);
-        } catch { /* permission denied — filtered stays empty, dropdown shows "No devices found" */ }
-      }
-
-      setDevices(filtered);
+      const all = await navigator.mediaDevices.enumerateDevices();
+      setDevices(all.filter(d => d.kind === kind && d.deviceId && d.label));
     }
     setOpen(v => !v);
   }
@@ -69,7 +56,18 @@ export default function DevicePicker({ icon: Icon, kind, current, placeholder, o
       {open && (
         <div className="absolute top-full mt-1 left-0 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl z-50 min-w-[220px] max-w-xs py-1">
           {devices.length === 0 ? (
-            <p className="px-4 py-2 text-sm text-gray-500 italic">No devices found</p>
+            kind === 'audioinput' ? (
+              // No labeled devices = permission not yet granted this session.
+              // Clicking here IS the user gesture Chrome needs.
+              <button
+                onClick={() => { setOpen(false); onSwitch(null); }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-700 text-left"
+              >
+                Connect microphone
+              </button>
+            ) : (
+              <p className="px-4 py-2 text-sm text-gray-500 italic">No devices found</p>
+            )
           ) : devices.map(d => {
             const isActive = current?.deviceId === d.deviceId;
             const label = d.label.replace(/\s*\(.*?\)\s*$/, '').trim();

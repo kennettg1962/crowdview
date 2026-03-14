@@ -59,30 +59,18 @@ export default function HubScreen() {
           }
         } catch { /* profile fetch failure is non-fatal */ }
 
-        let stream;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: videoConstraint,
-            audio: true,
-          });
-        } catch {
-          // Mic may be blocked — connect video-only so camera is never held hostage
-          stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint });
-        }
-
+        // Video-only — no audio attempt here, which would leave a zombie request
+        // that blocks the mic picker's own getUserMedia call.
+        // Mic is connected independently via the DevicePicker (user gesture).
+        const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint });
         startStream(stream);
 
-        // Enumerate to resolve device names for picker labels
+        // Enumerate to resolve real device object for the camera picker label
         const devices = await navigator.mediaDevices.enumerateDevices();
         const [vTrack] = stream.getVideoTracks();
-        const [aTrack] = stream.getAudioTracks();
         if (vTrack) {
           const dev = devices.find(d => d.kind === 'videoinput' && d.label === vTrack.label);
           if (dev) setCurrentSource(dev);
-        }
-        if (aTrack) {
-          const dev = devices.find(d => d.kind === 'audioinput' && d.label === aTrack.label);
-          if (dev) setCurrentAudioIn(dev);
         }
       } catch (err) {
         setPermissionError(err);
@@ -135,16 +123,20 @@ export default function HubScreen() {
 
   async function switchMic(device) {
     try {
-      const newAudioStream = await navigator.mediaDevices.getUserMedia({
-        audio: device.deviceId ? { deviceId: { ideal: device.deviceId } } : true,
-      });
+      // device=null means "connect default mic" (permission not yet granted this session)
+      const constraint = device?.deviceId ? { deviceId: { ideal: device.deviceId } } : true;
+      const newAudioStream = await navigator.mediaDevices.getUserMedia({ audio: constraint });
       const [newTrack] = newAudioStream.getAudioTracks();
       if (!newTrack) return;
       if (mediaStream) {
         mediaStream.getAudioTracks().forEach(t => { t.stop(); mediaStream.removeTrack(t); });
         mediaStream.addTrack(newTrack);
       }
-      setCurrentAudioIn(device);
+      // Re-enumerate now that permission is granted to get the real device object
+      const allDevices = await navigator.mediaDevices.enumerateDevices();
+      const connected = allDevices.find(d => d.kind === 'audioinput' && d.label === newTrack.label)
+        ?? device;
+      setCurrentAudioIn(connected);
     } catch (err) {
       console.error('Mic switch failed:', err);
     }
