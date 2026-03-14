@@ -4,6 +4,23 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 
 ---
 
+## 2026-03-14
+
+### [2026-03-14] macOS mic / voice command architecture — `#audio #voice #platform`
+- On macOS: stream audio wins — mic goes to video stream like Zoom/Teams; SpeechRecognition not used.
+- On Windows 11: both stream audio and voice commands supported concurrently (WASAPI allows it).
+- Voice commands ("scan" etc.) are a Windows/Android/wearable feature, not macOS.
+- Auto-connect on HubScreen mount changed to `getUserMedia({video, audio})` on all platforms.
+- `isMac` OS detection added in `client/src/utils/platform.js`; gates GlobalVoiceCommands and useVoiceCommands hook.
+
+### [2026-03-14] Platform Roadmap — `#platform #mobile`
+- Current PoC targets Chrome desktop only.
+- Next phase: iOS (iPhone), Android (Chrome), Windows 11 (Chrome).
+- Voice command architecture will need redesign for iOS (SpeechRecognition unreliable on WebKit).
+- macOS mic conflict workarounds should be treated as temporary PoC solutions, not permanent architecture.
+
+---
+
 ## 2026-03 (Session history reconstructed from git log and conversation transcript)
 
 ### [2026-03] Auth & Onboarding — `#auth`

@@ -6,7 +6,11 @@ Living specification. Entries are merged/rewritten as requirements evolve. Last 
 
 ## 1. Product Vision
 
-CrowdView is a real-time crowd face-identification and live-streaming web application. The core value proposition is: point your camera at a crowd, identify who is there, and share the moment live with your social network.
+CrowdView is a real-time crowd face-identification and live-streaming application. The core value proposition is: point your camera at a crowd, identify who is there, and share the moment live with your social network.
+
+**Ultimate product endpoint**: a wearable device (AR glasses) with built-in camera, microphone, speakers, and lens display — enabling fully hands-free crowd identification, voice-commanded interaction, and live streaming with audio, all from a head-mounted device.
+
+**Current phase**: Chrome desktop PoC (macOS primary, Windows 11 secondary).
 
 ---
 
@@ -18,7 +22,7 @@ CrowdView is a real-time crowd face-identification and live-streaming web applic
 | BG-02 | Stream live video to friends and followers via the CrowdView platform. |
 | BG-03 | Build and maintain a personal contacts database (friends list) with photos. |
 | BG-04 | Store and review captured photos and video clips in a personal library. |
-| BG-05 | Use voice commands hands-free while viewing a crowd. |
+| BG-05 | Use voice commands hands-free while viewing a crowd. Voice commands are the primary interaction paradigm; the product is designed toward fully hands-free wearable operation. |
 | BG-06 | Share captured moments to external social platforms (Facebook, Instagram, YouTube, TikTok). |
 
 ---
@@ -53,7 +57,23 @@ CrowdView is a real-time crowd face-identification and live-streaming web applic
 
 ---
 
-## 5. Compliance & Constraints
+## 5. Platform Roadmap
+
+### Priority Rule by Platform
+
+| Platform | Stream Audio | Voice Commands | Mic Strategy |
+|----------|-------------|----------------|--------------|
+| macOS + Chrome (PoC) | **Yes** | **No** | `getUserMedia({audio})` owns the mic. SpeechRecognition not started on macOS. Same flow as Zoom/Teams. |
+| Windows 11 + Chrome (PoC) | Yes | Yes | WASAPI shared mode; mic goes to stream AND SpeechRecognition concurrently. |
+| Android + Chrome (next) | Yes | Yes | No systemic conflict. |
+| iOS / any browser (next) | Yes (target) | Needs redesign | SpeechRecognition unreliable on WebKit; push-to-listen or native wrapper required. |
+| Wearables (future) | Yes | Yes | Dedicated hardware mic; no sharing conflict. |
+
+**Design implication:** Voice commands are a Windows/Android/wearable feature. On macOS the mic behaves identically to Zoom or Teams — audio is captured into the stream with no voice recognition. This is not a limitation to work around; it is the intended macOS behaviour.
+
+---
+
+## 6. Compliance & Constraints
 
 | ID | Constraint |
 |----|------------|
@@ -61,3 +81,4 @@ CrowdView is a real-time crowd face-identification and live-streaming web applic
 | BC-02 | Face recognition data (Rekognition Face IDs) is stored in the DB and must be cleaned up when a friend photo is deleted. |
 | BC-03 | Social platform tokens (Facebook, Instagram, YouTube, TikTok) are stored per user but the posting feature is currently a stub — no actual OAuth or API integration is implemented. ⚠ Confirm whether social posting is in scope for MVP. |
 | BC-04 | The production site runs at `https://crowdview.tv` (and `www.`). Both must be whitelisted in CORS and Vite preview allowedHosts. |
+| BC-05 | On macOS + Chrome, SpeechRecognition is not started — the mic is owned by `getUserMedia({audio})` for stream audio. Voice commands are a Windows/Android/wearable feature only. |

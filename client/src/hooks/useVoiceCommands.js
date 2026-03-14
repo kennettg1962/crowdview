@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { isMac } from '../utils/platform';
 
 /**
  * Voice command hook using Web Speech API.
@@ -25,6 +26,7 @@ export default function useVoiceCommands({ screen, commands = {} }) {
   }, []);
 
   useEffect(() => {
+    if (isMac) return; // macOS: mic used for stream audio; voice commands not supported
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn('Web Speech API not supported in this browser');

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { isMac } from '../utils/platform';
 
 export default function GlobalVoiceCommands() {
   const { mediaStream, isAuthenticated, voicePaused } = useApp();
@@ -26,6 +27,7 @@ export default function GlobalVoiceCommands() {
   }, [voicePaused]);
 
   useEffect(() => {
+    if (isMac) return; // macOS: mic used for stream audio; voice commands not supported
     if (!isAuthenticated) return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;

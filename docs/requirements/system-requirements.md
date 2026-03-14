@@ -307,13 +307,25 @@ Session persisted in `sessionStorage` (cleared on tab close). On mount, AppConte
 
 ## 11. Browser Compatibility & Permissions
 
-- **Target browser**: Google Chrome (desktop) — only browser with full Web Speech API support
+- **Target browser (PoC)**: Google Chrome desktop — only browser with full Web Speech API support
 - **Camera**: `navigator.mediaDevices.getUserMedia({video})` — requires HTTPS in production
 - **Microphone**: Requires BOTH macOS System Settings permission (Privacy & Security → Microphone → Chrome) AND Chrome site permission
 - **Auto-connect**: Video-only on login (no audio requested) to avoid zombie getUserMedia blocking subsequent mic access
 - **Device enumeration**: `navigator.mediaDevices.enumerateDevices()` returns empty `audioinput` list until mic permission is granted; shows "Grant Microphone Access" button in that case
 - **SpeechRecognition**: Requires user gesture before first start; `not-allowed` error retried after 5s delay
 - **WHIP**: Chrome + HTTPS required for WebRTC
+
+### Microphone Model (per platform)
+
+| Platform | Stream audio | Voice commands | Implementation |
+|----------|-------------|----------------|----------------|
+| macOS + Chrome | Yes | **No** | SpeechRecognition not initialised on macOS. `getUserMedia({video,audio})` on mount — identical to Zoom/Teams. |
+| Windows 11 + Chrome | Yes | Yes | WASAPI shared mode; SpeechRecognition + stream audio concurrent. |
+| Android + Chrome | Yes | Yes | No systemic conflict. |
+| iOS + any browser | Yes (target) | Needs redesign | WebKit; SpeechRecognition unreliable. |
+| Wearables (future) | Yes | Yes | Dedicated hardware mic. |
+
+**OS detection**: `isMac` flag in `client/src/utils/platform.js` — `GlobalVoiceCommands` and `useVoiceCommands` return early when `isMac` is true. No pause/resume needed on macOS.
 
 ---
 
