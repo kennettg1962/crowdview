@@ -175,7 +175,7 @@ export default function HubScreen() {
     const interval = setInterval(async () => {
       if (scanInFlightRef.current || !videoRef.current || !overlayCanvasRef.current || !liveScanActiveRef.current) return;
       const video = videoRef.current;
-      if (!video.videoWidth) return;
+      if (!video.videoWidth || video.readyState < 3) return;
 
       // Sync overlay canvas resolution to video native resolution
       const canvas = overlayCanvasRef.current;
