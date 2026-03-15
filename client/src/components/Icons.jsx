@@ -289,6 +289,18 @@ export function VideoOffIcon({ className = iconClass }) {
   );
 }
 
+export function LiveScanIcon({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M6.343 6.343a8 8 0 000 11.314M17.657 6.343a8 8 0 010 11.314" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M3.515 3.515a13 13 0 000 16.97M20.485 3.515a13 13 0 010 16.97" />
+    </svg>
+  );
+}
+
 // Icon button wrapper
 export function IconButton({ icon: Icon, label, onClick, disabled, className = '', variant = 'default', title }) {
   const base = 'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors text-xs font-medium';

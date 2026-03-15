@@ -242,7 +242,7 @@ All authenticated endpoints require: `Authorization: Bearer <JWT>`
   6. Then match against friends-of-friends via `Friend_User_Id` links (similarity ≥ 72%)
   7. Return structured face array
 
-⚠ `server/routes/rekognition.js` currently returns **hardcoded mock data** with a 1.5s delay. Real CompreFace integration must be activated before this feature is production-ready.
+CompreFace integration is fully implemented in `server/routes/rekognition.js`.
 
 ---
 
@@ -362,7 +362,7 @@ Session persisted in `sessionStorage` (cleared on tab close). On mount, AppConte
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Real face recognition | Stub | `rekognition.js` returns mock data with 1.5s delay |
+| Real face recognition | **Live** | CompreFace fully integrated in `rekognition.js` |
 | Social platform posting | Stub | PostScreen exists but no OAuth or API calls |
 | Platform tokens (FB/IG/YT/TT) | Stub | Stored in DB but not used |
 | Email sending (SMTP) | Conditional | Forgot-password only works if SMTP env vars configured |

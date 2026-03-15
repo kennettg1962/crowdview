@@ -7,7 +7,7 @@ import DevicePicker from '../components/DevicePicker';
 import {
   FriendsIcon, LibraryIcon,
   IdIcon, ActionIcon, CameraIcon, CutIcon, MicIcon,
-  MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon
+  MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon
 } from '../components/Icons';
 import api from '../api/api';
 
@@ -35,13 +35,17 @@ export default function HubScreen() {
     isStreamingOut, startWhipStream, stopWhipStream,
   } = useApp();
   const videoRef = useRef(null);
+  const overlayCanvasRef = useRef(null);
   const actionRecorderRef = useRef(null);
   const autoConnectAttempted = useRef(false);
+  const scanInFlightRef = useRef(false);
+  const liveScanActiveRef = useRef(false);
   const [liveStreams, setLiveStreams] = useState([]);
   const [isRecordingAction, setIsRecordingAction] = useState(false);
   const [cameraFlash, setCameraFlash] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
   const [permissionError, setPermissionError] = useState(null);
+  const [liveScan, setLiveScan] = useState(false);
 
   // ── Auto-connect on mount ──────────────────────────────────────────────────
   // Always attempt camera + mic on load (like Zoom/Teams). Uses the last-used
@@ -159,12 +163,86 @@ export default function HubScreen() {
     }
   }, [mediaStream]);
 
+  // ── Live scan interval ─────────────────────────────────────────────────────
+  useEffect(() => {
+    liveScanActiveRef.current = liveScan;
+    if (!liveScan) {
+      // Clear the overlay when toggled off
+      const canvas = overlayCanvasRef.current;
+      if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    const interval = setInterval(async () => {
+      if (scanInFlightRef.current || !videoRef.current || !overlayCanvasRef.current || !liveScanActiveRef.current) return;
+      const video = videoRef.current;
+      if (!video.videoWidth) return;
+
+      // Sync overlay canvas resolution to video native resolution
+      const canvas = overlayCanvasRef.current;
+      if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
+      if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
+
+      // Capture frame
+      const capture = document.createElement('canvas');
+      capture.width = video.videoWidth;
+      capture.height = video.videoHeight;
+      capture.getContext('2d').drawImage(video, 0, 0);
+      const dataUrl = capture.toDataURL('image/jpeg', 0.8);
+
+      scanInFlightRef.current = true;
+      try {
+        const res = await api.post('/api/rekognition/identify', { imageData: dataUrl });
+        if (!liveScanActiveRef.current) return; // toggled off while in flight
+        const { faces } = res.data;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        faces.forEach(face => {
+          const { boundingBox, status, friendName } = face;
+          const x = boundingBox.left   * canvas.width;
+          const y = boundingBox.top    * canvas.height;
+          const w = boundingBox.width  * canvas.width;
+          const h = boundingBox.height * canvas.height;
+
+          const color = status === 'known' ? '#22c55e'
+                      : status === 'identified' ? '#f97316'
+                      : '#ef4444';
+
+          // Bounding box
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, w, h);
+
+          // Label background + text
+          const label = friendName || 'Unknown';
+          ctx.font = 'bold 13px sans-serif';
+          const textW = ctx.measureText(label).width;
+          ctx.fillStyle = 'rgba(0,0,0,0.55)';
+          ctx.fillRect(x, y - 20, textW + 8, 20);
+          ctx.fillStyle = color;
+          ctx.fillText(label, x + 4, y - 5);
+        });
+      } catch (err) {
+        console.error('[LiveScan] error:', err);
+      } finally {
+        scanInFlightRef.current = false;
+      }
+    }, 1500);
+
+    return () => {
+      clearInterval(interval);
+      const canvas = overlayCanvasRef.current;
+      if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    };
+  }, [liveScan]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Stop recordings/stream when source disconnects ────────────────────────
   useEffect(() => {
     if (!isStreaming) {
       if (isStreamingOut) stopWhipStream();
       const rec = actionRecorderRef.current;
       if (rec && rec.state !== 'inactive') rec.stop();
+      setLiveScan(false);
     }
   }, [isStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -301,6 +379,12 @@ export default function HubScreen() {
         <div className="w-[15%] bg-slate-700 rounded-l-xl flex flex-col">
           <SideButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-slate-600" />
           <div className="mx-3 border-t border-slate-600" />
+          {liveScan ? (
+            <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-xl animate-pulse" />
+          ) : (
+            <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(true)} disabled={!canId} className="text-white hover:bg-slate-600" />
+          )}
+          <div className="mx-3 border-t border-slate-600" />
           {!isRecordingAction ? (
             <SideButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
           ) : (
@@ -313,7 +397,10 @@ export default function HubScreen() {
         <div className="w-[70%] bg-white flex flex-col items-center justify-center p-3 border-t border-b border-gray-200">
           <div className="w-full video-container bg-black border-2 border-white rounded-sm overflow-hidden relative">
             {mediaStream ? (
-              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+              <>
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                <canvas ref={overlayCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+              </>
             ) : permissionError ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center px-6">
                 <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center">

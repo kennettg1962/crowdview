@@ -6,6 +6,14 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 
 ## 2026-03-14
 
+### [2026-03-15] Live face scan overlay on HubScreen — `#face-recognition #hub`
+- Continuous face detection overlay on the live video feed on HubScreen.
+- "Live" toggle button in left sidebar; pulses green when active.
+- Samples one frame every 1.5 seconds; sends to /api/rekognition/identify.
+- Draws bounding boxes + name labels directly on a canvas overlay over the video.
+- Colour coding: green = known friend, orange = friend-of-friend, red = unknown.
+- Auto-disables when camera stream stops.
+
 ### [2026-03-15] Mobile + wearable native wrapper — `#platform #mobile #capacitor`
 - Decision: use Capacitor 6 to wrap the React/Vite app for iOS and Android.
 - No UI rewrite — same React codebase runs inside WKWebView (iOS) and WebView (Android).
