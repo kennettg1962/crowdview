@@ -49,12 +49,17 @@ body {
   100% { opacity: 0; }
 }
 
-/* Video container aspect ratio */
+/* Video container — mobile: fill parent height; desktop: enforce 16:9 */
 .video-container {
   position: relative;
-  padding-bottom: 56.25%; /* 16:9 */
-  height: 0;
+  height: 100%;
   overflow: hidden;
+}
+@media (min-width: 768px) {
+  .video-container {
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 */
+  }
 }
 .video-container video,
 .video-container canvas {

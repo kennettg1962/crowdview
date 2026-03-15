@@ -27,6 +27,21 @@ function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
   );
 }
 
+function FloatButton({ icon: Icon, label, onClick, disabled, className = '' }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-lg transition-colors
+        disabled:opacity-30 disabled:cursor-not-allowed ${className}`}
+    >
+      <Icon className="w-6 h-6" />
+      <span className="text-[10px] font-medium">{label}</span>
+    </button>
+  );
+}
+
 export default function HubScreen() {
   const navigate = useNavigate();
   const {
@@ -427,11 +442,11 @@ export default function HubScreen() {
 
       </div>
 
-      {/* Main 3-column layout */}
-      <main className="flex-1 flex items-stretch px-2 pb-2 gap-0">
+      {/* Main layout — mobile: full-width video + floating icons; desktop: 3-column */}
+      <main className="flex-1 flex items-stretch p-0 md:px-2 md:pb-2 md:gap-0">
 
-        {/* Left 15%: Id + action buttons */}
-        <div className="w-[15%] bg-slate-700 rounded-l-xl flex flex-col">
+        {/* Desktop left sidebar (hidden on mobile) */}
+        <div className="hidden md:flex w-[15%] bg-slate-700 rounded-l-xl flex-col">
           {liveScan ? (
             <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-xl animate-pulse" />
           ) : (
@@ -448,10 +463,15 @@ export default function HubScreen() {
           <SideButton icon={CameraIcon} label="Camera" onClick={handleCamera} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
         </div>
 
-        {/* Center: video — shrinks when face panel is open */}
-        <div style={{ width: selectedFace ? '42%' : '70%', transition: 'width 0.3s ease' }}
-          className="bg-white flex flex-col items-center justify-center p-3 border-t border-b border-gray-200">
-          <div className="w-full video-container bg-black border-2 border-white rounded-sm overflow-hidden relative">
+        {/* Video column — full width on mobile, percentage on desktop */}
+        <div
+          className={`flex-1 relative bg-black
+            md:flex-none md:bg-white md:flex md:flex-col md:items-center md:justify-center md:p-3
+            md:border-t md:border-b md:border-gray-200
+            md:[transition:width_0.3s_ease]
+            ${selectedFace ? 'md:w-[42%]' : 'md:w-[70%]'}`}
+        >
+          <div className="w-full h-full video-container bg-black border-0 md:border-2 md:border-white md:rounded-sm overflow-hidden relative">
             {mediaStream ? (
               <>
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
@@ -484,11 +504,58 @@ export default function HubScreen() {
               </div>
             )}
           </div>
+
+          {/* Mobile floating left icons — Live, Id, Action, Camera */}
+          <div className="flex md:hidden flex-col absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-black/50 backdrop-blur-sm rounded-xl p-1.5 gap-0.5">
+            {liveScan ? (
+              <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-lg animate-pulse" />
+            ) : (
+              <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(true)} disabled={!canId} className="text-white hover:bg-white/20" />
+            )}
+            <div className="border-t border-white/20 mx-1" />
+            <FloatButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-white/20" />
+            <div className="border-t border-white/20 mx-1" />
+            {!isRecordingAction ? (
+              <FloatButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-white/20" />
+            ) : (
+              <FloatButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-lg animate-pulse" />
+            )}
+            <FloatButton icon={CameraIcon} label="Camera" onClick={handleCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
+          </div>
+
+          {/* Mobile floating right icons — Stream */}
+          <div className="flex md:hidden flex-col absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-black/50 backdrop-blur-sm rounded-xl p-1.5 gap-0.5">
+            {!isStreamingOut ? (
+              <FloatButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-white/20" />
+            ) : (
+              <>
+                <FloatButton icon={StopCircleIcon} label="Stop" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-lg" />
+                <span className="text-red-400 text-[9px] font-semibold text-center px-1 leading-snug">CrowdView{'\n'}Live</span>
+              </>
+            )}
+            {liveStreams.filter(s => s.Friend_Id).length > 0 && (
+              <div className="mt-1 flex flex-col items-center gap-1.5">
+                <div className="border-t border-white/20 w-full" />
+                <span className="text-gray-300 text-[9px] font-medium">Live</span>
+                {liveStreams.filter(s => s.Friend_Id).map(s => (
+                  <button key={s.Stream_Id} onClick={() => navigate('/streams/watch', { state: { stream: s, isLive: true } })} title={s.Streamer_Name}>
+                    {s.Friend_Photo_Id ? (
+                      <img src={`/api/friends/${s.Friend_Id}/photos/${s.Friend_Photo_Id}/data`} alt={s.Streamer_Name} className="w-8 h-8 rounded-full object-cover border-2 border-red-500" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-slate-600/80 border-2 border-red-500 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">{s.Streamer_Name?.[0] || '?'}</span>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Face detail panel — slides in when a bounding box is clicked */}
+        {/* Face detail panel — desktop only, slides in when a bounding box is clicked */}
         {selectedFace && (
-          <div style={{ width: '28%', transition: 'width 0.3s ease' }} className="flex flex-col overflow-hidden">
+          <div className="hidden md:flex w-[28%] flex-col overflow-hidden" style={{ transition: 'width 0.3s ease' }}>
             <FriendForm
               friend={selectedFriendProp}
               capturedPhotoUrl={!selectedFace.friendId ? selectedFace.cropDataUrl : null}
@@ -499,8 +566,8 @@ export default function HubScreen() {
           </div>
         )}
 
-        {/* Right 15%: Stream + live friends */}
-        <div className="w-[15%] bg-slate-700 rounded-r-xl flex flex-col items-center">
+        {/* Desktop right sidebar (hidden on mobile) */}
+        <div className="hidden md:flex w-[15%] bg-slate-700 rounded-r-xl flex-col items-center">
           {!isStreamingOut ? (
             <SideButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
           ) : (
