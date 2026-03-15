@@ -227,7 +227,7 @@ export default function HubScreen() {
       } finally {
         scanInFlightRef.current = false;
       }
-    }, 1500);
+    }, 300);
 
     return () => {
       clearInterval(interval);
