@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import NavBar from '../components/NavBar';
@@ -49,6 +49,20 @@ export default function HubScreen() {
   const [liveScan, setLiveScan] = useState(false);
   const [liveFaces, setLiveFaces] = useState([]);
   const [selectedFace, setSelectedFace] = useState(null);
+
+  // Stable friend object for FriendForm — only changes when selectedFace changes,
+  // not on every scan cycle re-render (which would re-trigger photo loading)
+  const selectedFriendProp = useMemo(() => {
+    if (!selectedFace?.friendId) return null;
+    return {
+      Friend_Id:           selectedFace.friendId,
+      Name_Txt:            selectedFace.friendName  || '',
+      Note_Multi_Line_Txt: selectedFace.note        || '',
+      Friend_Group:        selectedFace.friendGroup || 'Friend',
+      Linked_User_Name:    null,
+      Linked_User_Email:   null,
+    };
+  }, [selectedFace]);
 
   // ── Auto-connect on mount ──────────────────────────────────────────────────
   // Always attempt camera + mic on load (like Zoom/Teams). Uses the last-used
@@ -476,14 +490,7 @@ export default function HubScreen() {
         {selectedFace && (
           <div style={{ width: '28%', transition: 'width 0.3s ease' }} className="flex flex-col overflow-hidden">
             <FriendForm
-              friend={selectedFace.friendId ? {
-                Friend_Id:             selectedFace.friendId,
-                Name_Txt:              selectedFace.friendName  || '',
-                Note_Multi_Line_Txt:   selectedFace.note        || '',
-                Friend_Group:          selectedFace.friendGroup || 'Friend',
-                Linked_User_Name:      null,
-                Linked_User_Email:     null,
-              } : null}
+              friend={selectedFriendProp}
               capturedPhotoUrl={!selectedFace.friendId ? selectedFace.cropDataUrl : null}
               onClose={() => setSelectedFace(null)}
               onSave={() => setSelectedFace(null)}
