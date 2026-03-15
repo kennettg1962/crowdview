@@ -379,13 +379,13 @@ export default function HubScreen() {
 
         {/* Left 15%: Id + action buttons */}
         <div className="w-[15%] bg-slate-700 rounded-l-xl flex flex-col">
-          <SideButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-slate-600" />
-          <div className="mx-3 border-t border-slate-600" />
           {liveScan ? (
             <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-xl animate-pulse" />
           ) : (
             <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(true)} disabled={!canId} className="text-white hover:bg-slate-600" />
           )}
+          <div className="mx-3 border-t border-slate-600" />
+          <SideButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-slate-600" />
           <div className="mx-3 border-t border-slate-600" />
           {!isRecordingAction ? (
             <SideButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
