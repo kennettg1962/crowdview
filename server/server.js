@@ -4,12 +4,15 @@ const cors = require("cors");
 const app = express();
 
 const allowedOrigins = [
-  "http://localhost:4173", // Vite preview
-  "http://localhost:5173", // Vite dev
-  "http://localhost:3000", // Alternative dev
-  "https://crowdview.tv", // Production URL
-  "https://www.crowdview.tv", // Production URL with www
-  process.env.CLIENT_URL, // Production URL from env
+  "http://localhost:4173",       // Vite preview
+  "http://localhost:5173",       // Vite dev
+  "http://localhost:3000",       // Alternative dev
+  "https://crowdview.tv",        // Production
+  "https://www.crowdview.tv",    // Production www
+  "capacitor://localhost",       // Capacitor iOS
+  "https://localhost",           // Capacitor iOS (WKWebView secure)
+  "http://localhost",            // Capacitor Android
+  process.env.CLIENT_URL,
 ].filter(Boolean);
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));

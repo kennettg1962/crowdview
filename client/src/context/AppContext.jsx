@@ -15,7 +15,9 @@ export function AppProvider({ children }) {
   const [voicePaused, setVoicePaused] = useState(false);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
   const pcRef = useRef(null);
-  const WHIP_BASE = `${window.location.protocol}//${window.location.hostname}`;
+  // On native Capacitor the WebView origin is capacitor://localhost — use the
+  // production server URL instead. Falls back to current origin on web.
+  const WHIP_BASE = import.meta.env.VITE_APP_API_URL || `${window.location.protocol}//${window.location.hostname}`;
 
   // Restore session from sessionStorage on mount
   useEffect(() => {
