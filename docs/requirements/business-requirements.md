@@ -61,15 +61,17 @@ CrowdView is a real-time crowd face-identification and live-streaming applicatio
 
 ### Priority Rule by Platform
 
-| Platform | Stream Audio | Voice Commands | Mic Strategy |
-|----------|-------------|----------------|--------------|
-| macOS + Chrome (PoC) | **Yes** | **No** | `getUserMedia({audio})` owns the mic. SpeechRecognition not started on macOS. Same flow as Zoom/Teams. |
-| Windows 11 + Chrome (PoC) | Yes | Yes | WASAPI shared mode; mic goes to stream AND SpeechRecognition concurrently. |
-| Android + Chrome (next) | Yes | Yes | No systemic conflict. |
-| iOS / any browser (next) | Yes (target) | Needs redesign | SpeechRecognition unreliable on WebKit; push-to-listen or native wrapper required. |
-| Wearables (future) | Yes | Yes | Dedicated hardware mic; no sharing conflict. |
+| Platform | Stream Audio | Voice Commands | Delivery |
+|----------|-------------|----------------|----------|
+| macOS + Chrome (PoC) | Yes | No | Web (Chrome) — mic = stream audio only, same as Zoom/Teams |
+| Windows 11 + Chrome (PoC) | Yes | Yes | Web (Chrome) — WASAPI allows both concurrently |
+| iOS (next) | Yes | Yes | Capacitor native app — `SFSpeechRecognizer` plugin alongside `getUserMedia` |
+| Android (next) | Yes | Yes | Capacitor native app — `SpeechRecognizer` plugin alongside `getUserMedia` |
+| Wearables (future) | Yes | Yes | Capacitor native app — dedicated hardware mic, no conflict |
 
-**Design implication:** Voice commands are a Windows/Android/wearable feature. On macOS the mic behaves identically to Zoom or Teams — audio is captured into the stream with no voice recognition. This is not a limitation to work around; it is the intended macOS behaviour.
+**Delivery strategy:** The React/Vite web app is the single codebase. Capacitor wraps it for iOS and Android without rewriting UI. Native speech recognition plugin replaces browser SpeechRecognition on mobile. The app detects its runtime context (`Capacitor.isNativePlatform()`) and switches behaviour accordingly.
+
+**macOS:** Voice commands intentionally not supported. Mic = stream audio. This is by design, not a limitation.
 
 ---
 

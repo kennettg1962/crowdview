@@ -6,20 +6,34 @@ Living specification of technical decisions, data contracts, and system behaviou
 
 ## 1. Technology Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18, Vite 5, Tailwind CSS v4, React Router v6 |
-| Backend | Node.js, Express |
-| Database | MySQL (LONGBLOB for binary data) |
-| Streaming | MediaMTX v1.16.3 (WHIP ingest, HLS output) |
-| Face Recognition | CompreFace (self-hosted; AWS Rekognition interface abstracted) |
-| Auth | JWT (jsonwebtoken); stored in sessionStorage |
-| File Uploads | multer (memoryStorage) |
-| HTTP Client | Axios |
-| Video Playback | HLS.js |
-| Process Manager | PM2 |
-| Reverse Proxy | nginx |
-| CI/CD | GitHub Actions (SSH deploy on push to `main`) |
+| Layer | Technology | Scope |
+|-------|-----------|-------|
+| Frontend | React 18, Vite 5, Tailwind CSS v4, React Router v6 | All platforms |
+| Native wrapper | Capacitor 6 | iOS, Android, future wearables |
+| Backend | Node.js, Express | Server |
+| Database | MySQL (LONGBLOB for binary data) | Server |
+| Streaming | MediaMTX v1.16.3 (WHIP ingest, HLS output) | Server |
+| Face Recognition | CompreFace (self-hosted; AWS Rekognition interface abstracted) | Server |
+| Auth | JWT (jsonwebtoken); stored in sessionStorage | All platforms |
+| File Uploads | multer (memoryStorage) | Server |
+| HTTP Client | Axios | All platforms |
+| Video Playback | HLS.js | All platforms |
+| Speech Recognition | Browser SpeechRecognition (Windows/desktop) + `@capacitor-community/speech-recognition` (iOS/Android) | Platform-dependent |
+| Process Manager | PM2 | Server |
+| Reverse Proxy | nginx | Server |
+| CI/CD | GitHub Actions (SSH deploy on push to `main`) | Server |
+
+### Capacitor Architecture
+
+Capacitor wraps the existing React/Vite web app in a native iOS (WKWebView) and Android (WebView) shell without rewriting any UI code. Native plugins bridge capabilities that WebKit/WebView cannot provide reliably:
+
+| Plugin | Purpose |
+|--------|---------|
+| `@capacitor-community/speech-recognition` | Always-on voice commands on iOS/Android using native SFSpeechRecognizer (iOS) / SpeechRecognizer (Android) — runs alongside `getUserMedia` audio without conflict |
+| `@capacitor/camera` | Optional: native camera picker for friend photo uploads |
+| `@capacitor/push-notifications` | Future: notify user when a friend goes live |
+
+The web app detects whether it is running inside Capacitor (`Capacitor.isNativePlatform()`) and uses the native speech plugin instead of the browser SpeechRecognition API accordingly.
 
 ---
 
@@ -319,13 +333,13 @@ Session persisted in `sessionStorage` (cleared on tab close). On mount, AppConte
 
 | Platform | Stream audio | Voice commands | Implementation |
 |----------|-------------|----------------|----------------|
-| macOS + Chrome | Yes | **No** | SpeechRecognition not initialised on macOS. `getUserMedia({video,audio})` on mount — identical to Zoom/Teams. |
-| Windows 11 + Chrome | Yes | Yes | WASAPI shared mode; SpeechRecognition + stream audio concurrent. |
-| Android + Chrome | Yes | Yes | No systemic conflict. |
-| iOS + any browser | Yes (target) | Needs redesign | WebKit; SpeechRecognition unreliable. |
-| Wearables (future) | Yes | Yes | Dedicated hardware mic. |
+| macOS + Chrome | Yes | **No** | SpeechRecognition not started on macOS (`isMac` gate). `getUserMedia({video,audio})` owns the mic — identical to Zoom/Teams. |
+| Windows 11 + Chrome | Yes | Yes | Browser SpeechRecognition; WASAPI shared mode allows concurrent stream audio. |
+| iOS (Capacitor) | Yes | Yes | Native `SFSpeechRecognizer` via `@capacitor-community/speech-recognition`; `getUserMedia` handles stream audio separately. No WebKit conflict. |
+| Android (Capacitor) | Yes | Yes | Native `SpeechRecognizer` via plugin; concurrent with `getUserMedia`. |
+| Wearables (Capacitor) | Yes | Yes | Dedicated hardware mic; native plugin handles routing. |
 
-**OS detection**: `isMac` flag in `client/src/utils/platform.js` — `GlobalVoiceCommands` and `useVoiceCommands` return early when `isMac` is true. No pause/resume needed on macOS.
+**OS detection**: `isMac` flag in `client/src/utils/platform.js`. `Capacitor.isNativePlatform()` used to switch between browser SpeechRecognition (desktop) and native plugin (mobile/wearable).
 
 ---
 

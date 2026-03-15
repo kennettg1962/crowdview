@@ -6,6 +6,14 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 
 ## 2026-03-14
 
+### [2026-03-15] Mobile + wearable native wrapper — `#platform #mobile #capacitor`
+- Decision: use Capacitor 6 to wrap the React/Vite app for iOS and Android.
+- No UI rewrite — same React codebase runs inside WKWebView (iOS) and WebView (Android).
+- Speech recognition on mobile: `@capacitor-community/speech-recognition` plugin using native SFSpeechRecognizer (iOS) / SpeechRecognizer (Android).
+- This enables both stream audio and always-on voice commands on iOS and Android simultaneously.
+- Same approach targeted for future wearable support.
+- Deployment: Apple Developer Program + Google Play Console required.
+
 ### [2026-03-14] macOS mic / voice command architecture — `#audio #voice #platform`
 - On macOS: stream audio wins — mic goes to video stream like Zoom/Teams; SpeechRecognition not used.
 - On Windows 11: both stream audio and voice commands supported concurrently (WASAPI allows it).
