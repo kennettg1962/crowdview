@@ -182,11 +182,13 @@ export default function HubScreen() {
       if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
       if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
 
-      // Capture frame
+      // Capture frame — cap at 640px wide to keep payload size manageable for CompreFace
+      const maxW = 640;
+      const scale = Math.min(1, maxW / video.videoWidth);
       const capture = document.createElement('canvas');
-      capture.width = video.videoWidth;
-      capture.height = video.videoHeight;
-      capture.getContext('2d').drawImage(video, 0, 0);
+      capture.width  = Math.round(video.videoWidth  * scale);
+      capture.height = Math.round(video.videoHeight * scale);
+      capture.getContext('2d').drawImage(video, 0, 0, capture.width, capture.height);
       const dataUrl = capture.toDataURL('image/jpeg', 0.8);
 
       scanInFlightRef.current = true;
