@@ -7,7 +7,7 @@ import DevicePicker from '../components/DevicePicker';
 import {
   FriendsIcon, LibraryIcon,
   IdIcon, ActionIcon, CameraIcon, CutIcon, MicIcon,
-  MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon
+  MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon, XIcon
 } from '../components/Icons';
 import api from '../api/api';
 
@@ -46,6 +46,8 @@ export default function HubScreen() {
   const [saveStatus, setSaveStatus] = useState(null);
   const [permissionError, setPermissionError] = useState(null);
   const [liveScan, setLiveScan] = useState(false);
+  const [liveFaces, setLiveFaces] = useState([]);
+  const [selectedFace, setSelectedFace] = useState(null);
 
   // ── Auto-connect on mount ──────────────────────────────────────────────────
   // Always attempt camera + mic on load (like Zoom/Teams). Uses the last-used
@@ -167,9 +169,10 @@ export default function HubScreen() {
   useEffect(() => {
     liveScanActiveRef.current = liveScan;
     if (!liveScan) {
-      // Clear the overlay when toggled off
       const canvas = overlayCanvasRef.current;
       if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+      setLiveFaces([]);
+      setSelectedFace(null);
       return;
     }
     const interval = setInterval(async () => {
@@ -196,10 +199,28 @@ export default function HubScreen() {
         const res = await api.post('/api/rekognition/identify', { imageData: dataUrl });
         if (!liveScanActiveRef.current) return; // toggled off while in flight
         const { faces } = res.data;
+
+        // Generate face crops from capture canvas and store in state
+        const facesWithCrops = faces.map(face => {
+          const bb = face.boundingBox;
+          const cx = Math.round(bb.left * capture.width);
+          const cy = Math.round(bb.top * capture.height);
+          const cw = Math.round(bb.width * capture.width);
+          const ch = Math.round(bb.height * capture.height);
+          if (cw > 0 && ch > 0) {
+            const crop = document.createElement('canvas');
+            crop.width = cw; crop.height = ch;
+            crop.getContext('2d').drawImage(capture, cx, cy, cw, ch, 0, 0, cw, ch);
+            return { ...face, cropDataUrl: crop.toDataURL('image/jpeg', 0.9) };
+          }
+          return face;
+        });
+        setLiveFaces(facesWithCrops);
+
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        faces.forEach(face => {
+        facesWithCrops.forEach(face => {
           const { boundingBox, status, friendName } = face;
           const x = boundingBox.left   * canvas.width;
           const y = boundingBox.top    * canvas.height;
@@ -210,12 +231,10 @@ export default function HubScreen() {
                       : status === 'identified' ? '#f97316'
                       : '#ef4444';
 
-          // Bounding box
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
           ctx.strokeRect(x, y, w, h);
 
-          // Label background + text
           const label = friendName || 'Unknown';
           ctx.font = 'bold 13px sans-serif';
           const textW = ctx.measureText(label).width;
@@ -318,6 +337,25 @@ export default function HubScreen() {
 
   const canId = isStreaming;
 
+  // ── Canvas click — hit-test bounding boxes ────────────────────────────────
+  function handleCanvasClick(e) {
+    if (!liveScan || !overlayCanvasRef.current || liveFaces.length === 0) return;
+    const canvas = overlayCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clickX = (e.clientX - rect.left) * scaleX;
+    const clickY = (e.clientY - rect.top)  * scaleY;
+    const hit = liveFaces.find(face => {
+      const x = face.boundingBox.left  * canvas.width;
+      const y = face.boundingBox.top   * canvas.height;
+      const w = face.boundingBox.width * canvas.width;
+      const h = face.boundingBox.height * canvas.height;
+      return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
+    });
+    setSelectedFace(hit || null);
+  }
+
   // Permission error message
   function permissionMessage() {
     if (!permissionError) return null;
@@ -395,13 +433,18 @@ export default function HubScreen() {
           <SideButton icon={CameraIcon} label="Camera" onClick={handleCamera} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
         </div>
 
-        {/* Center 70%: video */}
-        <div className="w-[70%] bg-white flex flex-col items-center justify-center p-3 border-t border-b border-gray-200">
+        {/* Center: video — shrinks when face panel is open */}
+        <div style={{ width: selectedFace ? '42%' : '70%', transition: 'width 0.3s ease' }}
+          className="bg-white flex flex-col items-center justify-center p-3 border-t border-b border-gray-200">
           <div className="w-full video-container bg-black border-2 border-white rounded-sm overflow-hidden relative">
             {mediaStream ? (
               <>
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                <canvas ref={overlayCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+                <canvas
+                  ref={overlayCanvasRef}
+                  onClick={handleCanvasClick}
+                  className={`absolute inset-0 w-full h-full ${liveScan && liveFaces.length > 0 ? 'cursor-pointer' : 'pointer-events-none'}`}
+                />
               </>
             ) : permissionError ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center px-6">
@@ -427,6 +470,89 @@ export default function HubScreen() {
             )}
           </div>
         </div>
+
+        {/* Face detail panel — slides in when a bounding box is clicked */}
+        {selectedFace && (
+          <div style={{ width: '28%', transition: 'width 0.3s ease' }}
+            className="bg-slate-800 flex flex-col overflow-y-auto border-t border-b border-slate-600">
+            {/* Header */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700">
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                selectedFace.status === 'known'      ? 'bg-green-700 text-green-200'
+                : selectedFace.status === 'identified' ? 'bg-orange-700 text-orange-200'
+                : 'bg-red-700 text-red-200'
+              }`}>
+                {selectedFace.status === 'known' ? 'Known' : selectedFace.status === 'identified' ? 'Identified' : 'Unknown'}
+              </span>
+              <button onClick={() => setSelectedFace(null)} className="text-slate-400 hover:text-white p-1">
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Face image */}
+            <div className="p-3">
+              {selectedFace.friendId ? (
+                <img
+                  src={`/api/friends/${selectedFace.friendId}/photos/primary/data`}
+                  alt={selectedFace.friendName}
+                  className="w-full rounded-lg object-cover max-h-36"
+                  onError={e => { e.target.style.display = 'none'; }}
+                />
+              ) : selectedFace.cropDataUrl ? (
+                <img src={selectedFace.cropDataUrl} alt="Face" className="w-full rounded-lg object-cover max-h-36" />
+              ) : null}
+            </div>
+
+            {/* Details */}
+            <div className="px-3 pb-3 flex flex-col gap-2">
+              {selectedFace.friendName && (
+                <div>
+                  <p className="text-slate-400 text-xs uppercase tracking-wide">Name</p>
+                  <p className="text-white text-sm font-semibold">{selectedFace.friendName}</p>
+                </div>
+              )}
+              {selectedFace.friendGroup && (
+                <div>
+                  <p className="text-slate-400 text-xs uppercase tracking-wide">Group</p>
+                  <p className="text-white text-sm">{selectedFace.friendGroup}</p>
+                </div>
+              )}
+              {selectedFace.note && (
+                <div>
+                  <p className="text-slate-400 text-xs uppercase tracking-wide">Note</p>
+                  <p className="text-white text-sm leading-snug">{selectedFace.note}</p>
+                </div>
+              )}
+              {selectedFace.attributes?.emotion && (
+                <div>
+                  <p className="text-slate-400 text-xs uppercase tracking-wide">Expression</p>
+                  <p className="text-white text-sm">{selectedFace.attributes.emotion}</p>
+                </div>
+              )}
+              {selectedFace.attributes?.ageRange && (
+                <div>
+                  <p className="text-slate-400 text-xs uppercase tracking-wide">Age</p>
+                  <p className="text-white text-sm">{selectedFace.attributes.ageRange}</p>
+                </div>
+              )}
+              {selectedFace.status === 'unknown' ? (
+                <button
+                  onClick={() => navigate('/friends')}
+                  className="mt-2 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  + Add as Friend
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/friends')}
+                  className="mt-2 w-full py-2 bg-slate-600 hover:bg-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  View in Friends
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Right 15%: Stream + live friends */}
         <div className="w-[15%] bg-slate-700 rounded-r-xl flex flex-col items-center">
