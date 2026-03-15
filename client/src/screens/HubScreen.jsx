@@ -4,10 +4,11 @@ import { useApp } from '../context/AppContext';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import DevicePicker from '../components/DevicePicker';
+import FriendForm from '../components/FriendForm';
 import {
   FriendsIcon, LibraryIcon,
   IdIcon, ActionIcon, CameraIcon, CutIcon, MicIcon,
-  MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon, XIcon
+  MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon
 } from '../components/Icons';
 import api from '../api/api';
 
@@ -473,84 +474,21 @@ export default function HubScreen() {
 
         {/* Face detail panel — slides in when a bounding box is clicked */}
         {selectedFace && (
-          <div style={{ width: '28%', transition: 'width 0.3s ease' }}
-            className="bg-slate-800 flex flex-col overflow-y-auto border-t border-b border-slate-600">
-            {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700">
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                selectedFace.status === 'known'      ? 'bg-green-700 text-green-200'
-                : selectedFace.status === 'identified' ? 'bg-orange-700 text-orange-200'
-                : 'bg-red-700 text-red-200'
-              }`}>
-                {selectedFace.status === 'known' ? 'Known' : selectedFace.status === 'identified' ? 'Identified' : 'Unknown'}
-              </span>
-              <button onClick={() => setSelectedFace(null)} className="text-slate-400 hover:text-white p-1">
-                <XIcon className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Face image */}
-            <div className="p-3">
-              {selectedFace.friendId ? (
-                <img
-                  src={`/api/friends/${selectedFace.friendId}/photos/primary/data`}
-                  alt={selectedFace.friendName}
-                  className="w-full rounded-lg object-cover max-h-36"
-                  onError={e => { e.target.style.display = 'none'; }}
-                />
-              ) : selectedFace.cropDataUrl ? (
-                <img src={selectedFace.cropDataUrl} alt="Face" className="w-full rounded-lg object-cover max-h-36" />
-              ) : null}
-            </div>
-
-            {/* Details */}
-            <div className="px-3 pb-3 flex flex-col gap-2">
-              {selectedFace.friendName && (
-                <div>
-                  <p className="text-slate-400 text-xs uppercase tracking-wide">Name</p>
-                  <p className="text-white text-sm font-semibold">{selectedFace.friendName}</p>
-                </div>
-              )}
-              {selectedFace.friendGroup && (
-                <div>
-                  <p className="text-slate-400 text-xs uppercase tracking-wide">Group</p>
-                  <p className="text-white text-sm">{selectedFace.friendGroup}</p>
-                </div>
-              )}
-              {selectedFace.note && (
-                <div>
-                  <p className="text-slate-400 text-xs uppercase tracking-wide">Note</p>
-                  <p className="text-white text-sm leading-snug">{selectedFace.note}</p>
-                </div>
-              )}
-              {selectedFace.attributes?.emotion && (
-                <div>
-                  <p className="text-slate-400 text-xs uppercase tracking-wide">Expression</p>
-                  <p className="text-white text-sm">{selectedFace.attributes.emotion}</p>
-                </div>
-              )}
-              {selectedFace.attributes?.ageRange && (
-                <div>
-                  <p className="text-slate-400 text-xs uppercase tracking-wide">Age</p>
-                  <p className="text-white text-sm">{selectedFace.attributes.ageRange}</p>
-                </div>
-              )}
-              {selectedFace.status === 'unknown' ? (
-                <button
-                  onClick={() => navigate('/friends')}
-                  className="mt-2 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors"
-                >
-                  + Add as Friend
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate('/friends')}
-                  className="mt-2 w-full py-2 bg-slate-600 hover:bg-slate-500 text-white text-xs font-medium rounded-lg transition-colors"
-                >
-                  View in Friends
-                </button>
-              )}
-            </div>
+          <div style={{ width: '28%', transition: 'width 0.3s ease' }} className="flex flex-col overflow-hidden">
+            <FriendForm
+              friend={selectedFace.friendId ? {
+                Friend_Id:             selectedFace.friendId,
+                Name_Txt:              selectedFace.friendName  || '',
+                Note_Multi_Line_Txt:   selectedFace.note        || '',
+                Friend_Group:          selectedFace.friendGroup || 'Friend',
+                Linked_User_Name:      null,
+                Linked_User_Email:     null,
+              } : null}
+              capturedPhotoUrl={!selectedFace.friendId ? selectedFace.cropDataUrl : null}
+              onClose={() => setSelectedFace(null)}
+              onSave={() => setSelectedFace(null)}
+              onDelete={() => setSelectedFace(null)}
+            />
           </div>
         )}
 
