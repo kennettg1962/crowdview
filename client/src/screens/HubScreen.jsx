@@ -8,7 +8,7 @@ import FriendForm from '../components/FriendForm';
 import {
   FriendsIcon, LibraryIcon,
   IdIcon, ActionIcon, CameraIcon, CutIcon, MicIcon,
-  MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon
+  MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon, FlipCameraIcon
 } from '../components/Icons';
 import api from '../api/api';
 
@@ -175,6 +175,19 @@ export default function HubScreen() {
       setCurrentAudioIn(connected);
     } catch (err) {
       console.error('Mic switch failed:', err);
+    }
+  }
+
+  async function flipCamera() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      if (videoDevices.length < 2) return;
+      const currentIdx = videoDevices.findIndex(d => d.deviceId === currentSource?.deviceId);
+      const next = videoDevices[(currentIdx + 1) % videoDevices.length];
+      await switchCamera(next);
+    } catch (err) {
+      console.error('Flip camera failed:', err);
     }
   }
 
@@ -399,7 +412,7 @@ export default function HubScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-700 flex flex-col">
+    <div className="h-screen overflow-hidden bg-slate-700 flex flex-col">
 
       {/* Header */}
       <header className="bg-slate-700 px-6 py-3 flex items-center justify-between">
@@ -422,8 +435,8 @@ export default function HubScreen() {
         </button>
       </header>
 
-      {/* Device pickers + outlet row */}
-      <div className="bg-slate-700 px-4 pb-3 flex items-center justify-center gap-2 flex-wrap">
+      {/* Device pickers — desktop only */}
+      <div className="hidden md:flex bg-slate-700 px-4 pb-3 items-center justify-center gap-2 flex-wrap">
         <DevicePicker
           icon={MovieCameraIcon}
           kind="videoinput"
@@ -443,7 +456,7 @@ export default function HubScreen() {
       </div>
 
       {/* Main layout — mobile: full-width video + floating icons; desktop: 3-column */}
-      <main className="flex-1 flex items-stretch p-0 md:px-2 md:pb-2 md:gap-0">
+      <main className="flex-1 flex items-start md:items-stretch p-0 md:px-2 md:pb-2 md:gap-0">
 
         {/* Desktop left sidebar (hidden on mobile) */}
         <div className="hidden md:flex w-[15%] bg-slate-700 rounded-l-xl flex-col">
@@ -465,7 +478,7 @@ export default function HubScreen() {
 
         {/* Video column — full width on mobile, percentage on desktop */}
         <div
-          className={`flex-1 relative bg-black
+          className={`flex-1 min-w-0 overflow-hidden relative bg-black
             md:flex-none md:bg-white md:flex md:flex-col md:items-center md:justify-center md:p-3
             md:border-t md:border-b md:border-gray-200
             md:[transition:width_0.3s_ease]
@@ -521,6 +534,8 @@ export default function HubScreen() {
               <FloatButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-lg animate-pulse" />
             )}
             <FloatButton icon={CameraIcon} label="Camera" onClick={handleCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
+            <div className="border-t border-white/20 mx-1" />
+            <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
           </div>
 
           {/* Mobile floating right icons — Stream */}
@@ -603,7 +618,7 @@ export default function HubScreen() {
       </main>
 
       <NavBar />
-      <TrueFooter />
+      <div className="hidden md:block"><TrueFooter /></div>
 
       {saveStatus && (
         <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-white text-sm font-medium z-50 ${
