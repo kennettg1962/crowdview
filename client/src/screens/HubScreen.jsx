@@ -412,10 +412,10 @@ export default function HubScreen() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-700 flex flex-col">
+    <div className="h-screen overflow-hidden bg-slate-700 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
 
       {/* Header */}
-      <header className="bg-slate-700 px-6 py-3 flex items-center justify-between">
+      <header className="bg-slate-700 px-4 py-2 md:py-3 flex items-center justify-between">
         <button
           onClick={() => navigate('/friends')}
           className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
