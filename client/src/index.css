@@ -49,15 +49,15 @@ body {
   100% { opacity: 0; }
 }
 
-/* Video container — mobile: portrait 3:4; desktop: landscape 16:9 */
+/* Video container — mobile: fill parent (full-screen); desktop: 16:9 */
 .video-container {
   position: relative;
-  padding-bottom: 133.33%; /* 3:4 portrait */
-  height: 0;
+  height: 100%;
   overflow: hidden;
 }
 @media (min-width: 768px) {
   .video-container {
+    height: 0;
     padding-bottom: 56.25%; /* 16:9 landscape */
   }
 }

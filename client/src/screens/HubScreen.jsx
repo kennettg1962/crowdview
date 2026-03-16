@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
@@ -8,7 +8,8 @@ import FriendForm from '../components/FriendForm';
 import {
   FriendsIcon, LibraryIcon,
   IdIcon, ActionIcon, CameraIcon, CutIcon, MicIcon,
-  MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon, FlipCameraIcon
+  MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon, FlipCameraIcon,
+  HomeIcon, BroadcastIcon, UserProfileIcon
 } from '../components/Icons';
 import api from '../api/api';
 
@@ -44,11 +45,13 @@ function FloatButton({ icon: Icon, label, onClick, disabled, className = '' }) {
 
 export default function HubScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     isStreaming, mediaStream, currentSource, setCurrentSource,
     currentAudioIn, setCurrentAudioIn,
     startStream, stopStream,
     isStreamingOut, startWhipStream, stopWhipStream,
+    setSlideoutOpen,
   } = useApp();
   const videoRef = useRef(null);
   const overlayCanvasRef = useRef(null);
@@ -412,10 +415,13 @@ export default function HubScreen() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-700 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div className="relative h-screen overflow-hidden bg-black md:bg-slate-700 md:flex md:flex-col">
 
-      {/* Header */}
-      <header className="bg-slate-700 px-4 py-2 md:py-3 flex items-center justify-between">
+      {/* ── Mobile header — floats over video at top ── */}
+      <header className="flex md:hidden absolute top-0 left-0 right-0 z-30
+        items-center justify-between px-4 pb-3
+        bg-gradient-to-b from-black/70 to-transparent"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>
         <button
           onClick={() => navigate('/friends')}
           className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
@@ -430,6 +436,19 @@ export default function HubScreen() {
           onClick={() => navigate('/library')}
           className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
         >
+          <LibraryIcon className="w-9 h-9" />
+          <span className="text-xs font-medium">Library</span>
+        </button>
+      </header>
+
+      {/* ── Desktop header — normal flow ── */}
+      <header className="hidden md:flex bg-slate-700 px-6 py-3 items-center justify-between">
+        <button onClick={() => navigate('/friends')} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
+          <FriendsIcon className="w-9 h-9" />
+          <span className="text-xs font-medium">Friends</span>
+        </button>
+        <span className="text-white font-bold text-2xl tracking-wide">CrowdView</span>
+        <button onClick={() => navigate('/library')} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
           <LibraryIcon className="w-9 h-9" />
           <span className="text-xs font-medium">Library</span>
         </button>
@@ -455,8 +474,8 @@ export default function HubScreen() {
 
       </div>
 
-      {/* Main layout — mobile: full-width video + floating icons; desktop: 3-column */}
-      <main className="flex-1 flex items-start md:items-stretch p-0 md:px-2 md:pb-2 md:gap-0">
+      {/* Main layout — mobile: full-screen absolute; desktop: 3-column flex */}
+      <main className="absolute inset-0 z-0 flex md:relative md:inset-auto md:z-auto md:flex-1 md:items-stretch md:p-0 md:px-2 md:pb-2 md:gap-0">
 
         {/* Desktop left sidebar (hidden on mobile) */}
         <div className="hidden md:flex w-[15%] bg-slate-700 rounded-l-xl flex-col">
@@ -484,7 +503,7 @@ export default function HubScreen() {
             md:[transition:width_0.3s_ease]
             ${selectedFace ? 'md:w-[42%]' : 'md:w-[70%]'}`}
         >
-          <div className="w-full h-full video-container bg-black border-0 md:border-2 md:border-white md:rounded-sm overflow-hidden relative">
+          <div className="w-full video-container bg-black border-0 md:border-2 md:border-white md:rounded-sm overflow-hidden relative">
             {mediaStream ? (
               <>
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
@@ -617,8 +636,40 @@ export default function HubScreen() {
         </div>
       </main>
 
-      <NavBar />
-      <div className="hidden md:block"><TrueFooter /></div>
+      {/* ── Mobile nav — floats over video at bottom ── */}
+      <nav className="flex md:hidden absolute bottom-0 left-0 right-0 z-30
+        bg-gradient-to-t from-black/70 to-transparent"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex w-full px-2 pt-4 pb-2">
+          {[
+            { icon: HomeIcon,        label: 'Home',      path: '/hub' },
+            { icon: FriendsIcon,     label: 'Friends',   path: '/friends' },
+            { icon: LibraryIcon,     label: 'Library',   path: '/library' },
+            { icon: BroadcastIcon,   label: 'Streams',   path: '/streams' },
+          ].map(({ icon: Icon, label, path }) => (
+            <button key={path} onClick={() => navigate(path)}
+              className={`flex-1 flex flex-col items-center gap-1 text-xs transition-colors
+                ${location.pathname === path ? 'text-white' : 'text-white/60 hover:text-white'}`}
+            >
+              <Icon className="w-5 h-5" />
+              <span>{label}</span>
+            </button>
+          ))}
+          <button onClick={() => setSlideoutOpen(true)}
+            className="flex-1 flex flex-col items-center gap-1 text-xs text-white/60 hover:text-white transition-colors"
+          >
+            <UserProfileIcon className="w-5 h-5" />
+            <span>Menu</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* ── Desktop nav — normal flow ── */}
+      <div className="hidden md:block">
+        <NavBar />
+        <TrueFooter />
+      </div>
 
       {saveStatus && (
         <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-white text-sm font-medium z-50 ${
