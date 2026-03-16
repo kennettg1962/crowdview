@@ -9,11 +9,20 @@ export default function NavBar() {
   const { setSlideoutOpen } = useApp();
 
   return (
-    <nav className="bg-white border-t border-gray-200 flex">
+    <>
+      {/* Spacer so content isn't hidden behind fixed nav on mobile */}
+      <div className="block md:hidden flex-shrink-0" style={{ height: 'calc(env(safe-area-inset-bottom) + 56px)' }} />
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 flex
+        bg-gray-900/95
+        md:relative md:bottom-auto md:left-auto md:right-auto md:z-auto
+        md:bg-white md:border-t md:border-gray-200"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <button
         onClick={() => navigate('/hub')}
         className={`flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors ${
-          location.pathname === '/hub' ? 'text-blue-600 border-t-2 border-blue-600' : 'text-gray-500 hover:text-gray-800'
+          location.pathname === '/hub' ? 'text-white' : 'text-white/60 hover:text-white'
         }`}
       >
         <HomeIcon className="w-5 h-5" />
@@ -23,7 +32,7 @@ export default function NavBar() {
       <button
         onClick={() => navigate('/friends')}
         className={`flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors ${
-          location.pathname === '/friends' ? 'text-blue-600 border-t-2 border-blue-600' : 'text-gray-500 hover:text-gray-800'
+          location.pathname === '/friends' ? 'text-white' : 'text-white/60 hover:text-white'
         }`}
       >
         <FriendsIcon className="w-5 h-5" />
@@ -33,7 +42,7 @@ export default function NavBar() {
       <button
         onClick={() => navigate('/library')}
         className={`flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors ${
-          location.pathname === '/library' ? 'text-blue-600 border-t-2 border-blue-600' : 'text-gray-500 hover:text-gray-800'
+          location.pathname === '/library' ? 'text-white' : 'text-white/60 hover:text-white'
         }`}
       >
         <LibraryIcon className="w-5 h-5" />
@@ -43,7 +52,7 @@ export default function NavBar() {
       <button
         onClick={() => navigate('/streams')}
         className={`flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors ${
-          location.pathname === '/streams' ? 'text-blue-600 border-t-2 border-blue-600' : 'text-gray-500 hover:text-gray-800'
+          location.pathname === '/streams' ? 'text-white' : 'text-white/60 hover:text-white'
         }`}
       >
         <BroadcastIcon className="w-5 h-5" />
@@ -52,11 +61,12 @@ export default function NavBar() {
 
       <button
         onClick={() => setSlideoutOpen(true)}
-        className="flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors text-gray-500 hover:text-gray-800"
+        className="flex-1 flex flex-col items-center py-2 gap-1 text-xs transition-colors text-white/60 hover:text-white"
       >
         <UserProfileIcon className="w-5 h-5" />
         <span>User Menu</span>
       </button>
     </nav>
+    </>
   );
 }

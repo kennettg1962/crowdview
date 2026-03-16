@@ -170,8 +170,8 @@ export default function IdScreen() {
       {/* Main: photo with bounding box overlays */}
       <main className="flex-1 flex flex-col items-center px-3 py-1.5 gap-1 overflow-hidden min-h-0">
 
-        {/* Summary row: Back button left, message centered */}
-        <div className="w-full flex items-center">
+        {/* Summary row: Back button left, message centered — desktop only */}
+        <div className="hidden md:flex w-full items-center">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm flex-shrink-0"
@@ -211,14 +211,42 @@ export default function IdScreen() {
 
         {photoDataUrl ? (
           <div className="flex-1 min-h-0 flex items-center justify-center w-full overflow-hidden">
-          <div className="h-full bg-white p-3 flex items-center justify-center">
-          <div className="relative h-full overflow-hidden">
+          <div className="h-full md:bg-white md:p-3 flex items-center justify-center w-full md:w-auto">
+          <div className="relative h-full overflow-hidden w-full md:w-auto">
             <img
               src={photoDataUrl}
               alt="Captured"
-              className="h-full w-auto max-w-full block"
+              className="h-full w-full md:w-auto object-contain block"
               draggable={false}
             />
+
+            {/* Mobile: floating Back button top-left */}
+            <button
+              onClick={() => navigate(-1)}
+              className="md:hidden absolute top-3 left-3 z-20 flex items-center gap-1 px-3 py-1.5 bg-black/60 backdrop-blur-sm text-white rounded-lg text-sm"
+            >
+              <BackIcon className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+
+            {/* Mobile: floating identification message top-center */}
+            <div className="md:hidden absolute top-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+              {!loading && faces.length > 0 && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg text-xs whitespace-nowrap">
+                  <span className="text-white font-semibold">{faces.length} face{faces.length !== 1 ? 's' : ''}</span>
+                  <span className="text-white/40">·</span>
+                  <span className="text-green-400">{faces.filter(f => f.status === 'known').length} friend{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
+                  <span className="text-white/40">·</span>
+                  <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
+                </div>
+              )}
+              {!loading && identifyError && (
+                <div className="px-3 py-1.5 bg-red-900/70 backdrop-blur-sm rounded-lg text-xs text-red-300">{identifyError}</div>
+              )}
+              {!loading && !identifyError && faces.length === 0 && (
+                <div className="px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg text-xs text-gray-300">No faces detected</div>
+              )}
+            </div>
 
             {/* Loading overlay */}
             {loading && (

@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import MenuSlideout from './components/MenuSlideout';
 import GlobalVoiceCommands from './components/GlobalVoiceCommands';
@@ -20,9 +20,16 @@ function AuthGuard({ children }) {
   return children;
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
 function AppRoutes() {
   return (
     <>
+    <ScrollToTop />
     <MenuSlideout />
     <GlobalVoiceCommands />
     <Routes>

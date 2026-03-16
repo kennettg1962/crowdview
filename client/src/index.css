@@ -4,6 +4,11 @@
   box-sizing: border-box;
 }
 
+/* Eliminate iOS double-tap delay on all interactive elements */
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   font-family:

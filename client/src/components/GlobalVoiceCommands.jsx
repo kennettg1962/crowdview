@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { useApp } from '../context/AppContext';
 import { isMac } from '../utils/platform';
 
@@ -28,6 +29,7 @@ export default function GlobalVoiceCommands() {
 
   useEffect(() => {
     if (isMac) return; // macOS: mic used for stream audio; voice commands not supported
+    if (Capacitor.isNativePlatform()) return; // WKWebView/native: SpeechRecognition loops endlessly
     if (!isAuthenticated) return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;

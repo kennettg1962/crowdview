@@ -98,7 +98,7 @@ export default function ManageFriendsScreen() {
   }, {});
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className="bg-gray-900">
       {/* Hidden file input for photo upload */}
       <input
         ref={fileInputRef}
@@ -124,8 +124,8 @@ export default function ManageFriendsScreen() {
       />
 
       {/* Main container */}
-      <main className="flex-1 flex flex-col items-center px-4 py-4 overflow-hidden">
-        <div className="w-full max-w-2xl flex flex-col flex-1 gap-3">
+      <main className="flex flex-col items-center px-4 py-4">
+        <div className="w-full max-w-2xl flex flex-col gap-3">
           {/* Group filter */}
           <select
             value={group}
@@ -136,9 +136,9 @@ export default function ManageFriendsScreen() {
           </select>
 
           {/* Friends list with A-Z index */}
-          <div className="flex gap-2 flex-1 overflow-hidden">
+          <div className="flex gap-2">
             {/* A-Z index */}
-            <div className="flex flex-col justify-between py-1 text-xs text-gray-500">
+            <div className="flex flex-col gap-0.5 py-1 text-xs text-gray-500">
               {ALPHABET.map(letter => (
                 <button
                   key={letter}
@@ -151,7 +151,7 @@ export default function ManageFriendsScreen() {
             </div>
 
             {/* Friend list */}
-            <div className="flex-1 overflow-y-auto space-y-1">
+            <div className="flex-1 space-y-1">
               {loading ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
@@ -166,7 +166,7 @@ export default function ManageFriendsScreen() {
               ) : (
                 Object.entries(grouped).map(([letter, letterFriends]) => (
                   <div key={letter} id={`letter-${letter}`}>
-                    <div className="sticky top-0 bg-gray-900 text-blue-400 text-xs font-bold px-2 py-1">
+                    <div className="bg-gray-900 text-blue-400 text-xs font-bold px-2 py-1">
                       {letter}
                     </div>
                     {letterFriends.map(friend => (
@@ -182,6 +182,8 @@ export default function ManageFriendsScreen() {
                                 alt={friend.Name_Txt}
                                 className="w-full h-full object-cover"
                                 fallback={<span className="text-gray-500 text-[27px]">👤</span>}
+                                lazy
+                                maxPx={120}
                               />
                             ) : (
                               <span className="text-gray-500 text-[27px]">👤</span>

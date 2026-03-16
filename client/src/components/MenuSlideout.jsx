@@ -40,21 +40,23 @@ export default function MenuSlideout() {
     navigate('/profile');
   };
 
+  if (!slideoutOpen) return null;
+
   return (
     <>
       {/* Overlay */}
-      {slideoutOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={close}
-        />
-      )}
-
-      {/* Slide-out panel */}
       <div
-        className={`fixed top-0 left-0 h-full w-72 bg-gray-900 z-50 shadow-2xl transform transition-transform duration-300 flex flex-col ${
-          slideoutOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className="fixed inset-0 bg-black/50 z-40"
+        onClick={close}
+      />
+
+      {/* Slide-out panel — sits between fixed header and fixed nav */}
+      <div
+        className="fixed left-0 w-72 bg-gray-900 z-50 shadow-2xl flex flex-col"
+        style={{
+          top: 'calc(env(safe-area-inset-top) + 56px)',
+          bottom: 'calc(env(safe-area-inset-bottom) + 56px)',
+        }}
       >
         {/* Header */}
         <div className="bg-gray-800 px-4 py-4 flex items-center justify-between border-b border-gray-700">

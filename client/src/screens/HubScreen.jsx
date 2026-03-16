@@ -420,7 +420,7 @@ export default function HubScreen() {
       {/* ── Mobile header — fixed overlay at top ── */}
       <header className="flex md:hidden fixed top-0 left-0 right-0 z-50
         items-center justify-between px-4 pb-3
-        bg-black/60 backdrop-blur-md"
+        bg-black/70"
         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>
         <button
           onClick={() => navigate('/friends')}
@@ -538,7 +538,7 @@ export default function HubScreen() {
           </div>
 
           {/* Mobile floating left icons — Live, Id, Action, Camera */}
-          <div className="flex md:hidden flex-col absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-black/50 backdrop-blur-sm rounded-xl p-1.5 gap-0.5">
+          <div className="flex md:hidden flex-col absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-black/65 rounded-xl p-1.5 gap-0.5">
             {liveScan ? (
               <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-lg animate-pulse" />
             ) : (
@@ -558,7 +558,7 @@ export default function HubScreen() {
           </div>
 
           {/* Mobile floating right icons — Stream */}
-          <div className="flex md:hidden flex-col absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-black/50 backdrop-blur-sm rounded-xl p-1.5 gap-0.5">
+          <div className="flex md:hidden flex-col absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-black/65 rounded-xl p-1.5 gap-0.5">
             {!isStreamingOut ? (
               <FloatButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-white/20" />
             ) : (
@@ -638,7 +638,7 @@ export default function HubScreen() {
 
       {/* ── Mobile nav — fixed overlay at bottom ── */}
       <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-50
-        bg-black/60 backdrop-blur-md"
+        bg-black/70"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex w-full px-2 pt-4 pb-2">

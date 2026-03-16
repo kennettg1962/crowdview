@@ -11,7 +11,7 @@ export default function TrueFooter() {
 
   return (
     <>
-      <footer className="bg-gray-50 text-gray-600 text-sm py-3 px-4 flex justify-center gap-8 border-t border-gray-200">
+      <footer className="hidden md:flex bg-gray-50 text-gray-600 text-sm py-3 px-4 justify-center gap-8 border-t border-gray-200">
         <button onClick={() => setModal('about')} className="hover:text-gray-900 hover:underline transition-colors">
           About Us
         </button>

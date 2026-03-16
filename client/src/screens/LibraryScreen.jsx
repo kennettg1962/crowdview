@@ -11,10 +11,23 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 
 function VideoThumbnail({ mediaId, className }) {
   const [thumbUrl, setThumbUrl] = useState(null);
-  const videoRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+  const containerRef = useRef(null);
   const blobUrlRef = useRef(null);
 
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
     let cancelled = false;
     api.get(`/api/media/${mediaId}/data`, { responseType: 'blob' })
       .then(res => {
@@ -36,17 +49,16 @@ function VideoThumbnail({ mediaId, className }) {
           setThumbUrl(canvas.toDataURL('image/jpeg'));
           video.src = '';
         };
-        videoRef.current = video;
       })
       .catch(() => {});
     return () => {
       cancelled = true;
       if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
     };
-  }, [mediaId]);
+  }, [visible, mediaId]);
 
   return (
-    <div className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative ${className}`}>
       {thumbUrl ? (
         <img src={thumbUrl} alt="Video thumbnail" className="w-full h-full object-cover" />
       ) : (
@@ -172,8 +184,6 @@ export default function LibraryScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [viewingItem, setViewingItem] = useState(null);
-  const clickTimers = useRef({});
-
   const loadMedia = useCallback(async () => {
     setLoading(true);
     try {
@@ -190,23 +200,12 @@ export default function LibraryScreen() {
 
   function handleItemClick(item) {
     const id = item.User_Media_Id;
-    if (clickTimers.current[id]) {
-      // Double-click — open viewer
-      clearTimeout(clickTimers.current[id]);
-      delete clickTimers.current[id];
-      setViewingItem(item);
-    } else {
-      // Single click — wait to see if double-click follows
-      clickTimers.current[id] = setTimeout(() => {
-        delete clickTimers.current[id];
-        setSelectedIds(prev => {
-          const next = new Set(prev);
-          if (next.has(id)) next.delete(id);
-          else next.add(id);
-          return next;
-        });
-      }, 250);
-    }
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   async function handleDelete() {
@@ -300,7 +299,7 @@ export default function LibraryScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className="bg-gray-900">
       <AppHeader
         left={
           <button onClick={() => navigate('/hub')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
@@ -375,7 +374,7 @@ export default function LibraryScreen() {
       </div>
 
       {/* Media grid */}
-      <main className="flex-1 overflow-y-auto p-4">
+      <main className="p-4">
         {loading ? (
           <div className="flex justify-center mt-10">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
@@ -388,10 +387,10 @@ export default function LibraryScreen() {
         ) : (
           grouped.map(([key, group]) => (
             <div key={key} className="mb-6">
-              <h3 className="text-gray-400 text-sm font-medium mb-3 sticky top-0 bg-gray-900 py-1">
+              <h3 className="text-gray-400 text-sm font-medium mb-3 bg-gray-900 py-1">
                 {MONTHS[group.month]} {group.year}
               </h3>
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
                 {group.items.map(item => {
                   const selected = selectedIds.has(item.User_Media_Id);
                   return (
@@ -410,6 +409,8 @@ export default function LibraryScreen() {
                           alt="Media"
                           className="w-full h-full object-cover"
                           fallback={<div className="w-full h-full bg-gray-700 flex items-center justify-center"><span className="text-gray-500 text-xs">Photo</span></div>}
+                          lazy
+                          maxPx={400}
                         />
                       )}
                       {selected && (
