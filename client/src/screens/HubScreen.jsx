@@ -417,10 +417,10 @@ export default function HubScreen() {
   return (
     <div className="relative h-screen overflow-hidden bg-black md:bg-slate-700 md:flex md:flex-col">
 
-      {/* ── Mobile header — floats over video at top ── */}
-      <header className="flex md:hidden absolute top-0 left-0 right-0 z-30
+      {/* ── Mobile header — fixed overlay at top ── */}
+      <header className="flex md:hidden fixed top-0 left-0 right-0 z-50
         items-center justify-between px-4 pb-3
-        bg-gradient-to-b from-black/70 to-transparent"
+        bg-black/60 backdrop-blur-md"
         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>
         <button
           onClick={() => navigate('/friends')}
@@ -636,9 +636,9 @@ export default function HubScreen() {
         </div>
       </main>
 
-      {/* ── Mobile nav — floats over video at bottom ── */}
-      <nav className="flex md:hidden absolute bottom-0 left-0 right-0 z-30
-        bg-gradient-to-t from-black/70 to-transparent"
+      {/* ── Mobile nav — fixed overlay at bottom ── */}
+      <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-50
+        bg-black/60 backdrop-blur-md"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex w-full px-2 pt-4 pb-2">
