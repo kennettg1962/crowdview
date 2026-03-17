@@ -314,8 +314,8 @@ export default function LibraryScreen() {
         }
       />
 
-      {/* Filter / action row — two rows on mobile, single row on desktop */}
-      <div className="bg-gray-800 px-4 pt-2 pb-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+      {/* Filter / action row */}
+      <div className="bg-gray-800 px-4 pt-2 pb-2 flex flex-col md:flex-row md:items-center md:relative gap-2">
         {/* Year filters */}
         <div className="flex items-center gap-2 overflow-x-auto flex-1">
           <button
@@ -335,37 +335,27 @@ export default function LibraryScreen() {
           ))}
         </div>
 
-        {/* Action buttons — 4-col grid on mobile, inline flex on desktop */}
-        <div className="grid grid-cols-4 md:flex md:items-center gap-2 md:flex-shrink-0">
-          <button
-            onClick={handleId}
-            disabled={!singlePhotoSelected}
-            className="flex items-center justify-center h-9 md:h-8 md:w-[110px] bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-          >
-            Id
+        {/* Mobile: 4-col grid */}
+        <div className="grid grid-cols-4 gap-2 md:hidden">
+          <button onClick={handleId} disabled={!singlePhotoSelected} className="flex items-center justify-center h-9 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors">Id</button>
+          <button onClick={() => singleSelected && setViewingItem(singleSelected)} disabled={!singleSelected} className="flex items-center justify-center h-9 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors">View</button>
+          <button onClick={handleExport} disabled={selectedIds.size === 0} className="flex items-center justify-center h-9 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors">Export</button>
+          <button onClick={() => selectedIds.size > 0 && setConfirmDelete(true)} disabled={selectedIds.size === 0} className="flex items-center justify-center gap-1 h-9 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors">
+            <DeleteIcon className="w-4 h-4" /><span>({selectedIds.size})</span>
           </button>
-          <button
-            onClick={() => singleSelected && setViewingItem(singleSelected)}
-            disabled={!singleSelected}
-            className="flex items-center justify-center h-9 md:h-8 md:w-[110px] bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-          >
-            View
-          </button>
-          <button
-            onClick={handleExport}
-            disabled={selectedIds.size === 0}
-            className="flex items-center justify-center h-9 md:h-8 md:w-[110px] bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-          >
-            Export
-          </button>
-          <button
-            onClick={() => selectedIds.size > 0 && setConfirmDelete(true)}
-            disabled={selectedIds.size === 0}
-            className="flex items-center justify-center gap-1 h-9 md:h-8 md:w-[110px] bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors"
-          >
-            <DeleteIcon className="w-4 h-4" />
-            <span className="md:hidden">({selectedIds.size})</span>
-            <span className="hidden md:inline">Delete ({selectedIds.size})</span>
+        </div>
+
+        {/* Desktop center: Id + Export */}
+        <div className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
+          <button onClick={handleId} disabled={!singlePhotoSelected} className="flex items-center justify-center h-8 w-[110px] bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors">Id</button>
+          <button onClick={handleExport} disabled={selectedIds.size === 0} className="flex items-center justify-center h-8 w-[110px] bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors">Export</button>
+        </div>
+
+        {/* Desktop right: View + Delete */}
+        <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+          <button onClick={() => singleSelected && setViewingItem(singleSelected)} disabled={!singleSelected} className="flex items-center justify-center h-8 w-[110px] bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors">View</button>
+          <button onClick={() => selectedIds.size > 0 && setConfirmDelete(true)} disabled={selectedIds.size === 0} className="flex items-center justify-center gap-1 h-8 w-[110px] bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40 transition-colors">
+            <DeleteIcon className="w-4 h-4" /><span>Delete ({selectedIds.size})</span>
           </button>
         </div>
       </div>
