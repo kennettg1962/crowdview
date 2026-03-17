@@ -299,7 +299,7 @@ export default function LibraryScreen() {
   }
 
   return (
-    <div className="bg-gray-900 min-h-screen">
+    <div className="bg-gray-900 min-h-screen flex flex-col">
       <AppHeader
         left={
           <button onClick={() => navigate('/hub')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
@@ -371,7 +371,7 @@ export default function LibraryScreen() {
       </div>
 
       {/* Media grid */}
-      <main className="p-4">
+      <main className="flex-1 p-4">
         {loading ? (
           <div className="flex justify-center mt-10">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
@@ -426,8 +426,8 @@ export default function LibraryScreen() {
         )}
       </main>
 
-      <NavBar />
       <TrueFooter />
+      <NavBar />
 
       {/* Delete confirm */}
       {confirmDelete && (

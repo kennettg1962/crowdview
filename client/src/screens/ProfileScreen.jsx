@@ -193,8 +193,8 @@ export default function ProfileScreen() {
         </div>
       </main>
 
-      <NavBar />
       <TrueFooter />
+      <NavBar />
 
       {/* Dirty check confirm */}
       {confirmLeave && (

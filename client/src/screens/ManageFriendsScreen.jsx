@@ -98,7 +98,7 @@ export default function ManageFriendsScreen() {
   }, {});
 
   return (
-    <div className="bg-gray-900">
+    <div className="bg-gray-900 min-h-screen flex flex-col">
       {/* Hidden file input for photo upload */}
       <input
         ref={fileInputRef}
@@ -124,7 +124,7 @@ export default function ManageFriendsScreen() {
       />
 
       {/* Main container */}
-      <main className="flex flex-col items-center px-4 py-4">
+      <main className="flex-1 flex flex-col items-center px-4 py-4">
         <div className="w-full max-w-2xl flex flex-col gap-3">
           {/* Group filter */}
           <select
@@ -220,8 +220,8 @@ export default function ManageFriendsScreen() {
         </div>
       </main>
 
-      <NavBar />
       <TrueFooter />
+      <NavBar />
 
       {showForm && (
         <FriendFormPopup

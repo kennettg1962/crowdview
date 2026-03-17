@@ -58,7 +58,7 @@ export default function StreamsScreen() {
   const streams = tab === 'live' ? liveStreams : pastStreams;
 
   return (
-    <div className="h-screen overflow-hidden bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-gray-900 flex flex-col">
       <AppHeader
         left={
           <button onClick={() => navigate('/hub')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
@@ -139,8 +139,8 @@ export default function StreamsScreen() {
         )}
       </main>
 
-      <NavBar />
       <TrueFooter />
+      <NavBar />
     </div>
   );
 }

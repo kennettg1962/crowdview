@@ -151,7 +151,7 @@ export default function IdScreen() {
   }
 
   return (
-    <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-gray-900 flex flex-col">
       {/* Header */}
       <AppHeader
         left={
@@ -343,8 +343,8 @@ export default function IdScreen() {
         )}
       </main>
 
-      <NavBar />
       <TrueFooter />
+      <NavBar />
 
       {/* Right-click context menu */}
       {contextMenu && (

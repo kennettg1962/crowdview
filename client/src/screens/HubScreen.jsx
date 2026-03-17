@@ -667,8 +667,8 @@ export default function HubScreen() {
 
       {/* ── Desktop nav — normal flow ── */}
       <div className="hidden md:block">
-        <NavBar />
         <TrueFooter />
+        <NavBar />
       </div>
 
       {saveStatus && (
