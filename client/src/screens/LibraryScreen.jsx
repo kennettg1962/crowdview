@@ -316,8 +316,8 @@ export default function LibraryScreen() {
 
       {/* Filter / action row */}
       <div className="bg-gray-800 px-4 pt-2 pb-2 flex flex-col md:flex-row md:items-center md:relative gap-2">
-        {/* Year filters */}
-        <div className="flex items-center gap-2 overflow-x-auto flex-1">
+        {/* Year filters — desktop only */}
+        <div className="hidden md:flex items-center gap-2 overflow-x-auto flex-1">
           <button
             onClick={() => setFilter('all')}
             className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
