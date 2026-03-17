@@ -420,24 +420,27 @@ cropped face data URL (padded 12%)
 ### Layout
 ```
 [AppHeader: CameraIcon | "CrowdView" | FriendsIcon]
-[Year filter row]
-[Action row: Id btn | Export btn | View btn | Delete btn (with count)]
+[Row 1: Year filter pills (scrollable)]
+[Row 2: Action buttons — Id | View | Export | Delete(N) — equal-width 4-column grid]
 [Media grid — 6 columns]
 [NavBar]
 [TrueFooter]
 ```
 
-### Year Filter Row
-- Buttons: "All" + each distinct year present in media
-- Active year: highlighted; filters grid to that year
+### Year Filter Row (Row 1)
+- Horizontally scrollable pill buttons: "All" + each distinct year present in media
+- Active year: highlighted blue; filters grid to that year
 
-### Action Row
+### Action Row (Row 2)
+- 4 equal-width buttons in a CSS grid (grid-cols-4); all buttons same height (h-9)
+- Split into two rows to avoid overflow on narrow mobile screens
+
 | Button | Enabled when | Action |
 |--------|--------------|--------|
 | Id | Single photo selected | Navigate to `/id` with `saveToLibrary:false` |
+| View | Single item selected | Opens MediaViewer |
 | Export | ≥1 item selected | File System Access API save dialog or blob download fallback |
-| View | ≥1 item selected | Opens MediaViewer |
-| Delete (N) | ≥1 item selected | Confirm → DELETE each selected item |
+| Delete (N) | ≥1 item selected | Confirm → DELETE each selected item; shows count in parens |
 
 ### Media Grid
 - 6 columns; items grouped and displayed by month/year
