@@ -62,7 +62,7 @@ function VideoThumbnail({ mediaId, className }) {
       {thumbUrl ? (
         <img src={thumbUrl} alt="Video thumbnail" className="w-full h-full object-cover" />
       ) : (
-        <div className="w-full h-full bg-gray-800" />
+        <div className="w-full h-full bg-slate-700" />
       )}
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="text-white text-5xl opacity-80 drop-shadow">▶</span>
@@ -315,7 +315,7 @@ export default function LibraryScreen() {
       />
 
       {/* Filter / action row — two rows on mobile, single row on desktop */}
-      <div className="bg-gray-800 px-4 pt-2 pb-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+      <div className="bg-slate-700 px-4 pt-2 pb-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         {/* Year filters */}
         <div className="flex items-center gap-2 overflow-x-auto flex-1">
           <button
@@ -432,7 +432,7 @@ export default function LibraryScreen() {
       {/* Delete confirm */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
+          <div className="bg-slate-700 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
             <p className="text-white mb-2">Delete {selectedIds.size} item{selectedIds.size !== 1 ? 's' : ''}?</p>
             <p className="text-gray-400 text-sm mb-4">This action cannot be undone.</p>
             <div className="flex gap-3">
