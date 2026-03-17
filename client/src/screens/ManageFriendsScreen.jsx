@@ -125,7 +125,7 @@ export default function ManageFriendsScreen() {
 
       {/* Main container */}
       <main className="flex-1 flex flex-col items-center px-4 py-4">
-        <div className="w-full max-w-2xl flex flex-col gap-3">
+        <div className="w-full max-w-2xl flex flex-col gap-3 bg-gray-900 rounded-lg p-3">
           {/* Group filter */}
           <select
             value={group}
