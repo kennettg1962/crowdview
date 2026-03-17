@@ -299,7 +299,7 @@ export default function LibraryScreen() {
   }
 
   return (
-    <div className="bg-gray-900">
+    <div className="bg-gray-900 min-h-screen">
       <AppHeader
         left={
           <button onClick={() => navigate('/hub')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
