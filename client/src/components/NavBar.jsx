@@ -10,10 +10,11 @@ export default function NavBar() {
 
   return (
     <>
-      {/* Spacer so content isn't hidden behind fixed nav */}
-      <div className="flex-shrink-0" style={{ height: 'calc(env(safe-area-inset-bottom) + 56px)' }} />
+      {/* Spacer — mobile: nav height only; desktop: nav + footer height */}
+      <div className="flex-shrink-0 md:hidden" style={{ height: 'calc(env(safe-area-inset-bottom) + 56px)' }} />
+      <div className="hidden md:block" style={{ height: '100px' }} />
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 flex bg-gray-900/95"
+      className="fixed bottom-0 left-0 right-0 z-50 flex bg-gray-900/95 md:bottom-[44px]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <button
