@@ -98,7 +98,7 @@ export default function ManageFriendsScreen() {
   }, {});
 
   return (
-    <div className="bg-gray-900 min-h-screen flex flex-col">
+    <div className="bg-slate-700 min-h-screen flex flex-col">
       {/* Hidden file input for photo upload */}
       <input
         ref={fileInputRef}

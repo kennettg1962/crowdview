@@ -78,14 +78,14 @@ export default function StreamWatchScreen() {
 
   if (!stream) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center text-gray-400">
+      <div className="min-h-screen bg-slate-700 flex items-center justify-center text-gray-400">
         <p>No stream selected. <button onClick={() => navigate('/streams')} className="text-blue-400 underline">Go to Streams</button></p>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
+    <div className="h-screen bg-slate-700 flex flex-col overflow-hidden">
       <AppHeader
         left={
           <button onClick={() => navigate(-1)} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">

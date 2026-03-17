@@ -6,9 +6,9 @@ export default function AppHeader({ left, center, right }) {
       {/* Fixed on mobile, normal flow on desktop */}
       <header
         className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-4 pb-2
-          bg-gray-900/95
+          bg-slate-700/95
           md:relative md:top-auto md:left-auto md:right-auto md:z-auto
-          md:bg-gray-900 md:border-b md:border-gray-700 md:py-2 min-h-[56px]"
+          md:bg-slate-700 md:border-b md:border-slate-600 md:py-2 min-h-[56px]"
         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}
       >
         <div className="flex items-center gap-2 min-w-[80px]">

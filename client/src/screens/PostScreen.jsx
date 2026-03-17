@@ -172,7 +172,7 @@ export default function PostScreen() {
   const hasNext = currentIndex < mediaItems.length - 1;
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-slate-700 flex flex-col">
       <AppHeader
         left={
           <button onClick={() => navigate('/library')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
