@@ -237,7 +237,7 @@ export default function IdScreen() {
             <img
               src={photoDataUrl}
               alt="Captured"
-              className="h-full w-full object-contain block md:h-auto md:w-auto md:max-w-full md:max-h-[calc(100vh-200px)]"
+              className="h-full w-full object-contain block md:h-auto md:w-auto md:max-w-[calc(100vw-32px)] md:max-h-[calc(100vh-160px)]"
               draggable={false}
             />
 
