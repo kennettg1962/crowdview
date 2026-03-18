@@ -65,6 +65,7 @@ export default function HubScreen() {
   const [saveStatus, setSaveStatus] = useState(null);
   const [permissionError, setPermissionError] = useState(null);
   const [liveScan, setLiveScan] = useState(false);
+  const [liveScanInitializing, setLiveScanInitializing] = useState(false);
   const [liveFaces, setLiveFaces] = useState([]);
   const [selectedFace, setSelectedFace] = useState(null);
 
@@ -219,6 +220,7 @@ export default function HubScreen() {
       if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
       setLiveFaces([]);
       setSelectedFace(null);
+      setLiveScanInitializing(false);
       return;
     }
     const interval = setInterval(async () => {
@@ -293,6 +295,7 @@ export default function HubScreen() {
         console.error('[LiveScan] error:', err);
       } finally {
         scanInFlightRef.current = false;
+        setLiveScanInitializing(false);
       }
     }, 300);
 
@@ -482,7 +485,7 @@ export default function HubScreen() {
           {liveScan ? (
             <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-xl animate-pulse" />
           ) : (
-            <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(true)} disabled={!canId} className="text-white hover:bg-slate-600" />
+            <SideButton icon={LiveScanIcon} label="Live" onClick={() => { setLiveScan(true); setLiveScanInitializing(true); }} disabled={!canId} className="text-white hover:bg-slate-600" />
           )}
           <div className="mx-3 border-t border-slate-600" />
           <SideButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-slate-600" />
@@ -511,6 +514,12 @@ export default function HubScreen() {
                   onClick={handleCanvasClick}
                   className={`absolute inset-0 w-full h-full ${liveScan && liveFaces.length > 0 ? 'cursor-pointer' : 'pointer-events-none'}`}
                 />
+                {liveScanInitializing && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 gap-3 pointer-events-none">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-400" />
+                    <p className="text-white text-sm font-medium">Initializing face detection...</p>
+                  </div>
+                )}
               </>
             ) : permissionError ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center px-6">
@@ -544,7 +553,7 @@ export default function HubScreen() {
             {liveScan ? (
               <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-lg animate-pulse" />
             ) : (
-              <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(true)} disabled={!canId} className="text-white hover:bg-white/20" />
+              <FloatButton icon={LiveScanIcon} label="Live" onClick={() => { setLiveScan(true); setLiveScanInitializing(true); }} disabled={!canId} className="text-white hover:bg-white/20" />
             )}
           </div>
 
