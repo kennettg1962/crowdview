@@ -106,12 +106,14 @@ export default function IdScreen() {
   }
 
   useEffect(() => {
-    const onResize = () => {
-      const img = photoContainerRef.current?.querySelector('img');
+    const container = photoContainerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(() => {
+      const img = container.querySelector('img');
       if (img?.complete) calcImgRect(img);
-    };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function identifyFaces() {
@@ -199,10 +201,10 @@ export default function IdScreen() {
       />
 
       {/* Main: photo with bounding box overlays */}
-      <main className="flex-1 flex flex-col items-center px-3 py-1.5 gap-1 overflow-hidden min-h-0">
+      <main className="flex-1 flex flex-col items-center overflow-hidden min-h-0">
 
         {/* Summary row: Back button left, message centered — desktop only */}
-        <div className="hidden md:flex w-full items-center">
+        <div className="hidden md:flex w-full items-center px-3 py-1.5">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm flex-shrink-0"
@@ -242,7 +244,7 @@ export default function IdScreen() {
 
         {/* Mobile: identification message above photo */}
         {photoDataUrl && (
-          <div className="md:hidden w-full flex justify-center pointer-events-none">
+          <div className="md:hidden w-full flex justify-center pointer-events-none px-3 py-1.5">
             {!loading && faces.length > 0 && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 rounded-lg text-xs whitespace-nowrap">
                 <span className="text-white font-semibold">{faces.length} face{faces.length !== 1 ? 's' : ''}</span>
@@ -266,7 +268,7 @@ export default function IdScreen() {
             <img
               src={photoDataUrl}
               alt="Captured"
-              className="w-full h-full object-contain block"
+              className="w-full h-full object-contain object-center block"
               draggable={false}
               onLoad={e => calcImgRect(e.target)}
             />
