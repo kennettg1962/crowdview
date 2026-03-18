@@ -132,18 +132,20 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
 
   function resizeImage(file, maxW = 1280, quality = 0.82) {
     return new Promise(resolve => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const scale = Math.min(1, maxW / img.naturalWidth);
-        const canvas = document.createElement('canvas');
-        canvas.width  = Math.round(img.naturalWidth  * scale);
-        canvas.height = Math.round(img.naturalHeight * scale);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxW / img.naturalWidth);
+          const canvas = document.createElement('canvas');
+          canvas.width  = Math.round(img.naturalWidth  * scale);
+          canvas.height = Math.round(img.naturalHeight * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+        };
+        img.src = reader.result;
       };
-      img.src = url;
+      reader.readAsDataURL(file);
     });
   }
 

@@ -50,19 +50,21 @@ export default function ManageFriendsScreen() {
     if (!file) return;
 
     const imageDataUrl = await new Promise(resolve => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const maxW = 1280;
-        const scale = Math.min(1, maxW / img.naturalWidth);
-        const canvas = document.createElement('canvas');
-        canvas.width  = Math.round(img.naturalWidth  * scale);
-        canvas.height = Math.round(img.naturalHeight * scale);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxW = 1280;
+          const scale = Math.min(1, maxW / img.naturalWidth);
+          const canvas = document.createElement('canvas');
+          canvas.width  = Math.round(img.naturalWidth  * scale);
+          canvas.height = Math.round(img.naturalHeight * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.src = reader.result;
       };
-      img.src = url;
+      reader.readAsDataURL(file);
     });
 
     // Save to library (non-blocking)
