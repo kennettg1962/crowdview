@@ -368,16 +368,20 @@ export default function HubScreen() {
 
   const handleId = useCallback(() => {
     if (!videoRef.current || !mediaStream) return;
+    const maxW = 1280;
+    const vw = videoRef.current.videoWidth  || 640;
+    const vh = videoRef.current.videoHeight || 480;
+    const scale = Math.min(1, maxW / vw);
     const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth || 640;
-    canvas.height = videoRef.current.videoHeight || 480;
-    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
-    const dataUrl = canvas.toDataURL('image/jpeg');
+    canvas.width  = Math.round(vw * scale);
+    canvas.height = Math.round(vh * scale);
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
     canvas.toBlob(blob => {
       const fd = new FormData();
       fd.append('media', blob, 'photo.jpg');
       api.post('/api/media', fd).catch(console.error);
-    }, 'image/jpeg');
+    }, 'image/jpeg', 0.82);
     navigate('/id', { state: { photoDataUrl: dataUrl, saveToLibrary: true } });
   }, [mediaStream, navigate]);
 
