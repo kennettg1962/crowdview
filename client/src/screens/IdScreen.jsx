@@ -51,7 +51,7 @@ export default function IdScreen() {
   const [activeFaceCrop, setActiveFaceCrop] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, face, index }
   const [showAddPhotoPopup, setShowAddPhotoPopup] = useState(null); // { face, faceCrop }
-  const [imgRect, setImgRect] = useState(null); // rendered image rect within container
+  const [imgStyle, setImgStyle] = useState(null); // {width, height} in px for rendered image
   const photoContainerRef = useRef(null);
   const photoDataUrl = location.state?.photoDataUrl;
   const saveToLibrary = location.state?.saveToLibrary ?? false;
@@ -85,24 +85,17 @@ export default function IdScreen() {
     if (photoDataUrl) identifyFaces();
   }, [photoDataUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function calcImgRect(img) {
+  function calcImgStyle(img) {
     const container = photoContainerRef.current;
     if (!container || !img) return;
     const cw = container.clientWidth;
     const ch = container.clientHeight;
-    const iw = img.naturalWidth;
-    const ih = img.naturalHeight;
-    const containerAspect = cw / ch;
-    const imgAspect = iw / ih;
-    let renderW, renderH, offsetX, offsetY;
-    if (imgAspect > containerAspect) {
-      renderW = cw; renderH = cw / imgAspect;
-      offsetX = 0;  offsetY = (ch - renderH) / 2;
-    } else {
-      renderH = ch; renderW = ch * imgAspect;
-      offsetY = 0;  offsetX = (cw - renderW) / 2;
-    }
-    setImgRect({ left: offsetX, top: offsetY, width: renderW, height: renderH });
+    if (!cw || !ch) return;
+    const scale = Math.min(cw / img.naturalWidth, ch / img.naturalHeight);
+    setImgStyle({
+      width:  Math.round(img.naturalWidth  * scale),
+      height: Math.round(img.naturalHeight * scale),
+    });
   }
 
   useEffect(() => {
@@ -110,7 +103,7 @@ export default function IdScreen() {
     if (!container) return;
     const ro = new ResizeObserver(() => {
       const img = container.querySelector('img');
-      if (img?.complete) calcImgRect(img);
+      if (img?.complete) calcImgStyle(img);
     });
     ro.observe(container);
     return () => ro.disconnect();
@@ -264,13 +257,17 @@ export default function IdScreen() {
         )}
 
         {photoDataUrl ? (
-          <div ref={photoContainerRef} className="flex-1 min-h-0 relative w-full overflow-hidden bg-slate-700">
+          <div ref={photoContainerRef} className="flex-1 min-h-0 flex items-center justify-center w-full bg-slate-700 overflow-hidden">
+
+            {/* Wrapper sized exactly to rendered image — bounding boxes are % of this */}
+            <div className="relative flex-shrink-0" style={imgStyle || { width: '100%', height: '100%' }}>
             <img
               src={photoDataUrl}
               alt="Captured"
-              className="w-full h-full object-contain object-center block"
+              className="block"
+              style={{ width: '100%', height: '100%' }}
               draggable={false}
-              onLoad={e => calcImgRect(e.target)}
+              onLoad={e => calcImgStyle(e.target)}
             />
 
             {/* Mobile: floating Back button top-left */}
@@ -290,8 +287,8 @@ export default function IdScreen() {
               </div>
             )}
 
-            {/* Face bounding box overlays — positioned over rendered image area */}
-            {!loading && imgRect && (() => {
+            {/* Face bounding box overlays — percentage of image wrapper */}
+            {!loading && imgStyle && (() => {
               let unknownCount = 0;
               const unknownLabels = faces.reduce((acc, f, i) => {
                 if (f.status === 'unknown') acc[i] = ++unknownCount;
@@ -314,10 +311,10 @@ export default function IdScreen() {
                   title={face.friendName || 'Unknown — click to add as friend'}
                   style={{
                     position: 'absolute',
-                    left:   imgRect.left + left   * imgRect.width,
-                    top:    imgRect.top  + top    * imgRect.height,
-                    width:  width  * imgRect.width,
-                    height: height * imgRect.height,
+                    left:   `${left   * 100}%`,
+                    top:    `${top    * 100}%`,
+                    width:  `${width  * 100}%`,
+                    height: `${height * 100}%`,
                     borderColor: color,
                     borderWidth: 2,
                     borderStyle: 'solid',
@@ -363,6 +360,7 @@ export default function IdScreen() {
             });
             })()}
 
+            </div>
           </div>
         ) : (
           <div className="text-gray-500 text-center">
