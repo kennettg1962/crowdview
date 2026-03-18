@@ -262,7 +262,7 @@ export default function IdScreen() {
         )}
 
         {photoDataUrl ? (
-          <div ref={photoContainerRef} className="flex-1 min-h-0 relative w-full overflow-hidden bg-black md:bg-white">
+          <div ref={photoContainerRef} className="flex-1 min-h-0 relative w-full overflow-hidden bg-slate-700">
             <img
               src={photoDataUrl}
               alt="Captured"
