@@ -4,6 +4,17 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 
 ---
 
+## 2026-03-18
+
+### [2026-03-18] HubScreen mobile overlay icon repositioning — `#hub #mobile #ui`
+- Move Flip icon to bottom-left corner of the video overlay.
+- Move Id icon to top-left corner; move Live icon horizontally to the right of Id (top-left horizontal pill).
+- Move Stream icon to top-right corner; move Action/Cut icons horizontally to the left of Stream (top-right horizontal pill).
+- Remove Camera icon entirely (desktop and mobile).
+- Friend bubbles (live streams) become a vertical dropdown list aligned below the Stream icon (top-right).
+
+---
+
 ## 2026-03-14
 
 ### [2026-03-15] Live face scan overlay on HubScreen — `#face-recognition #hub`

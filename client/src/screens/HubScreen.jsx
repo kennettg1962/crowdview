@@ -7,7 +7,7 @@ import DevicePicker from '../components/DevicePicker';
 import FriendForm from '../components/FriendForm';
 import {
   FriendsIcon, LibraryIcon,
-  IdIcon, ActionIcon, CameraIcon, CutIcon, MicIcon,
+  IdIcon, ActionIcon, CutIcon, MicIcon,
   MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon, FlipCameraIcon,
   HomeIcon, BroadcastIcon, UserProfileIcon
 } from '../components/Icons';
@@ -492,7 +492,6 @@ export default function HubScreen() {
           ) : (
             <SideButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-xl animate-pulse" />
           )}
-          <SideButton icon={CameraIcon} label="Camera" onClick={handleCamera} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
         </div>
 
         {/* Video column — full width on mobile, percentage on desktop */}
@@ -537,40 +536,39 @@ export default function HubScreen() {
             )}
           </div>
 
-          {/* Mobile floating left icons — Live, Id, Action, Camera */}
-          <div className="flex md:hidden flex-col absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-black/65 rounded-xl p-1.5 gap-0.5">
+          {/* Mobile — top-left: Id + Live (horizontal) */}
+          <div className="flex md:hidden absolute left-3 z-20 bg-black/35 rounded-xl p-1.5 gap-0.5"
+               style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}>
+            <FloatButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-white/20" />
+            <div className="border-l border-white/20 my-1" />
             {liveScan ? (
               <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-lg animate-pulse" />
             ) : (
               <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(true)} disabled={!canId} className="text-white hover:bg-white/20" />
             )}
-            <div className="border-t border-white/20 mx-1" />
-            <FloatButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-white/20" />
-            <div className="border-t border-white/20 mx-1" />
-            {!isRecordingAction ? (
-              <FloatButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-white/20" />
-            ) : (
-              <FloatButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-lg animate-pulse" />
-            )}
-            <FloatButton icon={CameraIcon} label="Camera" onClick={handleCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
-            <div className="border-t border-white/20 mx-1" />
-            <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
           </div>
 
-          {/* Mobile floating right icons — Stream */}
-          <div className="flex md:hidden flex-col absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-black/65 rounded-xl p-1.5 gap-0.5">
-            {!isStreamingOut ? (
-              <FloatButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-white/20" />
-            ) : (
-              <>
-                <FloatButton icon={StopCircleIcon} label="Stop" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-lg" />
-                <span className="text-red-400 text-[9px] font-semibold text-center px-1 leading-snug">CrowdView{'\n'}Live</span>
-              </>
-            )}
+          {/* Mobile — top-right: Action/Cut + Stream (horizontal), friend bubbles below */}
+          <div className="flex md:hidden absolute right-3 z-20 flex-col items-end"
+               style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}>
+            <div className="flex bg-black/35 rounded-xl p-1.5 gap-0.5">
+              {!isRecordingAction ? (
+                <FloatButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-white/20" />
+              ) : (
+                <FloatButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-lg animate-pulse" />
+              )}
+              <div className="border-l border-white/20 my-1" />
+              {!isStreamingOut ? (
+                <FloatButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-white/20" />
+              ) : (
+                <>
+                  <FloatButton icon={StopCircleIcon} label="Stop" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-lg" />
+                  <span className="text-red-400 text-[9px] font-semibold text-center px-1 leading-snug">CrowdView{'\n'}Live</span>
+                </>
+              )}
+            </div>
             {liveStreams.filter(s => s.Friend_Id).length > 0 && (
-              <div className="mt-1 flex flex-col items-center gap-1.5">
-                <div className="border-t border-white/20 w-full" />
-                <span className="text-gray-300 text-[9px] font-medium">Live</span>
+              <div className="mt-1 flex flex-col items-center gap-1.5 bg-black/35 rounded-xl p-1.5">
                 {liveStreams.filter(s => s.Friend_Id).map(s => (
                   <button key={s.Stream_Id} onClick={() => navigate('/streams/watch', { state: { stream: s, isLive: true } })} title={s.Streamer_Name}>
                     {s.Friend_Photo_Id ? (
@@ -584,6 +582,12 @@ export default function HubScreen() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Mobile — bottom-left: Flip */}
+          <div className="flex md:hidden absolute left-3 z-20 bg-black/35 rounded-xl p-1.5"
+               style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
+            <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
           </div>
         </div>
 

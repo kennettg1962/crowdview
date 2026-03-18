@@ -209,6 +209,27 @@ export default function IdScreen() {
           <div className="flex-shrink-0" style={{ width: '72px' }} />
         </div>
 
+        {/* Mobile: identification message above photo */}
+        {photoDataUrl && (
+          <div className="md:hidden w-full flex justify-center pointer-events-none">
+            {!loading && faces.length > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 rounded-lg text-xs whitespace-nowrap">
+                <span className="text-white font-semibold">{faces.length} face{faces.length !== 1 ? 's' : ''}</span>
+                <span className="text-white/40">·</span>
+                <span className="text-green-400">{faces.filter(f => f.status === 'known').length} friend{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
+                <span className="text-white/40">·</span>
+                <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
+              </div>
+            )}
+            {!loading && identifyError && (
+              <div className="px-3 py-1.5 bg-red-900/70 rounded-lg text-xs text-red-300">{identifyError}</div>
+            )}
+            {!loading && !identifyError && faces.length === 0 && (
+              <div className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs text-gray-400">No faces detected</div>
+            )}
+          </div>
+        )}
+
         {photoDataUrl ? (
           <div className="flex-1 min-h-0 flex items-center justify-center w-full overflow-hidden">
           <div className="h-full md:bg-white md:p-3 flex items-center justify-center w-full md:w-auto">
@@ -228,25 +249,6 @@ export default function IdScreen() {
               <BackIcon className="w-5 h-5" />
               <span>Back</span>
             </button>
-
-            {/* Mobile: floating identification message top-center */}
-            <div className="md:hidden absolute top-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-              {!loading && faces.length > 0 && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg text-xs whitespace-nowrap">
-                  <span className="text-white font-semibold">{faces.length} face{faces.length !== 1 ? 's' : ''}</span>
-                  <span className="text-white/40">·</span>
-                  <span className="text-green-400">{faces.filter(f => f.status === 'known').length} friend{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
-                  <span className="text-white/40">·</span>
-                  <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
-                </div>
-              )}
-              {!loading && identifyError && (
-                <div className="px-3 py-1.5 bg-red-900/70 backdrop-blur-sm rounded-lg text-xs text-red-300">{identifyError}</div>
-              )}
-              {!loading && !identifyError && faces.length === 0 && (
-                <div className="px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg text-xs text-gray-300">No faces detected</div>
-              )}
-            </div>
 
             {/* Loading overlay */}
             {loading && (

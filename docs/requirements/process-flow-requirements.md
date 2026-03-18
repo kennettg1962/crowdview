@@ -121,13 +121,35 @@ AppContext: mediaStream set (if auto-connect succeeds), currentSource set (devic
 - "Select Outlet" button (slate, border) + StreamToIcon → opens StreamToPopup overlay
 - Outlet name badge (blue): shown only when `currentOutlet` is set; displays outlet name
 
-### Left Sidebar Buttons (top to bottom)
+### Left Sidebar Buttons (top to bottom) — Desktop only
 | Button | Icon | Enabled when | Action |
 |--------|------|--------------|--------|
+| Live | LiveScanIcon | `isStreaming` | Toggle continuous face-scan overlay; green/pulsing when active |
 | Id | IdIcon | `isStreaming` | Capture frame → save to library → navigate to `/id` with `saveToLibrary:true` |
 | Action | ActionIcon | `isStreaming` | Start video recording (MediaRecorder) |
 | Cut | CutIcon | Recording active | Stop recording → save clip to library; replaces Action button while recording; animated red pulse |
-| Camera | CameraIcon | `isStreaming` | Capture still → save to `/api/media` (no navigation) |
+
+### Mobile Overlay Icons (floating over full-screen video)
+
+**Top-left — horizontal pill (Id + Live):**
+| Button | Icon | Enabled when | Action |
+|--------|------|--------------|--------|
+| Id | IdIcon | `isStreaming` | Capture frame → navigate to `/id` |
+| Live | LiveScanIcon | `isStreaming` | Toggle continuous face-scan overlay; green/pulsing when active |
+
+**Top-right — horizontal pill (Action/Cut + Stream) with friend bubbles below:**
+| Button | Icon | Enabled when | Action |
+|--------|------|--------------|--------|
+| Action | ActionIcon | `isStreaming` | Start video recording |
+| Cut | CutIcon | Recording active | Stop recording; replaces Action, animated red pulse |
+| Stream | StreamIcon | `isStreaming` | Start WHIP live stream |
+| Stop | StopCircleIcon | Streaming out | Stop WHIP live stream; replaces Stream |
+- Friend bubbles: vertical list of circular friend profile photos (red border) rendered below the top-right pill; each tap navigates to `/streams/watch`; shown only when live friend streams exist
+
+**Bottom-left — Flip:**
+| Button | Icon | Enabled when | Action |
+|--------|------|--------------|--------|
+| Flip | FlipCameraIcon | `isStreaming` | Cycle to next video input device |
 
 ### Center Video Area
 - Black background container with 16:9 aspect ratio
