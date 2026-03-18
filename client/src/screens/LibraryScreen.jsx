@@ -118,20 +118,23 @@ function MediaViewer({ item, allItems, onClose }) {
   const dateStr = `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
 
   return (
-    <div className="fixed inset-0 bg-black/95 flex flex-col items-center justify-center z-50" onClick={onClose}>
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent">
+    <div className="fixed inset-0 bg-black/95 flex flex-col z-50" onClick={onClose}>
+      {/* Header — respects safe area so X is always tappable */}
+      <div
+        className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
+      >
         <span className="text-gray-300 text-sm">{dateStr} · {currentItem.Media_Type === 'video' ? 'Video' : 'Photo'}</span>
         <button
           onClick={onClose}
-          className="text-white text-2xl leading-none w-8 h-8 flex items-center justify-center hover:text-gray-300"
+          className="text-white text-2xl leading-none w-10 h-10 flex items-center justify-center hover:text-gray-300"
         >
           ✕
         </button>
       </div>
 
-      {/* Media */}
-      <div className="relative w-full max-w-4xl px-4 flex items-center justify-center" onClick={e => e.stopPropagation()}>
+      {/* Media — fills remaining space, never overflows */}
+      <div className="flex-1 min-h-0 flex items-center justify-center relative w-full max-w-4xl mx-auto px-4" onClick={e => e.stopPropagation()}>
         {/* Prev */}
         <button
           onClick={() => hasPrev && setCurrentItem(allItems[currentIndex - 1])}
@@ -151,10 +154,10 @@ function MediaViewer({ item, allItems, onClose }) {
             src={blobUrl}
             controls
             autoPlay
-            className="w-full max-h-[80vh] rounded-xl"
+            className="w-full h-full object-contain rounded-xl"
           />
         ) : (
-          <img src={blobUrl} alt="Media" className="w-full max-h-[80vh] object-contain rounded-xl" />
+          <img src={blobUrl} alt="Media" className="w-full h-full object-contain rounded-xl" />
         )}
 
         {/* Next */}
@@ -168,7 +171,10 @@ function MediaViewer({ item, allItems, onClose }) {
       </div>
 
       {/* Counter */}
-      <div className="absolute bottom-24 text-gray-400 text-sm">
+      <div
+        className="flex-shrink-0 text-center text-gray-400 text-sm py-3"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}
+      >
         {currentIndex + 1} / {allItems.length}
       </div>
     </div>
