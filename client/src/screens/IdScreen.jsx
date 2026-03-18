@@ -51,6 +51,8 @@ export default function IdScreen() {
   const [activeFaceCrop, setActiveFaceCrop] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, face, index }
   const [showAddPhotoPopup, setShowAddPhotoPopup] = useState(null); // { face, faceCrop }
+  const [imgRect, setImgRect] = useState(null); // rendered image rect within container
+  const photoContainerRef = useRef(null);
   const photoDataUrl = location.state?.photoDataUrl;
   const saveToLibrary = location.state?.saveToLibrary ?? false;
 
@@ -82,6 +84,35 @@ export default function IdScreen() {
   useEffect(() => {
     if (photoDataUrl) identifyFaces();
   }, [photoDataUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function calcImgRect(img) {
+    const container = photoContainerRef.current;
+    if (!container || !img) return;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    const containerAspect = cw / ch;
+    const imgAspect = iw / ih;
+    let renderW, renderH, offsetX, offsetY;
+    if (imgAspect > containerAspect) {
+      renderW = cw; renderH = cw / imgAspect;
+      offsetX = 0;  offsetY = (ch - renderH) / 2;
+    } else {
+      renderH = ch; renderW = ch * imgAspect;
+      offsetY = 0;  offsetX = (cw - renderW) / 2;
+    }
+    setImgRect({ left: offsetX, top: offsetY, width: renderW, height: renderH });
+  }
+
+  useEffect(() => {
+    const onResize = () => {
+      const img = photoContainerRef.current?.querySelector('img');
+      if (img?.complete) calcImgRect(img);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function identifyFaces() {
     setLoading(true);
@@ -231,14 +262,13 @@ export default function IdScreen() {
         )}
 
         {photoDataUrl ? (
-          <div className="flex-1 min-h-0 flex items-center justify-center w-full overflow-hidden">
-          <div className="h-full w-full md:h-auto md:w-auto md:bg-white md:p-3 flex items-center justify-center">
-          <div className="relative h-full w-full md:h-auto md:w-auto overflow-hidden">
+          <div ref={photoContainerRef} className="flex-1 min-h-0 relative w-full overflow-hidden bg-black md:bg-white">
             <img
               src={photoDataUrl}
               alt="Captured"
-              className="h-full w-full object-contain block md:h-auto md:w-auto md:max-w-[calc(100vw-32px)] md:max-h-[calc(100vh-160px)]"
+              className="w-full h-full object-contain block"
               draggable={false}
+              onLoad={e => calcImgRect(e.target)}
             />
 
             {/* Mobile: floating Back button top-left */}
@@ -258,8 +288,8 @@ export default function IdScreen() {
               </div>
             )}
 
-            {/* Face bounding box overlays */}
-            {!loading && (() => {
+            {/* Face bounding box overlays — positioned over rendered image area */}
+            {!loading && imgRect && (() => {
               let unknownCount = 0;
               const unknownLabels = faces.reduce((acc, f, i) => {
                 if (f.status === 'unknown') acc[i] = ++unknownCount;
@@ -270,7 +300,6 @@ export default function IdScreen() {
               const color = STATUS_COLORS[face.status]?.border || '#ffffff';
               const isHovered = hoveredFaceIndex === i;
               const tooltipAttrs = buildTooltip(face);
-              // Show tooltip above face if face is in lower 40% of image, else below
               const tooltipAbove = top > 0.45;
 
               return (
@@ -283,10 +312,10 @@ export default function IdScreen() {
                   title={face.friendName || 'Unknown — click to add as friend'}
                   style={{
                     position: 'absolute',
-                    left:   `${left   * 100}%`,
-                    top:    `${top    * 100}%`,
-                    width:  `${width  * 100}%`,
-                    height: `${height * 100}%`,
+                    left:   imgRect.left + left   * imgRect.width,
+                    top:    imgRect.top  + top    * imgRect.height,
+                    width:  width  * imgRect.width,
+                    height: height * imgRect.height,
                     borderColor: color,
                     borderWidth: 2,
                     borderStyle: 'solid',
@@ -332,8 +361,6 @@ export default function IdScreen() {
             });
             })()}
 
-          </div>
-          </div>
           </div>
         ) : (
           <div className="text-gray-500 text-center">
