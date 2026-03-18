@@ -76,7 +76,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
         if (newId) {
           if (pendingPhoto) {
             const formData = new FormData();
-            formData.append('photo', pendingPhoto);
+            formData.append('photo', pendingPhoto, 'photo.jpg');
             await api.post(`/api/friends/${newId}/photos`, formData);
           } else if (capturedPhotoUrl) {
             const blob = await fetch(capturedPhotoUrl).then(r => r.blob());
@@ -130,18 +130,36 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
     }
   }
 
+  function resizeImage(file, maxW = 1280, quality = 0.82) {
+    return new Promise(resolve => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxW / img.naturalWidth);
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.naturalWidth  * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+      };
+      img.src = url;
+    });
+  }
+
   async function handlePhotoUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
+    const blob = await resizeImage(file);
     if (!friend?.Friend_Id) {
       if (pendingPhotoUrl) URL.revokeObjectURL(pendingPhotoUrl);
-      setPendingPhoto(file);
-      setPendingPhotoUrl(URL.createObjectURL(file));
+      setPendingPhoto(blob);
+      setPendingPhotoUrl(URL.createObjectURL(blob));
       setErrors(prev => ({ ...prev, photo: undefined }));
       return;
     }
     const formData = new FormData();
-    formData.append('photo', file);
+    formData.append('photo', blob, 'photo.jpg');
     try {
       await api.post(`/api/friends/${friend.Friend_Id}/photos`, formData);
       await loadPhotos(friend.Friend_Id);
