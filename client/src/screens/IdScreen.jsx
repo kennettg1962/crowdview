@@ -151,7 +151,7 @@ export default function IdScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-700 flex flex-col">
+    <div className="min-h-screen md:h-screen bg-slate-700 flex flex-col overflow-hidden">
       {/* Header */}
       <AppHeader
         left={
