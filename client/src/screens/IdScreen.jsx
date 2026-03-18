@@ -232,12 +232,12 @@ export default function IdScreen() {
 
         {photoDataUrl ? (
           <div className="flex-1 min-h-0 flex items-center justify-center w-full overflow-hidden">
-          <div className="h-full md:bg-white md:p-3 flex items-center justify-center w-full md:w-auto md:max-h-full">
-          <div className="relative h-full overflow-hidden w-full md:w-auto md:max-h-full">
+          <div className="h-full w-full md:h-auto md:w-auto md:bg-white md:p-3 flex items-center justify-center">
+          <div className="relative h-full w-full md:h-auto md:w-auto overflow-hidden">
             <img
               src={photoDataUrl}
               alt="Captured"
-              className="h-full w-full md:w-auto md:h-auto md:max-h-full md:max-w-full object-contain block"
+              className="h-full w-full object-contain block md:h-auto md:w-auto md:max-w-full md:max-h-[calc(100vh-200px)]"
               draggable={false}
             />
 
