@@ -4,7 +4,7 @@ import Hls from 'hls.js';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
-import { BackIcon, BroadcastIcon, IdIcon } from '../components/Icons';
+import { BackIcon, BroadcastIcon, IdIcon, PlayIcon } from '../components/Icons';
 import api from '../api/api';
 
 const HLS_BASE = `${window.location.protocol}//${window.location.hostname}/hls`;
@@ -171,8 +171,10 @@ export default function StreamWatchScreen() {
           {showIdBtn && hasFaces && (
             <button
               onClick={handleResume}
+              title="Resume"
               className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full text-white hover:bg-slate-600"
             >
+              <PlayIcon className="w-[42px] h-[42px]" />
               <span className="text-xs font-medium">Resume</span>
             </button>
           )}
@@ -312,9 +314,11 @@ export default function StreamWatchScreen() {
                 ) : (
                   <button
                     onClick={handleResume}
-                    className="px-2.5 py-2 bg-black/35 hover:bg-white/20 text-white text-[10px] font-medium rounded-lg transition-colors"
+                    title="Resume"
+                    className="flex flex-col items-center gap-0.5 px-2.5 py-2 bg-black/35 hover:bg-white/20 text-white rounded-lg transition-colors"
                   >
-                    Resume
+                    <PlayIcon className="w-6 h-6" />
+                    <span className="text-[10px] font-medium">Resume</span>
                   </button>
                 )}
               </div>

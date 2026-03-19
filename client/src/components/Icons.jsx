@@ -234,6 +234,14 @@ export function CutIcon({ className = iconClass }) {
   );
 }
 
+export function PlayIcon({ className = iconClass }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M8 5.14v14l11-7-11-7z" />
+    </svg>
+  );
+}
+
 export function StopCircleIcon({ className = iconClass }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor">
