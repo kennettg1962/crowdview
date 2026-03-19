@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Hls from 'hls.js';
-import { Capacitor } from '@capacitor/core';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import { BackIcon, BroadcastIcon, IdIcon, PlayIcon, LiveScanIcon } from '../components/Icons';
 import api from '../api/api';
 
-// On native (Capacitor) window.location.hostname is 'localhost' — use the real server
-const SERVER_ORIGIN = Capacitor.isNativePlatform()
+// Capacitor native apps use protocol 'capacitor:' — window.location.hostname is 'localhost'
+// so we must use the real server origin instead
+const SERVER_ORIGIN = window.location.protocol === 'capacitor:'
   ? 'https://crowdview.tv'
   : `${window.location.protocol}//${window.location.hostname}`;
 const HLS_BASE = `${SERVER_ORIGIN}/hls`;
