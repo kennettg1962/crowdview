@@ -171,7 +171,7 @@ export default function StreamsScreen() {
       <NavBar />
 
       {showDeletedToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-700 text-white text-sm px-4 py-2 rounded-full shadow-lg z-50 pointer-events-none">
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-700 text-white text-sm px-4 py-2 rounded-full shadow-lg z-50 pointer-events-none">
           Stream Deleted
         </div>
       )}
