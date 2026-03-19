@@ -127,6 +127,7 @@ router.get('/past', auth, async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt,
               s.Started_At, s.Ended_At, s.Recording_Dir_Txt,
+              s.User_Id AS Streamer_User_Id,
               u.Name_Txt AS Streamer_Name
          FROM Stream s
          JOIN User u ON u.User_Id = s.User_Id
@@ -161,6 +162,41 @@ router.get('/past', auth, async (req, res) => {
 
     res.json(result);
   } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/stream/:id  — delete own past stream + recordings from disk
+// ---------------------------------------------------------------------------
+router.delete('/:id', auth, async (req, res) => {
+  const streamId = req.params.id;
+  try {
+    const [rows] = await pool.execute(
+      'SELECT Stream_Id, User_Id, Recording_Dir_Txt FROM Stream WHERE Stream_Id = ?',
+      [streamId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Stream not found' });
+
+    const stream = rows[0];
+    if (stream.User_Id !== req.user.userId) {
+      return res.status(403).json({ error: 'Cannot delete another user\'s stream' });
+    }
+
+    // Delete recording files from disk
+    if (stream.Recording_Dir_Txt && fs.existsSync(stream.Recording_Dir_Txt)) {
+      const files = fs.readdirSync(stream.Recording_Dir_Txt).filter(f => f.endsWith('.mp4'));
+      for (const f of files) {
+        fs.unlinkSync(path.join(stream.Recording_Dir_Txt, f));
+      }
+      try { fs.rmdirSync(stream.Recording_Dir_Txt); } catch (_) {}
+    }
+
+    await pool.execute('DELETE FROM Stream WHERE Stream_Id = ?', [streamId]);
+    console.log(`[stream] deleted stream ${streamId}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('stream delete error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

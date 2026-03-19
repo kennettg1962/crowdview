@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
-import { MovieCameraIcon, FriendsIcon, BroadcastIcon } from '../components/Icons';
+import { MovieCameraIcon, FriendsIcon, BroadcastIcon, DeleteIcon } from '../components/Icons';
+import { useApp } from '../context/AppContext';
 import api from '../api/api';
 
 function LiveBadge() {
@@ -24,10 +25,12 @@ function duration(start, end) {
 
 export default function StreamsScreen() {
   const navigate = useNavigate();
+  const { user } = useApp();
   const [liveStreams, setLiveStreams]   = useState([]);
   const [pastStreams, setPastStreams]   = useState([]);
   const [loading, setLoading]           = useState(true);
   const [tab, setTab]                   = useState('live'); // 'live' | 'past'
+  const [deletingStream, setDeletingStream] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,6 +57,17 @@ export default function StreamsScreen() {
     }, 30000);
     return () => clearInterval(id);
   }, []);
+
+  async function confirmDeleteStream() {
+    if (!deletingStream) return;
+    try {
+      await api.delete(`/api/stream/${deletingStream.Stream_Id}`);
+      setDeletingStream(null);
+      setPastStreams(prev => prev.filter(s => s.Stream_Id !== deletingStream.Stream_Id));
+    } catch (err) {
+      console.error('Delete stream failed', err);
+    }
+  }
 
   const streams = tab === 'live' ? liveStreams : pastStreams;
 
@@ -127,12 +141,23 @@ export default function StreamsScreen() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => navigate('/streams/watch', { state: { stream: s, isLive: tab === 'live' } })}
-                  className="flex-shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium"
-                >
-                  Watch
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => navigate('/streams/watch', { state: { stream: s, isLive: tab === 'live' } })}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium"
+                  >
+                    Watch
+                  </button>
+                  {tab === 'past' && s.Streamer_User_Id === user?.userId && (
+                    <button
+                      onClick={() => setDeletingStream(s)}
+                      className="p-2 text-red-400/50 hover:text-red-400 transition-colors"
+                      title="Delete stream"
+                    >
+                      <DeleteIcon className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -141,6 +166,30 @@ export default function StreamsScreen() {
 
       <TrueFooter />
       <NavBar />
+
+      {deletingStream && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <p className="text-white font-medium mb-1">Delete this stream?</p>
+            <p className="text-gray-400 text-sm mb-1">{deletingStream.Title_Txt}</p>
+            <p className="text-gray-400 text-sm mb-4">This will permanently remove the stream record and all recording files. This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingStream(null)}
+                className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteStream}
+                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
