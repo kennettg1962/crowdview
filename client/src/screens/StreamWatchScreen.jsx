@@ -247,7 +247,7 @@ export default function StreamWatchScreen() {
                 ${liveScan ? 'bg-green-700 hover:bg-green-600 animate-pulse' : 'hover:bg-slate-600'}`}
             >
               <LiveScanIcon className="w-[42px] h-[42px]" />
-              <span className="text-xs font-medium">Live</span>
+              <span className="text-xs font-medium">Detect</span>
             </button>
           )}
           {/* Id / Resume buttons (VOD only) */}
@@ -417,7 +417,7 @@ export default function StreamWatchScreen() {
                     ${liveScan ? 'bg-green-700 hover:bg-green-600 animate-pulse' : 'bg-black/35 hover:bg-white/20'}`}
                 >
                   <LiveScanIcon className="w-6 h-6" />
-                  <span className="text-[10px] font-medium">Live</span>
+                  <span className="text-[10px] font-medium">Detect</span>
                 </button>
               )}
               {/* Mobile Id / Resume buttons */}
