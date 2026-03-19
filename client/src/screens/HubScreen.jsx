@@ -50,7 +50,7 @@ export default function HubScreen() {
     isStreaming, mediaStream, currentSource, setCurrentSource,
     currentAudioIn, setCurrentAudioIn,
     startStream, stopStream,
-    isStreamingOut, startWhipStream, stopWhipStream, streamError, setStreamError,
+    isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
     setSlideoutOpen,
   } = useApp();
   const videoRef = useRef(null);
@@ -571,14 +571,14 @@ export default function HubScreen() {
                 <FloatButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-lg animate-pulse" />
               )}
               <div className="border-l border-white/20 my-1" />
-              {!isStreamingOut ? (
+              {!(isStreamingOut || isStreamingConnecting) ? (
                 <FloatButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-white/20" />
               ) : (
                 <FloatButton icon={StopCircleIcon} label="Stop" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-lg" />
               )}
             </div>
-            {isStreamingOut && (
-              <span className="mt-1 text-red-400 text-[9px] font-semibold text-center leading-snug">CrowdView Live</span>
+            {(isStreamingOut || isStreamingConnecting) && (
+              <span className="mt-1 text-red-400 text-[9px] font-semibold text-center leading-snug">{isStreamingConnecting ? 'Connecting…' : 'CrowdView Live'}</span>
             )}
             {liveStreams.filter(s => s.Friend_Id).length > 0 && (
               <div className="mt-1 flex flex-col items-center gap-1.5 bg-black/35 rounded-xl p-1.5">
@@ -619,12 +619,12 @@ export default function HubScreen() {
 
         {/* Desktop right sidebar (hidden on mobile) */}
         <div className="hidden md:flex w-[15%] bg-slate-700 rounded-r-xl flex-col items-center">
-          {!isStreamingOut ? (
+          {!(isStreamingOut || isStreamingConnecting) ? (
             <SideButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
           ) : (
             <>
               <SideButton icon={StopCircleIcon} label="Stop Stream" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-xl" />
-              <span className="text-red-400 text-xs font-semibold text-center px-2 mt-1 leading-snug">CrowdView Live</span>
+              <span className="text-red-400 text-xs font-semibold text-center px-2 mt-1 leading-snug">{isStreamingConnecting ? 'Connecting…' : 'CrowdView Live'}</span>
             </>
           )}
 

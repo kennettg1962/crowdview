@@ -14,6 +14,7 @@ export function AppProvider({ children }) {
   const [slideoutOpen, setSlideoutOpen] = useState(false);
   const [voicePaused, setVoicePaused] = useState(false);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
+  const [isStreamingConnecting, setIsStreamingConnecting] = useState(false);
   const [streamError, setStreamError] = useState(null);
   const pcRef = useRef(null);
   // On native Capacitor the WebView origin is capacitor://localhost — use the
@@ -78,6 +79,7 @@ export function AppProvider({ children }) {
   };
 
   const startWhipStream = async (stream) => {
+    setIsStreamingConnecting(true);
     try {
       const keyRes = await api.get('/api/stream/key');
       const { streamKey } = keyRes.data;
@@ -135,6 +137,8 @@ export function AppProvider({ children }) {
       setStreamError(err.message);
       pcRef.current?.close();
       pcRef.current = null;
+    } finally {
+      setIsStreamingConnecting(false);
     }
   };
 
@@ -157,7 +161,7 @@ export function AppProvider({ children }) {
       mediaStream, setMediaStream,
       slideoutOpen, setSlideoutOpen,
       voicePaused, setVoicePaused,
-      isStreamingOut, startWhipStream, stopWhipStream, streamError, setStreamError
+      isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError
     }}>
       {children}
     </AppContext.Provider>
