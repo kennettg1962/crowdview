@@ -31,6 +31,7 @@ export default function StreamsScreen() {
   const [loading, setLoading]           = useState(true);
   const [tab, setTab]                   = useState('live'); // 'live' | 'past'
   const [deletingStream, setDeletingStream] = useState(null);
+  const [showDeletedToast, setShowDeletedToast] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,6 +65,8 @@ export default function StreamsScreen() {
       await api.delete(`/api/stream/${deletingStream.Stream_Id}`);
       setDeletingStream(null);
       setPastStreams(prev => prev.filter(s => s.Stream_Id !== deletingStream.Stream_Id));
+      setShowDeletedToast(true);
+      setTimeout(() => setShowDeletedToast(false), 500);
     } catch (err) {
       console.error('Delete stream failed', err);
     }
@@ -166,6 +169,12 @@ export default function StreamsScreen() {
 
       <TrueFooter />
       <NavBar />
+
+      {showDeletedToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-700 text-white text-sm px-4 py-2 rounded-full shadow-lg z-50 pointer-events-none">
+          Stream Deleted
+        </div>
+      )}
 
       {deletingStream && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
