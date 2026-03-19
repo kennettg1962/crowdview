@@ -4,7 +4,7 @@ import Hls from 'hls.js';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
-import { BackIcon, BroadcastIcon, IdIcon, PlayIcon } from '../components/Icons';
+import { BackIcon, BroadcastIcon, IdIcon, PlayIcon, LiveScanIcon } from '../components/Icons';
 import api from '../api/api';
 
 const HLS_BASE = `${window.location.protocol}//${window.location.hostname}/hls`;
@@ -24,13 +24,18 @@ export default function StreamWatchScreen() {
   const videoRef          = useRef(null);
   const hlsRef            = useRef(null);
   const videoContainerRef = useRef(null);
+  const overlayCanvasRef  = useRef(null);
+  const liveScanActiveRef = useRef(false);
+  const scanInFlightRef   = useRef(false);
 
-  const [error, setError]                 = useState(null);
-  const [loading, setLoading]             = useState(true);
-  const [idFaces, setIdFaces]             = useState([]);
-  const [idLoading, setIdLoading]         = useState(false);
-  const [idError, setIdError]             = useState(null);
-  const [videoRendered, setVideoRendered] = useState(null); // {width, height} px
+  const [error, setError]                       = useState(null);
+  const [loading, setLoading]                   = useState(true);
+  const [idFaces, setIdFaces]                   = useState([]);
+  const [idLoading, setIdLoading]               = useState(false);
+  const [idError, setIdError]                   = useState(null);
+  const [videoRendered, setVideoRendered]       = useState(null);
+  const [liveScan, setLiveScan]                 = useState(false);
+  const [liveScanInitializing, setLiveScanInitializing] = useState(false);
 
   const calcVideoRendered = useCallback(() => {
     const video = videoRef.current;
@@ -53,6 +58,7 @@ export default function StreamWatchScreen() {
     return () => ro.disconnect();
   }, [calcVideoRendered]);
 
+  // ── Video / HLS setup ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!stream) return;
     const video = videoRef.current;
@@ -97,6 +103,78 @@ export default function StreamWatchScreen() {
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [stream, isLive, calcVideoRendered]);
 
+  // ── Live scan interval ─────────────────────────────────────────────────────
+  useEffect(() => {
+    liveScanActiveRef.current = liveScan;
+    if (!liveScan) {
+      const canvas = overlayCanvasRef.current;
+      if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+      setLiveScanInitializing(false);
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      if (scanInFlightRef.current || !videoRef.current || !overlayCanvasRef.current || !liveScanActiveRef.current) return;
+      const video = videoRef.current;
+      if (!video.videoWidth || video.readyState < 3) return;
+
+      const canvas = overlayCanvasRef.current;
+      if (canvas.width !== video.videoWidth)  canvas.width  = video.videoWidth;
+      if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
+
+      const maxW = 640;
+      const scale = Math.min(1, maxW / video.videoWidth);
+      const capture = document.createElement('canvas');
+      capture.width  = Math.round(video.videoWidth  * scale);
+      capture.height = Math.round(video.videoHeight * scale);
+      capture.getContext('2d').drawImage(video, 0, 0, capture.width, capture.height);
+      const dataUrl = capture.toDataURL('image/jpeg', 0.8);
+
+      scanInFlightRef.current = true;
+      try {
+        const res = await api.post('/api/rekognition/identify', { imageData: dataUrl });
+        if (!liveScanActiveRef.current) return;
+        const { faces } = res.data;
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        faces.forEach(face => {
+          const { boundingBox, status, friendName } = face;
+          const x = boundingBox.left   * canvas.width;
+          const y = boundingBox.top    * canvas.height;
+          const w = boundingBox.width  * canvas.width;
+          const h = boundingBox.height * canvas.height;
+          const color = STATUS_COLORS[status] || '#ffffff';
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, w, h);
+
+          const label = friendName || 'Unknown';
+          ctx.font = 'bold 13px sans-serif';
+          const textW = ctx.measureText(label).width;
+          ctx.fillStyle = 'rgba(0,0,0,0.55)';
+          ctx.fillRect(x, y - 20, textW + 8, 20);
+          ctx.fillStyle = color;
+          ctx.fillText(label, x + 4, y - 5);
+        });
+      } catch (err) {
+        console.error('[LiveScan] error:', err);
+      } finally {
+        scanInFlightRef.current = false;
+        setLiveScanInitializing(false);
+      }
+    }, 300);
+
+    return () => {
+      clearInterval(interval);
+      const canvas = overlayCanvasRef.current;
+      if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    };
+  }, [liveScan]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── VOD Id handlers ────────────────────────────────────────────────────────
   async function handleId() {
     const video = videoRef.current;
     if (!video) return;
@@ -128,6 +206,11 @@ export default function StreamWatchScreen() {
     videoRef.current?.play().catch(() => {});
   }
 
+  function toggleLiveScan() {
+    if (!liveScan) setLiveScanInitializing(true);
+    setLiveScan(v => !v);
+  }
+
   if (!stream) {
     return (
       <div className="min-h-screen bg-slate-700 flex items-center justify-center text-gray-400">
@@ -136,8 +219,8 @@ export default function StreamWatchScreen() {
     );
   }
 
-  const showIdBtn  = !isLive && !loading && !error;
-  const hasFaces   = idFaces.length > 0;
+  const showVodButtons = !isLive && !loading && !error;
+  const hasFaces = idFaces.length > 0;
 
   return (
     <div className="h-screen bg-slate-700 flex flex-col overflow-hidden">
@@ -151,24 +234,35 @@ export default function StreamWatchScreen() {
         right={<div className="w-[46px]" />}
       />
 
-      {/* Main — mirrors HubScreen's sidebar + video layout */}
       <main className="flex-1 flex min-h-0 md:items-stretch md:px-2 md:pb-2 md:gap-0 overflow-hidden">
 
         {/* Desktop left sidebar */}
         <div className="hidden md:flex w-[15%] bg-slate-700 rounded-l-xl flex-col">
-          {showIdBtn && !hasFaces && (
+          {/* Live button (live streams only) */}
+          {isLive && !loading && !error && (
+            <button
+              onClick={toggleLiveScan}
+              title="Live"
+              className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full text-white
+                ${liveScan ? 'bg-green-700 hover:bg-green-600 animate-pulse' : 'hover:bg-slate-600'}`}
+            >
+              <LiveScanIcon className="w-[42px] h-[42px]" />
+              <span className="text-xs font-medium">Live</span>
+            </button>
+          )}
+          {/* Id / Resume buttons (VOD only) */}
+          {showVodButtons && !hasFaces && (
             <button
               onClick={handleId}
               disabled={idLoading}
               title="Id"
-              className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full
-                text-white hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full text-white hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <IdIcon className="w-[42px] h-[42px]" />
               <span className="text-xs font-medium">Id</span>
             </button>
           )}
-          {showIdBtn && hasFaces && (
+          {showVodButtons && hasFaces && (
             <button
               onClick={handleResume}
               title="Resume"
@@ -193,12 +287,18 @@ export default function StreamWatchScreen() {
             >
               <video
                 ref={videoRef}
-                controls={!hasFaces}
+                controls={!hasFaces && !liveScan}
                 playsInline
                 className="block w-full h-full object-contain"
               />
 
-              {/* Face bounding boxes */}
+              {/* Live scan canvas overlay */}
+              <canvas
+                ref={overlayCanvasRef}
+                className="absolute inset-0 w-full h-full pointer-events-none"
+              />
+
+              {/* VOD face bounding boxes */}
               {hasFaces && videoRendered && idFaces.map((face, i) => {
                 const { left, top, width, height } = face.boundingBox;
                 const color = STATUS_COLORS[face.status] || '#ffffff';
@@ -255,7 +355,15 @@ export default function StreamWatchScreen() {
               </div>
             )}
 
-            {/* Identifying overlay */}
+            {/* Live scan initializing overlay */}
+            {liveScanInitializing && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50 pointer-events-none">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400" />
+                <p className="text-white text-sm">Initializing face detection...</p>
+              </div>
+            )}
+
+            {/* VOD identifying overlay */}
             {idLoading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 pointer-events-none">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400" />
@@ -263,7 +371,7 @@ export default function StreamWatchScreen() {
               </div>
             )}
 
-            {/* Id result pill */}
+            {/* VOD Id result pill */}
             {!idLoading && (hasFaces || idError) && (
               <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full pointer-events-none">
                 {hasFaces ? (
@@ -280,7 +388,7 @@ export default function StreamWatchScreen() {
               </div>
             )}
 
-            {/* Stream info overlay (bottom of video) */}
+            {/* Stream info overlay */}
             {!loading && !error && (
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2 flex items-center gap-2 pointer-events-none">
                 <BroadcastIcon className="w-4 h-4 text-gray-300 flex-shrink-0" />
@@ -295,38 +403,50 @@ export default function StreamWatchScreen() {
               </div>
             )}
 
-            {/* Mobile Id / Resume overlay */}
-            {showIdBtn && (
-              <div
-                className="md:hidden absolute left-3 flex gap-2"
-                style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}
-              >
-                {!hasFaces ? (
-                  <button
-                    onClick={handleId}
-                    disabled={idLoading}
-                    title="Id"
-                    className="flex flex-col items-center gap-0.5 px-2.5 py-2 bg-black/35 hover:bg-white/20 disabled:opacity-30 text-white rounded-lg transition-colors"
-                  >
-                    <IdIcon className="w-6 h-6" />
-                    <span className="text-[10px] font-medium">Id</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleResume}
-                    title="Resume"
-                    className="flex flex-col items-center gap-0.5 px-2.5 py-2 bg-black/35 hover:bg-white/20 text-white rounded-lg transition-colors"
-                  >
-                    <PlayIcon className="w-6 h-6" />
-                    <span className="text-[10px] font-medium">Resume</span>
-                  </button>
-                )}
-              </div>
-            )}
+            {/* Mobile overlays */}
+            <div
+              className="md:hidden absolute left-3 flex gap-2"
+              style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}
+            >
+              {/* Mobile Live button */}
+              {isLive && !loading && !error && (
+                <button
+                  onClick={toggleLiveScan}
+                  title="Live"
+                  className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-lg transition-colors text-white
+                    ${liveScan ? 'bg-green-700 hover:bg-green-600 animate-pulse' : 'bg-black/35 hover:bg-white/20'}`}
+                >
+                  <LiveScanIcon className="w-6 h-6" />
+                  <span className="text-[10px] font-medium">Live</span>
+                </button>
+              )}
+              {/* Mobile Id / Resume buttons */}
+              {showVodButtons && !hasFaces && (
+                <button
+                  onClick={handleId}
+                  disabled={idLoading}
+                  title="Id"
+                  className="flex flex-col items-center gap-0.5 px-2.5 py-2 bg-black/35 hover:bg-white/20 disabled:opacity-30 text-white rounded-lg transition-colors"
+                >
+                  <IdIcon className="w-6 h-6" />
+                  <span className="text-[10px] font-medium">Id</span>
+                </button>
+              )}
+              {showVodButtons && hasFaces && (
+                <button
+                  onClick={handleResume}
+                  title="Resume"
+                  className="flex flex-col items-center gap-0.5 px-2.5 py-2 bg-black/35 hover:bg-white/20 text-white rounded-lg transition-colors"
+                >
+                  <PlayIcon className="w-6 h-6" />
+                  <span className="text-[10px] font-medium">Resume</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Desktop right sidebar (empty spacer to balance layout) */}
+        {/* Desktop right sidebar spacer */}
         <div className="hidden md:block w-[15%] bg-slate-700 rounded-r-xl" />
       </main>
 
