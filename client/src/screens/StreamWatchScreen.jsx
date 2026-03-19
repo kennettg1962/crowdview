@@ -1,13 +1,18 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Hls from 'hls.js';
+import { Capacitor } from '@capacitor/core';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import { BackIcon, BroadcastIcon, IdIcon, PlayIcon, LiveScanIcon } from '../components/Icons';
 import api from '../api/api';
 
-const HLS_BASE = `${window.location.protocol}//${window.location.hostname}/hls`;
+// On native (Capacitor) window.location.hostname is 'localhost' — use the real server
+const SERVER_ORIGIN = Capacitor.isNativePlatform()
+  ? 'https://crowdview.tv'
+  : `${window.location.protocol}//${window.location.hostname}`;
+const HLS_BASE = `${SERVER_ORIGIN}/hls`;
 
 const STATUS_COLORS = {
   known:      '#22c55e',
