@@ -13,7 +13,10 @@ CREATE TABLE IF NOT EXISTS Stream (
   Title_Txt       VARCHAR(255) DEFAULT 'CrowdView Live',
   Status_Fl       ENUM('live','ended') DEFAULT 'live',
   Recording_Dir_Txt VARCHAR(500) NULL,
+  Recording_File_Txt VARCHAR(500) NULL,
   Started_At      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   Ended_At        TIMESTAMP NULL,
   FOREIGN KEY (User_Id) REFERENCES User(User_Id) ON DELETE CASCADE
 );
+
+ALTER TABLE Stream ADD COLUMN IF NOT EXISTS Recording_File_Txt VARCHAR(500) NULL;

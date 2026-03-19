@@ -71,20 +71,29 @@ router.post('/on-unpublish', async (req, res) => {
   if (!streamKey) return res.status(400).json({ error: 'Invalid path' });
 
   try {
-    // Determine recording directory for this stream key
     const recDir = path.join(RECORDINGS_ROOT, 'live', streamKey);
-    const recDirExists = fs.existsSync(recDir);
+    let recFile = null;
+
+    if (fs.existsSync(recDir)) {
+      // Find the most recently modified .mp4 in the directory — that's this session's recording
+      const files = fs.readdirSync(recDir)
+        .filter(f => f.endsWith('.mp4'))
+        .map(f => ({ name: f, mtime: fs.statSync(path.join(recDir, f)).mtimeMs }))
+        .sort((a, b) => b.mtime - a.mtime);
+      if (files.length) recFile = path.join(recDir, files[0].name);
+    }
 
     await pool.execute(
       `UPDATE Stream
           SET Status_Fl = 'ended',
               Ended_At  = NOW(),
-              Recording_Dir_Txt = ?
+              Recording_Dir_Txt = ?,
+              Recording_File_Txt = ?
         WHERE Stream_Key_Txt = ? AND Status_Fl = 'live'`,
-      [recDirExists ? recDir : null, streamKey]
+      [recFile ? path.dirname(recFile) : null, recFile, streamKey]
     );
 
-    console.log(`[stream] ${streamKey} ended`);
+    console.log(`[stream] ${streamKey} ended — recording: ${recFile || 'none'}`);
     res.json({ success: true });
   } catch (err) {
     console.error('on-unpublish error:', err);
@@ -126,7 +135,8 @@ router.get('/past', auth, async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt,
-              s.Started_At, s.Ended_At, s.Recording_Dir_Txt,
+              s.Started_At, s.Ended_At,
+              s.Recording_File_Txt,
               s.User_Id AS Streamer_User_Id,
               u.Name_Txt AS Streamer_Name
          FROM Stream s
@@ -144,18 +154,16 @@ router.get('/past', auth, async (req, res) => {
       [req.user.userId, req.user.userId]
     );
 
-    // Attach recording file URLs for each past stream
+    // Build recording URL from the stored file path for each past stream
     const base = process.env.CLIENT_URL || 'https://crowdview.tv';
     const result = rows.map(row => {
       let recordings = [];
-      if (row.Recording_Dir_Txt && fs.existsSync(row.Recording_Dir_Txt)) {
-        recordings = fs.readdirSync(row.Recording_Dir_Txt)
-          .filter(f => f.endsWith('.mp4'))
-          .sort()
-          .map(f => ({
-            filename: f,
-            url: `${base}/recordings/live/${row.Stream_Key_Txt}/${f}`,
-          }));
+      if (row.Recording_File_Txt && fs.existsSync(row.Recording_File_Txt)) {
+        const filename = path.basename(row.Recording_File_Txt);
+        recordings = [{
+          filename,
+          url: `${base}/recordings/live/${row.Stream_Key_Txt}/${filename}`,
+        }];
       }
       return { ...row, recordings };
     });
@@ -173,7 +181,7 @@ router.delete('/:id', auth, async (req, res) => {
   const streamId = req.params.id;
   try {
     const [rows] = await pool.execute(
-      'SELECT Stream_Id, User_Id, Recording_Dir_Txt FROM Stream WHERE Stream_Id = ?',
+      'SELECT Stream_Id, User_Id, Recording_File_Txt FROM Stream WHERE Stream_Id = ?',
       [streamId]
     );
     if (!rows.length) return res.status(404).json({ error: 'Stream not found' });
@@ -183,13 +191,15 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(403).json({ error: 'Cannot delete another user\'s stream' });
     }
 
-    // Delete recording files from disk
-    if (stream.Recording_Dir_Txt && fs.existsSync(stream.Recording_Dir_Txt)) {
-      const files = fs.readdirSync(stream.Recording_Dir_Txt).filter(f => f.endsWith('.mp4'));
-      for (const f of files) {
-        fs.unlinkSync(path.join(stream.Recording_Dir_Txt, f));
-      }
-      try { fs.rmdirSync(stream.Recording_Dir_Txt); } catch (_) {}
+    // Delete only this stream's specific recording file
+    if (stream.Recording_File_Txt && fs.existsSync(stream.Recording_File_Txt)) {
+      fs.unlinkSync(stream.Recording_File_Txt);
+      // Remove the parent directory only if it is now empty
+      const dir = path.dirname(stream.Recording_File_Txt);
+      try {
+        const remaining = fs.readdirSync(dir);
+        if (remaining.length === 0) fs.rmdirSync(dir);
+      } catch (_) {}
     }
 
     await pool.execute('DELETE FROM Stream WHERE Stream_Id = ?', [streamId]);
