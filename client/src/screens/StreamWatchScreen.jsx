@@ -293,21 +293,24 @@ export default function StreamWatchScreen() {
 
         {/* Id + Resume buttons (VOD only) */}
         {showIdOverlay && (
-          <div className="absolute top-3 left-3 flex gap-2">
+          <div
+            className="absolute left-3 flex gap-2"
+            style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}
+          >
             {!hasFaces ? (
               <button
                 onClick={handleId}
                 disabled={idLoading}
-                className="flex flex-col items-center gap-0.5 px-3 py-2 bg-black/40 hover:bg-black/60 disabled:opacity-50 text-white rounded-xl backdrop-blur-sm"
-                title="Identify faces"
+                title="Id"
+                className="flex flex-col items-center gap-0.5 px-2.5 py-2 bg-black/35 hover:bg-white/20 disabled:opacity-30 text-white rounded-lg transition-colors"
               >
-                <IdIcon className="w-7 h-7" />
-                <span className="text-[10px] font-semibold leading-none">Id</span>
+                <IdIcon className="w-6 h-6" />
+                <span className="text-[10px] font-medium">Id</span>
               </button>
             ) : (
               <button
                 onClick={handleResume}
-                className="px-3 py-2 bg-black/40 hover:bg-black/60 text-white text-sm font-semibold rounded-xl backdrop-blur-sm"
+                className="flex flex-col items-center gap-0.5 px-2.5 py-2 bg-black/35 hover:bg-white/20 text-white rounded-lg transition-colors text-[10px] font-medium"
               >
                 Resume
               </button>
