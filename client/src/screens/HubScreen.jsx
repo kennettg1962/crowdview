@@ -574,12 +574,12 @@ export default function HubScreen() {
               {!isStreamingOut ? (
                 <FloatButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-white/20" />
               ) : (
-                <>
-                  <FloatButton icon={StopCircleIcon} label="Stop" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-lg" />
-                  <span className="text-red-400 text-[9px] font-semibold text-center px-1 leading-snug">CrowdView{'\n'}Live</span>
-                </>
+                <FloatButton icon={StopCircleIcon} label="Stop" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-lg" />
               )}
             </div>
+            {isStreamingOut && (
+              <span className="mt-1 text-red-400 text-[9px] font-semibold text-center leading-snug">CrowdView Live</span>
+            )}
             {liveStreams.filter(s => s.Friend_Id).length > 0 && (
               <div className="mt-1 flex flex-col items-center gap-1.5 bg-black/35 rounded-xl p-1.5">
                 {liveStreams.filter(s => s.Friend_Id).map(s => (
