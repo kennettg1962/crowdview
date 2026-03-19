@@ -580,12 +580,6 @@ export default function HubScreen() {
                 </>
               )}
             </div>
-            {streamError && (
-              <div className="mt-1 bg-red-900/80 text-red-300 text-[10px] rounded-lg px-2 py-1 max-w-[160px] text-center leading-snug">
-                {streamError}
-                <button onClick={() => setStreamError(null)} className="block w-full text-center text-red-400 mt-0.5 underline text-[9px]">Dismiss</button>
-              </div>
-            )}
             {liveStreams.filter(s => s.Friend_Id).length > 0 && (
               <div className="mt-1 flex flex-col items-center gap-1.5 bg-black/35 rounded-xl p-1.5">
                 {liveStreams.filter(s => s.Friend_Id).map(s => (
@@ -703,7 +697,7 @@ export default function HubScreen() {
       )}
 
       {streamError && (
-        <div className="hidden md:block fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 border border-red-600 text-white rounded-xl px-6 py-4 z-50 max-w-xs w-full mx-4 shadow-2xl text-center">
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 border border-red-600 text-white rounded-xl px-6 py-4 z-50 max-w-xs w-full mx-4 shadow-2xl text-center">
           <p className="text-red-400 font-semibold text-sm mb-1">Stream Blocked</p>
           <p className="text-gray-300 text-sm mb-4">{streamError}</p>
           <button
