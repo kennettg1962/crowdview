@@ -121,8 +121,8 @@ export function AppProvider({ children }) {
         body: pc.localDescription.sdp,
       });
       if (!res.ok) {
-        const msg = res.status === 403
-          ? 'Already streaming on another device. Stop that stream first.'
+        const msg = (res.status === 403 || res.status === 400)
+          ? 'This user is already streaming from a different device.'
           : `Stream failed (${res.status})`;
         throw new Error(msg);
       }
