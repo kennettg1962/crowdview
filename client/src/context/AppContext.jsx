@@ -14,6 +14,7 @@ export function AppProvider({ children }) {
   const [slideoutOpen, setSlideoutOpen] = useState(false);
   const [voicePaused, setVoicePaused] = useState(false);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
+  const [streamError, setStreamError] = useState(null);
   const pcRef = useRef(null);
   // On native Capacitor the WebView origin is capacitor://localhost — use the
   // production server URL instead. Falls back to current origin on web.
@@ -117,14 +118,21 @@ export function AppProvider({ children }) {
         headers: { 'Content-Type': 'application/sdp' },
         body: pc.localDescription.sdp,
       });
-      if (!res.ok) throw new Error(`WHIP error ${res.status}`);
+      if (!res.ok) {
+        const msg = res.status === 403
+          ? 'Already streaming on another device. Stop that stream first.'
+          : `Stream failed (${res.status})`;
+        throw new Error(msg);
+      }
 
       const answerSdp = await res.text();
       await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
+      setStreamError(null);
       setIsStreamingOut(true);
     } catch (err) {
       console.error('Stream failed:', err);
+      setStreamError(err.message);
       pcRef.current?.close();
       pcRef.current = null;
     }
@@ -134,6 +142,7 @@ export function AppProvider({ children }) {
     pcRef.current?.close();
     pcRef.current = null;
     setIsStreamingOut(false);
+    setStreamError(null);
   };
 
   return (
@@ -148,7 +157,7 @@ export function AppProvider({ children }) {
       mediaStream, setMediaStream,
       slideoutOpen, setSlideoutOpen,
       voicePaused, setVoicePaused,
-      isStreamingOut, startWhipStream, stopWhipStream
+      isStreamingOut, startWhipStream, stopWhipStream, streamError, setStreamError
     }}>
       {children}
     </AppContext.Provider>

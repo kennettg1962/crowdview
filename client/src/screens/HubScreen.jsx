@@ -50,7 +50,7 @@ export default function HubScreen() {
     isStreaming, mediaStream, currentSource, setCurrentSource,
     currentAudioIn, setCurrentAudioIn,
     startStream, stopStream,
-    isStreamingOut, startWhipStream, stopWhipStream,
+    isStreamingOut, startWhipStream, stopWhipStream, streamError, setStreamError,
     setSlideoutOpen,
   } = useApp();
   const videoRef = useRef(null);
@@ -693,6 +693,19 @@ export default function HubScreen() {
           saveStatus === 'saving' ? 'bg-blue-600' : saveStatus === 'saved' ? 'bg-green-600' : 'bg-red-600'
         }`}>
           {saveStatus === 'saving' ? 'Saving clip...' : saveStatus === 'saved' ? 'Clip saved to library' : saveStatus === 'toobig' ? 'Clip too large to save (50MB limit)' : 'Save failed'}
+        </div>
+      )}
+
+      {streamError && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 border border-red-600 text-white rounded-xl px-6 py-4 z-50 max-w-xs w-full mx-4 shadow-2xl text-center">
+          <p className="text-red-400 font-semibold text-sm mb-1">Stream Blocked</p>
+          <p className="text-gray-300 text-sm mb-4">{streamError}</p>
+          <button
+            onClick={() => setStreamError(null)}
+            className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+          >
+            OK
+          </button>
         </div>
       )}
 

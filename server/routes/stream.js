@@ -35,6 +35,45 @@ router.get('/key', auth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/stream/auth  — MediaMTX externalAuthenticationURL hook
+// Called before a publish or read is accepted. Return 200 to allow, 403 to reject.
+// ---------------------------------------------------------------------------
+router.post('/auth', async (req, res) => {
+  const { action, path: streamPath } = req.body;
+
+  // Only restrict publish actions
+  if (action !== 'publish') return res.sendStatus(200);
+
+  const streamKey = (streamPath || '').replace(/^live\//, '');
+  if (!streamKey) return res.sendStatus(200);
+
+  try {
+    const [users] = await pool.execute(
+      'SELECT User_Id FROM User WHERE Stream_Key_Txt = ?',
+      [streamKey]
+    );
+    if (!users.length) return res.sendStatus(200); // unknown key — let on-publish handle it
+
+    const [live] = await pool.execute(
+      `SELECT Stream_Id FROM Stream
+        WHERE User_Id = ? AND Status_Fl = 'live'
+          AND Started_At > NOW() - INTERVAL 24 HOUR`,
+      [users[0].User_Id]
+    );
+
+    if (live.length > 0) {
+      console.log(`[stream/auth] rejected — user ${users[0].User_Id} already has active stream`);
+      return res.sendStatus(403);
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('stream/auth error:', err);
+    res.sendStatus(200); // fail open — don't block on server error
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/stream/on-publish  — MediaMTX runOnPublish webhook
 // Body: { "path": "live/<streamKey>" }
 // ---------------------------------------------------------------------------
@@ -48,6 +87,13 @@ router.post('/on-publish', async (req, res) => {
       [streamKey]
     );
     if (!users.length) return res.status(404).json({ error: 'Unknown stream key' });
+
+    // Clean up any stale live rows for this user before inserting
+    await pool.execute(
+      `UPDATE Stream SET Status_Fl = 'ended', Ended_At = NOW()
+        WHERE User_Id = ? AND Status_Fl = 'live'`,
+      [users[0].User_Id]
+    );
 
     await pool.execute(
       `INSERT INTO Stream (User_Id, Stream_Key_Txt, Status_Fl)
