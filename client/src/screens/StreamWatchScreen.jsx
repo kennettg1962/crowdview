@@ -25,14 +25,13 @@ export default function StreamWatchScreen() {
   const hlsRef            = useRef(null);
   const videoContainerRef = useRef(null);
 
-  const [error, setError]               = useState(null);
-  const [loading, setLoading]           = useState(true);
-  const [idFaces, setIdFaces]           = useState([]);
-  const [idLoading, setIdLoading]       = useState(false);
-  const [idError, setIdError]           = useState(null);
+  const [error, setError]                 = useState(null);
+  const [loading, setLoading]             = useState(true);
+  const [idFaces, setIdFaces]             = useState([]);
+  const [idLoading, setIdLoading]         = useState(false);
+  const [idError, setIdError]             = useState(null);
   const [videoRendered, setVideoRendered] = useState(null); // {width, height} px
 
-  // Calculate the rendered video dimensions inside the object-contain container
   const calcVideoRendered = useCallback(() => {
     const video = videoRef.current;
     const container = videoContainerRef.current;
@@ -46,7 +45,6 @@ export default function StreamWatchScreen() {
     });
   }, []);
 
-  // Keep rendered size in sync with container resize
   useEffect(() => {
     const container = videoContainerRef.current;
     if (!container) return;
@@ -57,12 +55,10 @@ export default function StreamWatchScreen() {
 
   useEffect(() => {
     if (!stream) return;
-
     const video = videoRef.current;
     if (!video) return;
 
     if (!isLive) {
-      // VOD: play the recorded .mp4 directly via the native video element
       const rec = stream.recordings?.[0];
       if (!rec) { setError('No recording available for this stream.'); setLoading(false); return; }
       video.src = rec.url;
@@ -78,7 +74,6 @@ export default function StreamWatchScreen() {
       return;
     }
 
-    // Live HLS stream from MediaMTX
     const src = `${HLS_BASE}/live/${stream.Stream_Key_Txt}/index.m3u8`;
 
     if (Hls.isSupported()) {
@@ -86,48 +81,29 @@ export default function StreamWatchScreen() {
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setLoading(false);
-        video.play().catch(() => {});
-      });
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { setLoading(false); video.play().catch(() => {}); });
       hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          setError('Stream unavailable. It may have ended or not started yet.');
-          setLoading(false);
-        }
+        if (data.fatal) { setError('Stream unavailable. It may have ended or not started yet.'); setLoading(false); }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native HLS (Safari)
       video.src = src;
-      video.addEventListener('loadedmetadata', () => {
-        setLoading(false);
-        video.play().catch(() => {});
-      });
-      video.addEventListener('error', () => {
-        setError('Stream unavailable.');
-        setLoading(false);
-      });
+      video.addEventListener('loadedmetadata', () => { setLoading(false); video.play().catch(() => {}); });
+      video.addEventListener('error', () => { setError('Stream unavailable.'); setLoading(false); });
     } else {
       setError('Your browser does not support HLS streaming.');
       setLoading(false);
     }
 
-    return () => {
-      hlsRef.current?.destroy();
-      hlsRef.current = null;
-    };
+    return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [stream, isLive, calcVideoRendered]);
 
   async function handleId() {
     const video = videoRef.current;
     if (!video) return;
-
     video.pause();
     setIdFaces([]);
     setIdError(null);
     setIdLoading(true);
-
-    // Capture current frame to canvas
     const canvas = document.createElement('canvas');
     const maxW = 1280;
     const scale = Math.min(1, maxW / video.videoWidth);
@@ -135,7 +111,6 @@ export default function StreamWatchScreen() {
     canvas.height = Math.round(video.videoHeight * scale);
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-
     try {
       const res = await api.post('/api/rekognition/identify', { imageData: dataUrl });
       setIdFaces(res.data.faces || []);
@@ -161,8 +136,8 @@ export default function StreamWatchScreen() {
     );
   }
 
-  const showIdOverlay = !isLive && !loading && !error;
-  const hasFaces = idFaces.length > 0;
+  const showIdBtn  = !isLive && !loading && !error;
+  const hasFaces   = idFaces.length > 0;
 
   return (
     <div className="h-screen bg-slate-700 flex flex-col overflow-hidden">
@@ -176,148 +151,180 @@ export default function StreamWatchScreen() {
         right={<div className="w-[46px]" />}
       />
 
-      {/* Stream info bar */}
-      <div className="bg-gray-800 px-4 py-2 flex items-center gap-3 border-b border-gray-700">
-        <BroadcastIcon className="w-5 h-5 text-gray-400 flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          <span className="text-white font-medium text-sm">{stream.Streamer_Name || 'Unknown'}</span>
-          <span className="text-gray-500 text-sm mx-2">·</span>
-          <span className="text-gray-400 text-sm">{stream.Title_Txt}</span>
-        </div>
-        {isLive && (
-          <span className="flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            LIVE
-          </span>
-        )}
-      </div>
+      {/* Main — mirrors HubScreen's sidebar + video layout */}
+      <main className="flex-1 flex min-h-0 md:items-stretch md:px-2 md:pb-2 md:gap-0 overflow-hidden">
 
-      {/* Video */}
-      <div ref={videoContainerRef} className="flex-1 bg-black flex items-center justify-center relative min-h-0">
-
-        {/* Video + bounding box wrapper */}
-        <div
-          className="relative flex-shrink-0"
-          style={videoRendered || { width: '100%', height: '100%' }}
-        >
-          <video
-            ref={videoRef}
-            controls={!hasFaces}
-            playsInline
-            className="block w-full h-full object-contain"
-          />
-
-          {/* Face bounding boxes */}
-          {hasFaces && videoRendered && idFaces.map((face, i) => {
-            const { left, top, width, height } = face.boundingBox;
-            const color = STATUS_COLORS[face.status] || '#ffffff';
-            const labelAbove = top > 0.5;
-            return (
-              <div
-                key={face.faceId || i}
-                style={{
-                  position: 'absolute',
-                  left:   `${left   * 100}%`,
-                  top:    `${top    * 100}%`,
-                  width:  `${width  * 100}%`,
-                  height: `${height * 100}%`,
-                  border: `2px solid ${color}`,
-                  boxSizing: 'border-box',
-                  pointerEvents: 'none',
-                }}
-              >
-                <span style={{
-                  position: 'absolute',
-                  [labelAbove ? 'bottom' : 'top']: '100%',
-                  left: 0,
-                  background: color,
-                  color: '#000',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  padding: '1px 4px',
-                  whiteSpace: 'nowrap',
-                  maxWidth: '160px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}>
-                  {face.friendName || 'Unknown'}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Loading overlay */}
-        {loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400" />
-            <p className="text-white text-sm">Connecting to stream...</p>
-          </div>
-        )}
-
-        {/* Error overlay */}
-        {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <BroadcastIcon className="w-12 h-12 text-gray-600" />
-            <p className="text-gray-400 text-sm text-center px-8">{error}</p>
-            <button onClick={() => navigate('/streams')} className="text-blue-400 underline text-sm">
-              Back to Streams
+        {/* Desktop left sidebar */}
+        <div className="hidden md:flex w-[15%] bg-slate-700 rounded-l-xl flex-col">
+          {showIdBtn && !hasFaces && (
+            <button
+              onClick={handleId}
+              disabled={idLoading}
+              title="Id"
+              className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full
+                text-white hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <IdIcon className="w-[42px] h-[42px]" />
+              <span className="text-xs font-medium">Id</span>
             </button>
-          </div>
-        )}
+          )}
+          {showIdBtn && hasFaces && (
+            <button
+              onClick={handleResume}
+              className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full text-white hover:bg-slate-600"
+            >
+              <span className="text-xs font-medium">Resume</span>
+            </button>
+          )}
+        </div>
 
-        {/* Id identifying overlay */}
-        {idLoading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 pointer-events-none">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400" />
-            <p className="text-white text-sm">Identifying faces...</p>
-          </div>
-        )}
-
-        {/* Id result message */}
-        {!idLoading && (hasFaces || idError) && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full pointer-events-none">
-            {hasFaces ? (
-              <>
-                <span className="text-white text-xs font-semibold">{idFaces.length} face{idFaces.length !== 1 ? 's' : ''}</span>
-                <span className="text-white/40 text-xs">·</span>
-                <span className="text-green-400 text-xs">{idFaces.filter(f => f.status === 'known').length} friend{idFaces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
-                <span className="text-white/40 text-xs">·</span>
-                <span className="text-red-400 text-xs">{idFaces.filter(f => f.status === 'unknown').length} unknown</span>
-              </>
-            ) : (
-              <span className="text-gray-300 text-xs">{idError}</span>
-            )}
-          </div>
-        )}
-
-        {/* Id + Resume buttons (VOD only) */}
-        {showIdOverlay && (
+        {/* Video column */}
+        <div className="flex-1 min-w-0 relative bg-black md:bg-white md:flex md:flex-col md:items-center md:justify-center md:p-3 md:border-t md:border-b md:border-gray-200 overflow-hidden">
           <div
-            className="absolute left-3 flex gap-2"
-            style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}
+            ref={videoContainerRef}
+            className="w-full h-full md:w-auto md:h-auto md:flex-1 bg-black md:border-2 md:border-white md:rounded-sm overflow-hidden relative flex items-center justify-center"
           >
-            {!hasFaces ? (
-              <button
-                onClick={handleId}
-                disabled={idLoading}
-                title="Id"
-                className="flex flex-col items-center gap-0.5 px-2.5 py-2 bg-black/35 hover:bg-white/20 disabled:opacity-30 text-white rounded-lg transition-colors"
+            {/* Video + bounding box wrapper */}
+            <div
+              className="relative flex-shrink-0"
+              style={videoRendered || { width: '100%', height: '100%' }}
+            >
+              <video
+                ref={videoRef}
+                controls={!hasFaces}
+                playsInline
+                className="block w-full h-full object-contain"
+              />
+
+              {/* Face bounding boxes */}
+              {hasFaces && videoRendered && idFaces.map((face, i) => {
+                const { left, top, width, height } = face.boundingBox;
+                const color = STATUS_COLORS[face.status] || '#ffffff';
+                const labelAbove = top > 0.5;
+                return (
+                  <div
+                    key={face.faceId || i}
+                    style={{
+                      position: 'absolute',
+                      left:   `${left   * 100}%`,
+                      top:    `${top    * 100}%`,
+                      width:  `${width  * 100}%`,
+                      height: `${height * 100}%`,
+                      border: `2px solid ${color}`,
+                      boxSizing: 'border-box',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <span style={{
+                      position: 'absolute',
+                      [labelAbove ? 'bottom' : 'top']: '100%',
+                      left: 0,
+                      background: color,
+                      color: '#000',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '1px 4px',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '160px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {face.friendName || 'Unknown'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Loading overlay */}
+            {loading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400" />
+                <p className="text-white text-sm">Connecting to stream...</p>
+              </div>
+            )}
+
+            {/* Error overlay */}
+            {error && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                <BroadcastIcon className="w-12 h-12 text-gray-600" />
+                <p className="text-gray-400 text-sm text-center px-8">{error}</p>
+                <button onClick={() => navigate('/streams')} className="text-blue-400 underline text-sm">Back to Streams</button>
+              </div>
+            )}
+
+            {/* Identifying overlay */}
+            {idLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 pointer-events-none">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400" />
+                <p className="text-white text-sm">Identifying faces...</p>
+              </div>
+            )}
+
+            {/* Id result pill */}
+            {!idLoading && (hasFaces || idError) && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full pointer-events-none">
+                {hasFaces ? (
+                  <>
+                    <span className="text-white text-xs font-semibold">{idFaces.length} face{idFaces.length !== 1 ? 's' : ''}</span>
+                    <span className="text-white/40 text-xs">·</span>
+                    <span className="text-green-400 text-xs">{idFaces.filter(f => f.status === 'known').length} friend{idFaces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
+                    <span className="text-white/40 text-xs">·</span>
+                    <span className="text-red-400 text-xs">{idFaces.filter(f => f.status === 'unknown').length} unknown</span>
+                  </>
+                ) : (
+                  <span className="text-gray-300 text-xs">{idError}</span>
+                )}
+              </div>
+            )}
+
+            {/* Stream info overlay (bottom of video) */}
+            {!loading && !error && (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2 flex items-center gap-2 pointer-events-none">
+                <BroadcastIcon className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                <span className="text-white text-sm font-medium truncate">{stream.Streamer_Name || 'Unknown'}</span>
+                {stream.Title_Txt && <><span className="text-gray-500 text-sm">·</span><span className="text-gray-300 text-sm truncate">{stream.Title_Txt}</span></>}
+                {isLive && (
+                  <span className="ml-auto flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    LIVE
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Mobile Id / Resume overlay */}
+            {showIdBtn && (
+              <div
+                className="md:hidden absolute left-3 flex gap-2"
+                style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}
               >
-                <IdIcon className="w-6 h-6" />
-                <span className="text-[10px] font-medium">Id</span>
-              </button>
-            ) : (
-              <button
-                onClick={handleResume}
-                className="flex flex-col items-center gap-0.5 px-2.5 py-2 bg-black/35 hover:bg-white/20 text-white rounded-lg transition-colors text-[10px] font-medium"
-              >
-                Resume
-              </button>
+                {!hasFaces ? (
+                  <button
+                    onClick={handleId}
+                    disabled={idLoading}
+                    title="Id"
+                    className="flex flex-col items-center gap-0.5 px-2.5 py-2 bg-black/35 hover:bg-white/20 disabled:opacity-30 text-white rounded-lg transition-colors"
+                  >
+                    <IdIcon className="w-6 h-6" />
+                    <span className="text-[10px] font-medium">Id</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleResume}
+                    className="px-2.5 py-2 bg-black/35 hover:bg-white/20 text-white text-[10px] font-medium rounded-lg transition-colors"
+                  >
+                    Resume
+                  </button>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+
+        {/* Desktop right sidebar (empty spacer to balance layout) */}
+        <div className="hidden md:block w-[15%] bg-slate-700 rounded-r-xl" />
+      </main>
 
       <NavBar />
       <TrueFooter />
