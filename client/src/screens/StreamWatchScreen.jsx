@@ -4,7 +4,7 @@ import Hls from 'hls.js';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
-import { BackIcon, BroadcastIcon } from '../components/Icons';
+import { BackIcon, BroadcastIcon, IdIcon } from '../components/Icons';
 import api from '../api/api';
 
 const HLS_BASE = `${window.location.protocol}//${window.location.hostname}/hls`;
@@ -293,19 +293,21 @@ export default function StreamWatchScreen() {
 
         {/* Id + Resume buttons (VOD only) */}
         {showIdOverlay && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+          <div className="absolute top-3 left-3 flex gap-2">
             {!hasFaces ? (
               <button
                 onClick={handleId}
                 disabled={idLoading}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold rounded-full shadow-lg"
+                className="flex flex-col items-center gap-0.5 px-3 py-2 bg-black/40 hover:bg-black/60 disabled:opacity-50 text-white rounded-xl backdrop-blur-sm"
+                title="Identify faces"
               >
-                Id
+                <IdIcon className="w-7 h-7" />
+                <span className="text-[10px] font-semibold leading-none">Id</span>
               </button>
             ) : (
               <button
                 onClick={handleResume}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold rounded-full shadow-lg"
+                className="px-3 py-2 bg-black/40 hover:bg-black/60 text-white text-sm font-semibold rounded-xl backdrop-blur-sm"
               >
                 Resume
               </button>
