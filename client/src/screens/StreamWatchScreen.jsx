@@ -22,25 +22,30 @@ export default function StreamWatchScreen() {
   useEffect(() => {
     if (!stream) return;
 
-    let src;
-    if (isLive) {
-      // Live HLS stream from MediaMTX
-      src = `${HLS_BASE}/live/${stream.Stream_Key_Txt}/index.m3u8`;
-    } else {
-      // VOD: use first recording file if available
-      const rec = stream.recordings?.[0];
-      if (!rec) { setError('No recording available for this stream.'); setLoading(false); return; }
-      src = rec.url;
-    }
-
     const video = videoRef.current;
     if (!video) return;
 
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        lowLatencyMode: isLive,
-        backBufferLength: isLive ? 0 : 30,
+    if (!isLive) {
+      // VOD: play the recorded .mp4 directly via the native video element
+      const rec = stream.recordings?.[0];
+      if (!rec) { setError('No recording available for this stream.'); setLoading(false); return; }
+      video.src = rec.url;
+      video.addEventListener('loadedmetadata', () => {
+        setLoading(false);
+        video.play().catch(() => {});
       });
+      video.addEventListener('error', () => {
+        setError('Recording unavailable or could not be loaded.');
+        setLoading(false);
+      });
+      return;
+    }
+
+    // Live HLS stream from MediaMTX
+    const src = `${HLS_BASE}/live/${stream.Stream_Key_Txt}/index.m3u8`;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({ lowLatencyMode: true, backBufferLength: 0 });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
