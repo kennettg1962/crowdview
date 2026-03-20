@@ -217,10 +217,10 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
         {/* Photo wallet */}
         <div className="flex flex-col items-center gap-2">
           <div className="w-32 h-32 rounded-lg bg-gray-700 overflow-hidden border-2 border-gray-600 flex items-center justify-center">
-            {loading ? (
-              <span className="text-gray-400 text-sm">Loading...</span>
-            ) : photoUrl ? (
+            {photoUrl ? (
               <AuthImage src={photoUrl} alt="Friend" className="w-full h-full object-cover" />
+            ) : loading ? (
+              <span className="text-gray-400 text-sm">Loading...</span>
             ) : (
               <span className="text-gray-500 text-4xl">👤</span>
             )}
