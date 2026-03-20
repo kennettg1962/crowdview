@@ -5,6 +5,7 @@ import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import DevicePicker from '../components/DevicePicker';
 import FriendForm from '../components/FriendForm';
+import FriendFormPopup from '../components/FriendFormPopup';
 import {
   FriendsIcon, LibraryIcon,
   IdIcon, ActionIcon, CutIcon, MicIcon,
@@ -68,6 +69,7 @@ export default function HubScreen() {
   const [liveScanInitializing, setLiveScanInitializing] = useState(false);
   const [liveFaces, setLiveFaces] = useState([]);
   const [selectedFace, setSelectedFace] = useState(null);
+  const [liveFacePopup, setLiveFacePopup] = useState(null);
 
   // Stable friend object for FriendForm — only changes when selectedFace changes,
   // not on every scan cycle re-render (which would re-trigger photo loading)
@@ -220,6 +222,7 @@ export default function HubScreen() {
       if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
       setLiveFaces([]);
       setSelectedFace(null);
+      setLiveFacePopup(null);
       setLiveScanInitializing(false);
       return;
     }
@@ -407,6 +410,7 @@ export default function HubScreen() {
       return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
     });
     setSelectedFace(hit || null);
+    if (hit) setLiveFacePopup(hit);
   }
 
   // Permission error message
@@ -516,6 +520,7 @@ export default function HubScreen() {
                 <canvas
                   ref={overlayCanvasRef}
                   onClick={handleCanvasClick}
+                  onTouchEnd={e => { e.preventDefault(); handleCanvasClick(e.changedTouches[0]); }}
                   className={`absolute inset-0 w-full h-full ${liveScan && liveFaces.length > 0 ? 'cursor-pointer' : 'pointer-events-none'}`}
                 />
                 {liveScanInitializing && (
@@ -711,6 +716,24 @@ export default function HubScreen() {
 
       {cameraFlash && (
         <div className="fixed inset-0 pointer-events-none z-50" style={{ background: 'white', animation: 'cameraFlash 0.4s ease-out forwards' }} />
+      )}
+
+      {liveFacePopup && (
+        <FriendFormPopup
+          friend={liveFacePopup.friendId ? { Friend_Id: liveFacePopup.friendId, Name_Txt: liveFacePopup.friendName } : null}
+          capturedPhotoUrl={liveFacePopup.cropDataUrl || null}
+          onClose={() => { setLiveFacePopup(null); setSelectedFace(null); }}
+          onSave={(saved) => {
+            if (!saved || !liveFacePopup) return;
+            setLiveFaces(prev => prev.map(f =>
+              f.faceId === liveFacePopup.faceId
+                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId }
+                : f
+            ));
+            setLiveFacePopup(null);
+            setSelectedFace(null);
+          }}
+        />
       )}
     </div>
   );
