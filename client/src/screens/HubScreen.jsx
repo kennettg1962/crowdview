@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import useVoiceCommands from '../hooks/useVoiceCommands';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import DevicePicker from '../components/DevicePicker';
@@ -390,6 +391,15 @@ export default function HubScreen() {
 
   function handleStream() { if (isStreaming) startWhipStream(mediaStream); }
   function handleStopStream() { stopWhipStream(); }
+
+  useVoiceCommands({
+    screen: 'hub',
+    commands: {
+      scan:       handleId,
+      stream:     () => { if (isStreaming) startWhipStream(mediaStream); },
+      stopStream: stopWhipStream,
+    },
+  });
 
   const canId = isStreaming;
 

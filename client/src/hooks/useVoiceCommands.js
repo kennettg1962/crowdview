@@ -50,12 +50,15 @@ export default function useVoiceCommands({ screen, commands = {} }) {
       const cmds = commandsRef.current;
 
       if (screen === 'hub') {
-        if (transcript.includes('stream') && !transcript.includes('stop')) {
-          speak('Streaming');
-          cmds.stream?.();
+        if (transcript.includes('scan')) {
+          speak('Scanning');
+          cmds.scan?.();
         } else if (transcript.includes('stop stream') || transcript.includes('stop streaming')) {
           speak('Stopping stream');
           cmds.stopStream?.();
+        } else if (transcript.includes('stream')) {
+          speak('Streaming');
+          cmds.stream?.();
         }
       } else if (screen === 'id') {
         if (transcript === 'prev' || transcript === 'previous') {
