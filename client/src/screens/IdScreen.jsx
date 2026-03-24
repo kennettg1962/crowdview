@@ -68,8 +68,9 @@ export default function IdScreen() {
     commands: {
       prev:  () => setSelectedFaceIndex(i => { if (i === 0) { speakRef.current?.('First face'); return i; } return i - 1; }),
       next:  () => setSelectedFaceIndex(i => { if (i === faces.length - 1) { speakRef.current?.('Last face'); return i; } return i + 1; }),
-      show:  handleShow,
-      back:  () => navigate('/hub'),
+      show:   handleShow,
+      cancel: () => { setShowFriendForm(false); setActiveFaceCrop(null); },
+      back:   () => navigate('/hub'),
     },
   });
   speakRef.current = speak;

@@ -70,6 +70,9 @@ export default function useVoiceCommands({ screen, commands = {} }) {
         } else if (transcript === 'show') {
           speak('Show');
           cmds.show?.();
+        } else if (transcript === 'cancel') {
+          speak('Cancelled');
+          cmds.cancel?.();
         } else if (transcript === 'back') {
           speak('Going back');
           cmds.back?.();
