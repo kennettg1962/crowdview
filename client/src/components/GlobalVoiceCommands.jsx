@@ -18,13 +18,17 @@ export default function GlobalVoiceCommands() {
     mediaStreamRef.current = mediaStream;
   }, [mediaStream]);
 
-  // Pause/resume recognition when voicePaused changes
+  // Pause/resume recognition when voicePaused changes.
+  // On Capacitor, never stop the recognition — just ignore results via the ref.
+  // Stopping and restarting a WKWebView recognition instance breaks it permanently.
   useEffect(() => {
     voicePausedRef.current = voicePaused;
-    if (voicePaused) {
-      try { recognitionRef.current?.stop(); } catch {}
-    } else if (activeRef.current) {
-      try { recognitionRef.current?.start(); } catch {}
+    if (!isCapacitor()) {
+      if (voicePaused) {
+        try { recognitionRef.current?.stop(); } catch {}
+      } else if (activeRef.current) {
+        try { recognitionRef.current?.start(); } catch {}
+      }
     }
   }, [voicePaused]);
 
