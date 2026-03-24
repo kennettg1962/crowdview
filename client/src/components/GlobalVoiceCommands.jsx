@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { isMac } from '../utils/platform';
 
-const isNativePlatform = () => window?.Capacitor?.isNativePlatform?.() === true;
+const isCapacitor = () => window.location.protocol === 'capacitor:';
 
 export default function GlobalVoiceCommands() {
   const { mediaStream, isAuthenticated, voicePaused } = useApp();
@@ -30,13 +30,12 @@ export default function GlobalVoiceCommands() {
 
   useEffect(() => {
     if (isMac) return; // macOS: mic used for stream audio; voice commands not supported
-    if (isNativePlatform()) return; // WKWebView/native: SpeechRecognition loops endlessly
     if (!isAuthenticated) return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    recognition.continuous = !isCapacitor(); // WKWebView loops with continuous=true; use single-shot + onend restart
     recognition.interimResults = false;
     recognition.lang = 'en-US';
     recognitionRef.current = recognition;
@@ -53,10 +52,12 @@ export default function GlobalVoiceCommands() {
     const onFirstInteraction = () => {
       document.removeEventListener('click', onFirstInteraction);
       document.removeEventListener('keydown', onFirstInteraction);
+      document.removeEventListener('touchstart', onFirstInteraction);
       startRecognition();
     };
     document.addEventListener('click', onFirstInteraction);
     document.addEventListener('keydown', onFirstInteraction);
+    document.addEventListener('touchstart', onFirstInteraction);
 
     recognition.onresult = (event) => {
       const last = event.results[event.results.length - 1];
@@ -64,7 +65,7 @@ export default function GlobalVoiceCommands() {
       const transcript = last[0].transcript.trim().toLowerCase();
       console.log('[GlobalVoice] heard:', transcript);
 
-      if (transcript === 'scan' || transcript.includes('scan faces')) {
+      if (transcript.includes('snap') || transcript.includes('scan')) {
         const stream = mediaStreamRef.current;
         if (!stream) return;
 
