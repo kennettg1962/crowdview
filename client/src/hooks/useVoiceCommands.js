@@ -50,7 +50,7 @@ export default function useVoiceCommands({ screen, commands = {} }) {
       const cmds = commandsRef.current;
 
       if (screen === 'hub') {
-        if (transcript.includes('scan')) {
+        if (transcript.includes('snap')) {
           speak('Scanning');
           cmds.scan?.();
         } else if (transcript.includes('stop stream') || transcript.includes('stop streaming')) {
