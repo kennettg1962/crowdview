@@ -56,24 +56,23 @@ export default function IdScreen() {
   const photoDataUrl = location.state?.photoDataUrl;
   const saveToLibrary = location.state?.saveToLibrary ?? false;
 
-  const handlePrev = useCallback(() => {
-    setSelectedFaceIndex(i => Math.max(0, i - 1));
-  }, []);
-
-  const handleNext = useCallback(() => {
-    setSelectedFaceIndex(i => Math.min(faces.length - 1, i + 1));
-  }, [faces.length]);
-
   const handleShow = useCallback(() => {
     if (faces[selectedFaceIndex]) {
       openFaceForm(faces[selectedFaceIndex]);
     }
   }, [faces, selectedFaceIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useVoiceCommands({
+  const speakRef = useRef(null);
+  const { speak } = useVoiceCommands({
     screen: 'id',
-    commands: { prev: handlePrev, next: handleNext, show: handleShow, back: () => navigate('/hub') }
+    commands: {
+      prev:  () => setSelectedFaceIndex(i => { if (i === 0) { speakRef.current?.('First face'); return i; } return i - 1; }),
+      next:  () => setSelectedFaceIndex(i => { if (i === faces.length - 1) { speakRef.current?.('Last face'); return i; } return i + 1; }),
+      show:  handleShow,
+      back:  () => navigate('/hub'),
+    },
   });
+  speakRef.current = speak;
 
   // Pause GlobalVoiceCommands while this screen runs its own useVoiceCommands
   useEffect(() => {
