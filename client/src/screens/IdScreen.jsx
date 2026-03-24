@@ -72,7 +72,7 @@ export default function IdScreen() {
 
   useVoiceCommands({
     screen: 'id',
-    commands: { prev: handlePrev, next: handleNext, show: handleShow }
+    commands: { prev: handlePrev, next: handleNext, show: handleShow, back: () => navigate('/hub') }
   });
 
   // Pause GlobalVoiceCommands while this screen runs its own useVoiceCommands
