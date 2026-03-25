@@ -41,8 +41,12 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
       if (transcript) onResultRef.current(transcript);
     };
 
+    // On Capacitor, track last error to choose an appropriate restart delay.
+    const lastErrorRef = { current: null };
+
     recognition.onerror = (e) => {
       console.warn('[SR] error:', e.error);
+      lastErrorRef.current = e.error;
       if (e.error === 'not-allowed') {
         // iOS revoked mic after backgrounding — stop the restart loop;
         // visibilitychange will re-arm when the app returns to foreground.
@@ -51,13 +55,19 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
     };
 
     recognition.onend = () => {
-      console.log('[SR] ended, activeRef:', activeRef.current);
       if (!activeRef.current) return;
+      // After an audio/permission error use a longer pause to let iOS recover;
+      // otherwise use a short delay to keep the listening window tight.
+      const err = lastErrorRef.current;
+      lastErrorRef.current = null;
+      const delay = cap
+        ? (err === 'audio-capture' || err === 'aborted' ? 1500 : 200)
+        : 0;
       setTimeout(() => {
         if (activeRef.current) {
           try { recognition.start(); } catch { /* already started */ }
         }
-      }, cap ? 500 : 0);
+      }, delay);
     };
 
     // Restart recognition when the app returns to the foreground.
@@ -65,9 +75,12 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
       if (document.visibilityState === 'visible' && !activeRef.current) {
         console.log('[SR] resuming after foreground');
         activeRef.current = true;
+        // Give iOS time to re-establish the audio session before starting.
         setTimeout(() => {
-          try { recognition.start(); } catch { /* already started */ }
-        }, 500);
+          if (activeRef.current) {
+            try { recognition.start(); } catch { /* already started */ }
+          }
+        }, 1500);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
