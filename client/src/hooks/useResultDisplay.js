@@ -23,10 +23,7 @@ export default function useResultDisplay() {
   const navigate = useNavigate();
 
   const showResult = useCallback((photoDataUrl, { saveToLibrary = true, faces } = {}) => {
-    if (captureMode === 'glasses') {
-      if (faces) GlassesSDK.sendResult(faces);
-      return;
-    }
+    if (captureMode === 'glasses' && faces) GlassesSDK.sendResult(faces);
     navigate('/id', { state: { photoDataUrl, saveToLibrary } });
   }, [captureMode, navigate]);
 
