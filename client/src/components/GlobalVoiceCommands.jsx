@@ -1,7 +1,6 @@
 import { useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { isMac } from '../utils/platform';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
 
 export default function GlobalVoiceCommands() {
@@ -71,7 +70,7 @@ export default function GlobalVoiceCommands() {
   }, [navigate, screenVoiceRef]);
 
   useSpeechRecognition(handleResult, {
-    enabled: !isMac && isAuthenticated,
+    enabled: isAuthenticated,
   });
 
   return null;
