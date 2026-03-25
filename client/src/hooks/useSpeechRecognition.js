@@ -43,6 +43,11 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
 
     recognition.onerror = (e) => {
       console.warn('[SR] error:', e.error);
+      if (e.error === 'not-allowed') {
+        // iOS revoked mic after backgrounding — stop the restart loop;
+        // visibilitychange will re-arm when the app returns to foreground.
+        activeRef.current = false;
+      }
     };
 
     recognition.onend = () => {
@@ -55,12 +60,25 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
       }, cap ? 500 : 0);
     };
 
+    // Restart recognition when the app returns to the foreground.
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !activeRef.current) {
+        console.log('[SR] resuming after foreground');
+        activeRef.current = true;
+        setTimeout(() => {
+          try { recognition.start(); } catch { /* already started */ }
+        }, 500);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     // Try to start immediately — WKWebView allows this without a gesture.
     try { recognition.start(); console.log('[SR] started'); }
     catch (e) { console.warn('[SR] start failed:', e.message); }
 
     return () => {
       activeRef.current = false;
+      document.removeEventListener('visibilitychange', handleVisibility);
       try { recognition.stop(); } catch { /* already stopped */ }
     };
   }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
