@@ -21,13 +21,12 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
     if (!enabled) return;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    console.log('[SR] SpeechRecognition available:', !!SpeechRecognition, 'cap:', cap);
-    if (!SpeechRecognition) return;
-
     // WKWebView (Capacitor iOS) cannot sustain a continuous session —
     // it fires onend immediately, causing a tight loop. Use single-shot
     // mode with a restart delay instead.
     const cap = isCapacitor();
+    console.log('[SR] SpeechRecognition available:', !!SpeechRecognition, 'cap:', cap);
+    if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
     recognition.continuous     = !cap;
