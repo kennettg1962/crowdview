@@ -1,124 +1,42 @@
-import { useEffect, useRef } from 'react';
+import { useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { isMac } from '../utils/platform';
-
-const isCapacitor = () => window.location.protocol === 'capacitor:';
+import useSpeechRecognition from '../hooks/useSpeechRecognition';
 
 export default function GlobalVoiceCommands() {
   const { mediaStream, isAuthenticated, voicePaused } = useApp();
   const navigate = useNavigate();
   const mediaStreamRef = useRef(mediaStream);
-  const activeRef = useRef(false);
-  const retryTimerRef = useRef(null);
-  const recognitionRef = useRef(null);
-  const voicePausedRef = useRef(voicePaused);
+  mediaStreamRef.current = mediaStream;
 
-  useEffect(() => {
-    mediaStreamRef.current = mediaStream;
-  }, [mediaStream]);
+  const handleResult = useCallback((transcript) => {
+    if (voicePaused) return; // screen-specific hook is active
 
-  // Pause/resume recognition when voicePaused changes.
-  // On Capacitor, never stop the recognition — just ignore results via the ref.
-  // Stopping and restarting a WKWebView recognition instance breaks it permanently.
-  useEffect(() => {
-    voicePausedRef.current = voicePaused;
-    if (!isCapacitor()) {
-      if (voicePaused) {
-        try { recognitionRef.current?.stop(); } catch {}
-      } else if (activeRef.current) {
-        try { recognitionRef.current?.start(); } catch {}
-      }
+    if (transcript.includes('snap') || transcript.includes('scan')) {
+      const stream = mediaStreamRef.current;
+      if (!stream) return;
+
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.muted = true;
+      video.playsInline = true;
+      video.onloadedmetadata = () => {
+        video.play();
+        const canvas = document.createElement('canvas');
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        video.pause();
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        navigate('/id', { state: { photoDataUrl: dataUrl, saveToLibrary: true } });
+      };
     }
-  }, [voicePaused]);
+  }, [voicePaused, navigate]);
 
-  useEffect(() => {
-    if (isMac) return; // macOS: mic used for stream audio; voice commands not supported
-    if (!isAuthenticated) return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = !isCapacitor(); // WKWebView loops with continuous=true; use single-shot + onend restart
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-    recognitionRef.current = recognition;
-
-    const startRecognition = () => {
-      if (voicePausedRef.current) return;
-      activeRef.current = true;
-      try { recognition.start(); } catch (err) {
-        console.warn('[GlobalVoice] Could not start:', err);
-      }
-    };
-
-    // Chrome requires a user gesture before speech recognition is permitted.
-    const onFirstInteraction = () => {
-      document.removeEventListener('click', onFirstInteraction);
-      document.removeEventListener('keydown', onFirstInteraction);
-      document.removeEventListener('touchstart', onFirstInteraction);
-      startRecognition();
-    };
-    document.addEventListener('click', onFirstInteraction);
-    document.addEventListener('keydown', onFirstInteraction);
-    document.addEventListener('touchstart', onFirstInteraction);
-
-    recognition.onresult = (event) => {
-      const last = event.results[event.results.length - 1];
-      if (!last.isFinal) return;
-      const transcript = last[0].transcript.trim().toLowerCase();
-      console.log('[GlobalVoice] heard:', transcript);
-
-      if (transcript.includes('snap') || transcript.includes('scan')) {
-        const stream = mediaStreamRef.current;
-        if (!stream) return;
-
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.muted = true;
-        video.playsInline = true;
-        video.onloadedmetadata = () => {
-          video.play();
-          const canvas = document.createElement('canvas');
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          canvas.getContext('2d').drawImage(video, 0, 0);
-          video.pause();
-          const dataUrl = canvas.toDataURL('image/jpeg');
-          navigate('/id', { state: { photoDataUrl: dataUrl, saveToLibrary: true } });
-        };
-      }
-    };
-
-    recognition.onerror = (event) => {
-      if (event.error === 'not-allowed') {
-        retryTimerRef.current = setTimeout(() => {
-          if (activeRef.current && !voicePausedRef.current) {
-            try { recognition.start(); } catch { /* already started */ }
-          }
-        }, 5000);
-        return;
-      }
-      if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        console.warn('[GlobalVoice] Error:', event.error);
-      }
-    };
-
-    recognition.onend = () => {
-      if (activeRef.current && !voicePausedRef.current) {
-        try { recognition.start(); } catch { /* already started */ }
-      }
-    };
-
-    return () => {
-      activeRef.current = false;
-      recognitionRef.current = null;
-      clearTimeout(retryTimerRef.current);
-      document.removeEventListener('click', onFirstInteraction);
-      document.removeEventListener('keydown', onFirstInteraction);
-      try { recognition.stop(); } catch { /* already stopped */ }
-    };
-  }, [navigate, isAuthenticated]);
+  useSpeechRecognition(handleResult, {
+    enabled: !isMac && isAuthenticated,
+  });
 
   return null;
 }

@@ -1,133 +1,84 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { isMac } from '../utils/platform';
+import useSpeechRecognition from './useSpeechRecognition';
 
 /**
- * Voice command hook using Web Speech API.
- * @param {Object} options
- * @param {string} options.screen - Current screen name ('hub' | 'id' | 'friends')
- * @param {Object} options.commands - Map of command name → handler function
+ * Screen-local voice command hook.
+ * Pauses GlobalVoiceCommands while active (via voicePaused in AppContext).
+ *
+ * @param {string} options.screen   - 'hub' | 'id' | 'friends'
+ * @param {Object} options.commands - map of command name → handler
  */
 export default function useVoiceCommands({ screen, commands = {} }) {
-  const recognitionRef = useRef(null);
-  const activeRef = useRef(true);
   const commandsRef = useRef(commands);
-
-  // Keep commands ref current
-  useEffect(() => {
-    commandsRef.current = commands;
-  }, [commands]);
+  commandsRef.current = commands;
 
   const speak = useCallback((text) => {
     if (!window.speechSynthesis) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.1;
+    utterance.rate   = 1.1;
     utterance.volume = 0.7;
     window.speechSynthesis.speak(utterance);
   }, []);
 
-  useEffect(() => {
-    if (isMac) return; // macOS: mic used for stream audio; voice commands not supported
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.warn('Web Speech API not supported in this browser');
-      return;
+  const speakRef = useRef(speak);
+  speakRef.current = speak;
+
+  const handleResult = useCallback((transcript) => {
+    const cmds = commandsRef.current;
+
+    if (screen === 'hub') {
+      if (transcript.includes('snap') || transcript.includes('scan')) {
+        speakRef.current('Scanning');
+        cmds.scan?.();
+      } else if (transcript.includes('stop stream') || transcript.includes('stop streaming')) {
+        speakRef.current('Stopping stream');
+        cmds.stopStream?.();
+      } else if (transcript.includes('stream')) {
+        speakRef.current('Streaming');
+        cmds.stream?.();
+      }
+
+    } else if (screen === 'id') {
+      if (transcript === 'prev' || transcript === 'previous') {
+        speakRef.current('Previous');
+        cmds.prev?.();
+      } else if (transcript === 'next') {
+        speakRef.current('Next');
+        cmds.next?.();
+      } else if (transcript === 'show') {
+        speakRef.current('Show');
+        cmds.show?.();
+      } else if (transcript === 'cancel') {
+        speakRef.current('Cancelled');
+        cmds.cancel?.();
+      } else if (transcript === 'back') {
+        speakRef.current('Going back');
+        cmds.back?.();
+      }
+
+    } else if (screen === 'friends') {
+      if (transcript.startsWith('name ')) {
+        const nameText = transcript.slice(5);
+        speakRef.current(`Name: ${nameText}`);
+        cmds.name?.(nameText);
+      } else if (transcript.startsWith('note ')) {
+        const noteText = transcript.slice(5);
+        speakRef.current(`Note: ${noteText}`);
+        cmds.note?.(noteText);
+      } else if (transcript === 'update') {
+        speakRef.current('Updating');
+        cmds.update?.();
+      } else if (transcript === 'cancel') {
+        speakRef.current('Cancelling');
+        cmds.cancel?.();
+      }
     }
+  }, [screen]);
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-    recognitionRef.current = recognition;
-    activeRef.current = true;
-
-    recognition.onresult = (event) => {
-      const last = event.results[event.results.length - 1];
-      if (!last.isFinal) return;
-      const transcript = last[0].transcript.trim().toLowerCase();
-      console.log(`[VoiceCommand] Heard: "${transcript}" on screen: ${screen}`);
-
-      // Match commands based on current screen
-      const cmds = commandsRef.current;
-
-      if (screen === 'hub') {
-        if (transcript.includes('snap')) {
-          speak('Scanning');
-          cmds.scan?.();
-        } else if (transcript.includes('stop stream') || transcript.includes('stop streaming')) {
-          speak('Stopping stream');
-          cmds.stopStream?.();
-        } else if (transcript.includes('stream')) {
-          speak('Streaming');
-          cmds.stream?.();
-        }
-      } else if (screen === 'id') {
-        if (transcript === 'prev' || transcript === 'previous') {
-          speak('Previous');
-          cmds.prev?.();
-        } else if (transcript === 'next') {
-          speak('Next');
-          cmds.next?.();
-        } else if (transcript === 'show') {
-          speak('Show');
-          cmds.show?.();
-        } else if (transcript === 'cancel') {
-          speak('Cancelled');
-          cmds.cancel?.();
-        } else if (transcript === 'back') {
-          speak('Going back');
-          cmds.back?.();
-        }
-      } else if (screen === 'friends') {
-        if (transcript.startsWith('name ')) {
-          const nameText = transcript.slice(5);
-          speak(`Name: ${nameText}`);
-          cmds.name?.(nameText);
-        } else if (transcript.startsWith('note ')) {
-          const noteText = transcript.slice(5);
-          speak(`Note: ${noteText}`);
-          cmds.note?.(noteText);
-        } else if (transcript === 'update') {
-          speak('Updating');
-          cmds.update?.();
-        } else if (transcript === 'cancel') {
-          speak('Cancelling');
-          cmds.cancel?.();
-        }
-      }
-    };
-
-    recognition.onerror = (event) => {
-      if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        console.warn('[VoiceCommand] Error:', event.error);
-      }
-    };
-
-    recognition.onend = () => {
-      // Auto-restart if still active
-      if (activeRef.current) {
-        try {
-          recognition.start();
-        } catch {
-          // Already started
-        }
-      }
-    };
-
-    try {
-      recognition.start();
-    } catch (err) {
-      console.warn('[VoiceCommand] Could not start recognition:', err);
-    }
-
-    return () => {
-      activeRef.current = false;
-      try {
-        recognition.stop();
-      } catch {
-        // Already stopped
-      }
-    };
-  }, [screen, speak]);
+  useSpeechRecognition(handleResult, {
+    enabled: !isMac,
+  });
 
   return { speak };
 }
