@@ -19,6 +19,7 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
   useEffect(() => { onResultRef.current = onResult; }, [onResult]);
 
   useEffect(() => {
+    console.log('[SR] effect running, enabled:', enabled, 'capacitor:', isCapacitor());
     if (!enabled) return;
 
     if (isCapacitor()) {
@@ -70,6 +71,7 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
           };
 
           activeRef.current = true;
+          console.log('[SR] native SpeechRecognition.start() called');
           await SpeechRecognition.start({ language: 'en-US', partialResults: true, popup: false });
         } catch (err) {
           console.warn('[SpeechRecognition] Native start failed:', err);
@@ -78,6 +80,7 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
 
       // Wait for first user interaction before starting (iOS requirement)
       const onInteraction = () => {
+        console.log('[SR] native interaction detected, starting...');
         document.removeEventListener('touchstart', onInteraction);
         document.removeEventListener('click',      onInteraction);
         startNative();
@@ -128,9 +131,11 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
       };
 
       const onInteraction = () => {
+        console.log('[SR] web interaction detected, starting...');
         document.removeEventListener('click',   onInteraction);
         document.removeEventListener('keydown', onInteraction);
-        try { recognition.start(); } catch { /* already started */ }
+        try { recognition.start(); console.log('[SR] web recognition.start() called'); }
+        catch (e) { console.warn('[SR] web start error:', e); }
       };
       document.addEventListener('click',   onInteraction);
       document.addEventListener('keydown', onInteraction);
