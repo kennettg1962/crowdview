@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import api from '../api/api';
 
 const AppContext = createContext(null);
@@ -13,6 +13,15 @@ export function AppProvider({ children }) {
   const [mediaStream, setMediaStream] = useState(null);
   const [slideoutOpen, setSlideoutOpen] = useState(false);
   const [voicePaused, setVoicePaused] = useState(false);
+
+  // Registry for screen-local voice commands — avoids multiple recognition sessions
+  const screenVoiceRef = useRef({ screen: null, commands: {}, speak: () => {} });
+  const registerScreenVoice = useCallback((screen, commands, speak) => {
+    screenVoiceRef.current = { screen, commands, speak };
+  }, []);
+  const unregisterScreenVoice = useCallback(() => {
+    screenVoiceRef.current = { screen: null, commands: {}, speak: () => {} };
+  }, []);
   const [isStreamingOut, setIsStreamingOut] = useState(false);
   const [isStreamingConnecting, setIsStreamingConnecting] = useState(false);
   const [streamError, setStreamError] = useState(null);
@@ -161,6 +170,7 @@ export function AppProvider({ children }) {
       mediaStream, setMediaStream,
       slideoutOpen, setSlideoutOpen,
       voicePaused, setVoicePaused,
+      screenVoiceRef, registerScreenVoice, unregisterScreenVoice,
       isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError
     }}>
       {children}

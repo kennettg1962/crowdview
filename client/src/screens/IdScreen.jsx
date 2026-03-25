@@ -40,7 +40,6 @@ function cropFace(photoDataUrl, box) {
 export default function IdScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setVoicePaused } = useApp();
   const [faces, setFaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [identifyError, setIdentifyError] = useState(null);
@@ -75,11 +74,6 @@ export default function IdScreen() {
   });
   speakRef.current = speak;
 
-  // Pause GlobalVoiceCommands while this screen runs its own useVoiceCommands
-  useEffect(() => {
-    setVoicePaused(true);
-    return () => setVoicePaused(false);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (photoDataUrl) identifyFaces();
