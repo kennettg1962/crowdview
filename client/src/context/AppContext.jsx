@@ -14,6 +14,19 @@ export function AppProvider({ children }) {
   const [slideoutOpen, setSlideoutOpen] = useState(false);
   const [voicePaused, setVoicePaused] = useState(false);
 
+  // ── Glasses integration ───────────────────────────────────────────────────
+  // 'phone': existing camera behaviour (default)
+  // 'glasses': frames come from GlassesSDK; results route to glasses display
+  const [captureMode, setCaptureMode] = useState('phone');
+  // Holds a resolver set by useCaptureSource; called by injectGlassesFrame
+  const pendingGlassesFrameRef = useRef(null);
+  const injectGlassesFrame = useCallback((dataUrl) => {
+    if (pendingGlassesFrameRef.current) {
+      pendingGlassesFrameRef.current(dataUrl);
+      pendingGlassesFrameRef.current = null;
+    }
+  }, []);
+
   // Registry for screen-local voice commands — avoids multiple recognition sessions
   const screenVoiceRef = useRef({ screen: null, commands: {}, speak: () => {} });
   const registerScreenVoice = useCallback((screen, commands, speak) => {
@@ -171,7 +184,8 @@ export function AppProvider({ children }) {
       slideoutOpen, setSlideoutOpen,
       voicePaused, setVoicePaused,
       screenVoiceRef, registerScreenVoice, unregisterScreenVoice,
-      isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError
+      isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
+      captureMode, setCaptureMode, pendingGlassesFrameRef, injectGlassesFrame
     }}>
       {children}
     </AppContext.Provider>

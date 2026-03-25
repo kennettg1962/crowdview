@@ -2,6 +2,8 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import useVoiceCommands from '../hooks/useVoiceCommands';
+import useCaptureSource from '../hooks/useCaptureSource';
+import useResultDisplay from '../hooks/useResultDisplay';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import DevicePicker from '../components/DevicePicker';
@@ -53,9 +55,11 @@ export default function HubScreen() {
     currentAudioIn, setCurrentAudioIn,
     startStream, stopStream,
     isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
-    setSlideoutOpen,
+    setSlideoutOpen, captureMode,
   } = useApp();
   const videoRef = useRef(null);
+  const { getCaptureFrame } = useCaptureSource(videoRef);
+  const { showResult } = useResultDisplay();
   const overlayCanvasRef = useRef(null);
   const actionRecorderRef = useRef(null);
   const autoConnectAttempted = useRef(false);
@@ -228,22 +232,20 @@ export default function HubScreen() {
       return;
     }
     const interval = setInterval(async () => {
-      if (scanInFlightRef.current || !videoRef.current || !overlayCanvasRef.current || !liveScanActiveRef.current) return;
-      const video = videoRef.current;
-      if (!video.videoWidth || video.readyState < 3) return;
+      if (scanInFlightRef.current || !overlayCanvasRef.current || !liveScanActiveRef.current) return;
 
-      // Sync overlay canvas resolution to video native resolution
-      const canvas = overlayCanvasRef.current;
-      if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
-      if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
+      // Phone: sync overlay canvas to native video resolution before capturing
+      if (captureMode === 'phone') {
+        const video = videoRef.current;
+        if (!video || !video.videoWidth || video.readyState < 3) return;
+        const canvas = overlayCanvasRef.current;
+        if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
+        if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
+      }
 
-      // Capture frame — cap at 640px wide to keep payload size manageable for CompreFace
-      const maxW = 640;
-      const scale = Math.min(1, maxW / video.videoWidth);
-      const capture = document.createElement('canvas');
-      capture.width  = Math.round(video.videoWidth  * scale);
-      capture.height = Math.round(video.videoHeight * scale);
-      capture.getContext('2d').drawImage(video, 0, 0, capture.width, capture.height);
+      // Capture frame from active source (phone camera or glasses)
+      const capture = await getCaptureFrame(640, 0.8).catch(() => null);
+      if (!capture || !liveScanActiveRef.current) return;
       const dataUrl = capture.toDataURL('image/jpeg', 0.8);
 
       scanInFlightRef.current = true;
@@ -370,24 +372,18 @@ export default function HubScreen() {
     rec.stop();
   }
 
-  const handleId = useCallback(() => {
-    if (!videoRef.current || !mediaStream) return;
-    const maxW = 1280;
-    const vw = videoRef.current.videoWidth  || 640;
-    const vh = videoRef.current.videoHeight || 480;
-    const scale = Math.min(1, maxW / vw);
-    const canvas = document.createElement('canvas');
-    canvas.width  = Math.round(vw * scale);
-    canvas.height = Math.round(vh * scale);
-    canvas.getContext('2d').drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-    canvas.toBlob(blob => {
+  const handleId = useCallback(async () => {
+    if (captureMode === 'phone' && (!videoRef.current || !mediaStream)) return;
+    const capture = await getCaptureFrame(1280, 0.82).catch(() => null);
+    if (!capture) return;
+    const dataUrl = capture.toDataURL('image/jpeg', 0.82);
+    capture.toBlob(blob => {
       const fd = new FormData();
       fd.append('media', blob, 'photo.jpg');
       api.post('/api/media', fd).catch(console.error);
     }, 'image/jpeg', 0.82);
-    navigate('/id', { state: { photoDataUrl: dataUrl, saveToLibrary: true } });
-  }, [mediaStream, navigate]);
+    showResult(dataUrl, { saveToLibrary: true });
+  }, [captureMode, mediaStream, getCaptureFrame, showResult]);
 
   function handleStream() { if (isStreaming) startWhipStream(mediaStream); }
   function handleStopStream() { stopWhipStream(); }
