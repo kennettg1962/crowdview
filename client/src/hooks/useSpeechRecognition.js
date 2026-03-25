@@ -14,7 +14,6 @@ const isCapacitor = () => window.location.protocol === 'capacitor:';
 export default function useSpeechRecognition(onResult, { enabled = true } = {}) {
   const onResultRef = useRef(onResult);
   const activeRef   = useRef(false);
-  const listenerRef = useRef(null); // native listener handle
 
   useEffect(() => { onResultRef.current = onResult; }, [onResult]);
 
