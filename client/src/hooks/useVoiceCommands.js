@@ -14,6 +14,8 @@ export default function useVoiceCommands({ screen, commands = {} }) {
   commandsRef.current = commands;
 
   const speak = useCallback((text) => {
+    // WKWebView's SpeechSynthesis conflicts with the active mic session
+    if (window.location.protocol === 'capacitor:') return;
     if (!window.speechSynthesis) return;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate   = 1.1;
