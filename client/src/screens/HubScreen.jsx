@@ -395,9 +395,7 @@ export default function HubScreen() {
   useVoiceCommands({
     screen: 'hub',
     commands: {
-      scan:       handleId,
-      stream:     () => { if (isStreaming) startWhipStream(mediaStream); },
-      stopStream: stopWhipStream,
+      scan: handleId,
     },
   });
 

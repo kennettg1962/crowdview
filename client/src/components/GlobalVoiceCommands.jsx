@@ -4,10 +4,27 @@ import { useApp } from '../context/AppContext';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
 
 export default function GlobalVoiceCommands() {
-  const { mediaStream, isAuthenticated, screenVoiceRef } = useApp();
+  const {
+    mediaStream, isAuthenticated, screenVoiceRef,
+    isStreaming, isStreamingOut, isStreamingConnecting,
+    startWhipStream, stopWhipStream,
+  } = useApp();
+
   const navigate = useNavigate();
-  const mediaStreamRef = useRef(mediaStream);
-  mediaStreamRef.current = mediaStream;
+
+  // Refs so the stable handleResult callback always sees current values.
+  const mediaStreamRef         = useRef(mediaStream);
+  const isStreamingRef         = useRef(isStreaming);
+  const isStreamingOutRef      = useRef(isStreamingOut);
+  const isStreamingConnRef     = useRef(isStreamingConnecting);
+  const startWhipStreamRef     = useRef(startWhipStream);
+  const stopWhipStreamRef      = useRef(stopWhipStream);
+  mediaStreamRef.current       = mediaStream;
+  isStreamingRef.current       = isStreaming;
+  isStreamingOutRef.current    = isStreamingOut;
+  isStreamingConnRef.current   = isStreamingConnecting;
+  startWhipStreamRef.current   = startWhipStream;
+  stopWhipStreamRef.current    = stopWhipStream;
 
   const handleResult = useCallback((transcript) => {
     const { screen, commands, speak } = screenVoiceRef.current;
@@ -18,10 +35,6 @@ export default function GlobalVoiceCommands() {
     if (screen === 'hub') {
       if (transcript.includes('snap') || transcript.includes('scan')) {
         sp('Scanning'); cmds.scan?.(); return;
-      } else if (transcript.includes('stop stream') || transcript.includes('stop streaming')) {
-        sp('Stopping stream'); cmds.stopStream?.(); return;
-      } else if (transcript.includes('stream')) {
-        sp('Streaming'); cmds.stream?.(); return;
       }
 
     } else if (screen === 'id') {
@@ -49,8 +62,11 @@ export default function GlobalVoiceCommands() {
       }
     }
 
-    // ── Global fallback — snap works from any screen ─────────────────
+    // ── Global commands — active from any screen ─────────────────────
+
+    // snap/scan: only when the camera is live (Id button is enabled)
     if (transcript.includes('snap') || transcript.includes('scan')) {
+      if (!isStreamingRef.current) return;
       const stream = mediaStreamRef.current;
       if (!stream) return;
       const video = document.createElement('video');
@@ -66,6 +82,23 @@ export default function GlobalVoiceCommands() {
         video.pause();
         navigate('/id', { state: { photoDataUrl: canvas.toDataURL('image/jpeg'), saveToLibrary: true } });
       };
+      return;
+    }
+
+    // stream: only when camera is live and not already streaming out
+    if (transcript === 'stream') {
+      if (isStreamingRef.current && !isStreamingOutRef.current && !isStreamingConnRef.current) {
+        startWhipStreamRef.current(mediaStreamRef.current);
+      }
+      return;
+    }
+
+    // end: only when a stream is active or connecting
+    if (transcript === 'end') {
+      if (isStreamingOutRef.current || isStreamingConnRef.current) {
+        stopWhipStreamRef.current();
+      }
+      return;
     }
   }, [navigate, screenVoiceRef]);
 
