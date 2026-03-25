@@ -21,6 +21,7 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
     if (!enabled) return;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    console.log('[SR] SpeechRecognition available:', !!SpeechRecognition, 'cap:', cap);
     if (!SpeechRecognition) return;
 
     // WKWebView (Capacitor iOS) cannot sustain a continuous session —
@@ -42,24 +43,22 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
     };
 
     recognition.onerror = (e) => {
-      if (e.error !== 'no-speech' && e.error !== 'aborted') {
-        console.warn('[SpeechRecognition] error:', e.error);
-      }
+      console.warn('[SR] error:', e.error);
     };
 
     recognition.onend = () => {
+      console.log('[SR] ended, activeRef:', activeRef.current);
       if (!activeRef.current) return;
       setTimeout(() => {
         if (activeRef.current) {
           try { recognition.start(); } catch { /* already started */ }
         }
-      }, cap ? 500 : 0); // delay on Capacitor prevents tight loop
+      }, cap ? 500 : 0);
     };
 
     // Try to start immediately — WKWebView allows this without a gesture.
-    // On Chrome desktop it may fail silently until the user interacts;
-    // the onend restart loop will pick it up on the next interaction.
-    try { recognition.start(); } catch { /* will start on first interaction via onend */ }
+    try { recognition.start(); console.log('[SR] started'); }
+    catch (e) { console.warn('[SR] start failed:', e.message); }
 
     return () => {
       activeRef.current = false;
