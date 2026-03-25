@@ -56,21 +56,13 @@ export default function useSpeechRecognition(onResult, { enabled = true } = {}) 
       }, cap ? 500 : 0); // delay on Capacitor prevents tight loop
     };
 
-    const onInteraction = () => {
-      document.removeEventListener('click',      onInteraction);
-      document.removeEventListener('keydown',    onInteraction);
-      document.removeEventListener('touchstart', onInteraction);
-      try { recognition.start(); } catch { /* already started */ }
-    };
-    document.addEventListener('click',      onInteraction);
-    document.addEventListener('keydown',    onInteraction);
-    document.addEventListener('touchstart', onInteraction);
+    // Try to start immediately — WKWebView allows this without a gesture.
+    // On Chrome desktop it may fail silently until the user interacts;
+    // the onend restart loop will pick it up on the next interaction.
+    try { recognition.start(); } catch { /* will start on first interaction via onend */ }
 
     return () => {
       activeRef.current = false;
-      document.removeEventListener('click',      onInteraction);
-      document.removeEventListener('keydown',    onInteraction);
-      document.removeEventListener('touchstart', onInteraction);
       try { recognition.stop(); } catch { /* already stopped */ }
     };
   }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
