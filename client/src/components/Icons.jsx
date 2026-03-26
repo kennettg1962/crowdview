@@ -319,6 +319,15 @@ export function FlipCameraIcon({ className = iconClass }) {
   );
 }
 
+export function GlassesIcon({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M2 10h2m16 0h2M4 10a2 2 0 00-2 2v1a4 4 0 004 4 4 4 0 004-4h4a4 4 0 004 4 4 4 0 004-4v-1a2 2 0 00-2-2H4z" />
+    </svg>
+  );
+}
+
 // Icon button wrapper
 export function IconButton({ icon: Icon, label, onClick, disabled, className = '', variant = 'default', title }) {
   const base = 'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors text-xs font-medium';

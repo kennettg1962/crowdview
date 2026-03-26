@@ -14,7 +14,8 @@
  * AppContext.captureMode === 'phone' never calls these methods.
  */
 
-const _frameListeners = new Set();
+const _frameListeners      = new Set();
+const _transcriptListeners = new Set();
 
 const GlassesSDK = {
   /** Open connection to glasses hardware. Returns Promise<void>. */
@@ -27,6 +28,7 @@ const GlassesSDK = {
   disconnect() {
     console.log('[GlassesSDK] disconnect — not yet implemented');
     _frameListeners.clear();
+    _transcriptListeners.clear();
   },
 
   /**
@@ -47,6 +49,29 @@ const GlassesSDK = {
    */
   _dispatchFrame(dataUrl) {
     _frameListeners.forEach(cb => cb(dataUrl));
+  },
+
+  /**
+   * Subscribe to speech transcripts from the glasses microphone.
+   * callback(transcript: string) is called for each recognised utterance.
+   *
+   * Platform implementation:
+   *   Halo:    Lua on-device recognition → pushes text transcript via BLE
+   *   Ray-Ban: Mic audio streamed to Capacitor app → Web Speech API → transcript
+   *            (route raw audio via SDK audio stream to a MediaStreamTrack,
+   *             then feed that track into a SpeechRecognition instance)
+   */
+  onTranscript(callback) {
+    _transcriptListeners.add(callback);
+  },
+
+  offTranscript(callback) {
+    _transcriptListeners.delete(callback);
+  },
+
+  /** Called internally by the platform bridge when a transcript arrives. */
+  _dispatchTranscript(transcript) {
+    _transcriptListeners.forEach(cb => cb(transcript));
   },
 
   /**

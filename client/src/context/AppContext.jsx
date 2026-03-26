@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import api from '../api/api';
+import GlassesSDK from '../services/GlassesSDK';
 
 const AppContext = createContext(null);
 
@@ -15,14 +16,41 @@ export function AppProvider({ children }) {
   const [voicePaused, setVoicePaused] = useState(false);
 
   // ── Glasses integration ───────────────────────────────────────────────────
-  // 'phone': existing camera behaviour (default)
-  // 'glasses': frames come from GlassesSDK; results route to glasses display
-  const [captureMode, setCaptureMode] = useState('phone');
+  const [captureMode, setCaptureMode]           = useState('phone');
+  const [glassesConnected, setGlassesConnected] = useState(false);
+  // Incremented by disconnectGlasses to signal HubScreen to re-connect phone camera
+  const [cameraReconnectKey, setCameraReconnectKey] = useState(0);
   // Always holds the most recent frame dataUrl pushed by GlassesSDK.onFrame
   const latestGlassesFrameRef = useRef(null);
+
   const injectGlassesFrame = useCallback((dataUrl) => {
     latestGlassesFrameRef.current = dataUrl;
   }, []);
+
+  /** Connect glasses — switches ALL I/O to the glasses device. */
+  const connectGlasses = useCallback(async () => {
+    try {
+      await GlassesSDK.connect();
+      setCaptureMode('glasses');
+      setGlassesConnected(true);
+      setIsStreaming(true);   // enables Id / Live / Action buttons immediately
+      setMediaStream(null);   // no phone MediaStream in glasses mode
+    } catch (err) {
+      console.error('[Glasses] connect failed:', err);
+      setGlassesConnected(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Disconnect glasses — restores ALL I/O to the phone. */
+  const disconnectGlasses = useCallback(() => {
+    GlassesSDK.disconnect();
+    latestGlassesFrameRef.current = null;
+    setCaptureMode('phone');
+    setGlassesConnected(false);
+    setIsStreaming(false);
+    setMediaStream(null);
+    setCameraReconnectKey(k => k + 1); // triggers HubScreen camera re-connect
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Registry for screen-local voice commands — avoids multiple recognition sessions
   const screenVoiceRef = useRef({ screen: null, commands: {}, speak: () => {} });
@@ -182,7 +210,8 @@ export function AppProvider({ children }) {
       voicePaused, setVoicePaused,
       screenVoiceRef, registerScreenVoice, unregisterScreenVoice,
       isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
-      captureMode, setCaptureMode, latestGlassesFrameRef, injectGlassesFrame
+      captureMode, glassesConnected, connectGlasses, disconnectGlasses,
+      latestGlassesFrameRef, injectGlassesFrame, cameraReconnectKey
     }}>
       {children}
     </AppContext.Provider>

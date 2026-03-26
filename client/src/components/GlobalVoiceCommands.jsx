@@ -1,13 +1,14 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
+import GlassesSDK from '../services/GlassesSDK';
 
 export default function GlobalVoiceCommands() {
   const {
     mediaStream, isAuthenticated, screenVoiceRef,
     isStreaming, isStreamingOut, isStreamingConnecting,
-    startWhipStream, stopWhipStream,
+    startWhipStream, stopWhipStream, glassesConnected,
   } = useApp();
 
   const navigate = useNavigate();
@@ -102,9 +103,17 @@ export default function GlobalVoiceCommands() {
     }
   }, [navigate, screenVoiceRef]);
 
+  // Phone mic — disabled when glasses are connected (glasses mic takes over)
   useSpeechRecognition(handleResult, {
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !glassesConnected,
   });
+
+  // Glasses mic — subscribe to transcripts when glasses are connected
+  useEffect(() => {
+    if (!glassesConnected) return;
+    GlassesSDK.onTranscript(handleResult);
+    return () => GlassesSDK.offTranscript(handleResult);
+  }, [glassesConnected, handleResult]);
 
   return null;
 }

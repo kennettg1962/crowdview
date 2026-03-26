@@ -14,7 +14,7 @@ import {
   FriendsIcon, LibraryIcon,
   IdIcon, ActionIcon, CutIcon, MicIcon,
   MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon, FlipCameraIcon,
-  HomeIcon, BroadcastIcon, UserProfileIcon
+  HomeIcon, BroadcastIcon, UserProfileIcon, GlassesIcon,
 } from '../components/Icons';
 import api from '../api/api';
 
@@ -56,7 +56,8 @@ export default function HubScreen() {
     currentAudioIn, setCurrentAudioIn,
     startStream, stopStream,
     isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
-    setSlideoutOpen, captureMode, injectGlassesFrame,
+    setSlideoutOpen, captureMode, glassesConnected, connectGlasses, disconnectGlasses,
+    injectGlassesFrame, cameraReconnectKey,
   } = useApp();
   const videoRef = useRef(null);
   const glassesCanvasRef = useRef(null);
@@ -92,74 +93,19 @@ export default function HubScreen() {
     };
   }, [selectedFace]);
 
-  // ── Glasses camera feed ───────────────────────────────────────────────────
-  // Subscribe to frames from GlassesSDK, paint them to the glasses canvas,
-  // and store the latest frame for getCaptureFrame() (snap / live scan).
-  useEffect(() => {
-    if (captureMode !== 'glasses') return;
-    const handleFrame = (dataUrl) => {
-      injectGlassesFrame(dataUrl);
-      const canvas = glassesCanvasRef.current;
-      if (!canvas) return;
-      const img = new Image();
-      img.onload = () => {
-        if (canvas.width !== img.naturalWidth)   canvas.width  = img.naturalWidth;
-        if (canvas.height !== img.naturalHeight) canvas.height = img.naturalHeight;
-        canvas.getContext('2d').drawImage(img, 0, 0);
-      };
-      img.src = dataUrl;
-    };
-    // Mark as streaming so buttons (Id, Live, etc.) become enabled
-    startStream(null);
-    GlassesSDK.onFrame(handleFrame);
-    return () => GlassesSDK.offFrame(handleFrame);
-  }, [captureMode]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Auto-connect on mount ──────────────────────────────────────────────────
-  // Always attempt camera + mic on load (like Zoom/Teams). Uses the last-used
-  // camera as an ideal hint; falls back to system default if unavailable.
-  useEffect(() => {
-    if (captureMode === 'glasses') return; // glasses supply the feed — skip getUserMedia
-    if (isStreaming || autoConnectAttempted.current) return;
+  // ── Phone camera connect (shared by auto-connect + glasses disconnect) ─────
+  async function connectPhoneCamera() {
+    if (autoConnectAttempted.current) return;
     autoConnectAttempted.current = true;
-    (async () => {
-      try {
-        let videoConstraint = true;
-        try {
-          const profile = await api.get('/api/users/profile');
-          if (profile.data.Last_Source_Device_Id) {
-            videoConstraint = { deviceId: { ideal: profile.data.Last_Source_Device_Id } };
-          }
-        } catch { /* profile fetch failure is non-fatal */ }
-
-        const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: true });
-        startStream(stream);
-
-        // Enumerate to resolve real device objects for both pickers
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const [vTrack] = stream.getVideoTracks();
-        const [aTrack] = stream.getAudioTracks();
-        if (vTrack) {
-          const dev = devices.find(d => d.kind === 'videoinput' && d.label === vTrack.label);
-          if (dev) setCurrentSource(dev);
-        }
-        if (aTrack) {
-          const dev = devices.find(d => d.kind === 'audioinput' && d.label === aTrack.label);
-          if (dev) setCurrentAudioIn(dev);
-        }
-      } catch (err) {
-        setPermissionError(err);
-      }
-    })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Retry after user clicks "Try Again" in the permission error state
-  async function handleRetryAccess() {
-    setPermissionError(null);
-    autoConnectAttempted.current = false;
-    // Re-trigger the effect by forcing a re-evaluation isn't possible, so inline the logic:
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      let videoConstraint = true;
+      try {
+        const profile = await api.get('/api/users/profile');
+        if (profile.data.Last_Source_Device_Id) {
+          videoConstraint = { deviceId: { ideal: profile.data.Last_Source_Device_Id } };
+        }
+      } catch { /* non-fatal */ }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: true });
       startStream(stream);
       const devices = await navigator.mediaDevices.enumerateDevices();
       const [vTrack] = stream.getVideoTracks();
@@ -175,6 +121,45 @@ export default function HubScreen() {
     } catch (err) {
       setPermissionError(err);
     }
+  }
+
+  // ── Glasses camera feed ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (captureMode !== 'glasses') return;
+    const handleFrame = (dataUrl) => {
+      injectGlassesFrame(dataUrl);
+      const canvas = glassesCanvasRef.current;
+      if (!canvas) return;
+      const img = new Image();
+      img.onload = () => {
+        if (canvas.width !== img.naturalWidth)   canvas.width  = img.naturalWidth;
+        if (canvas.height !== img.naturalHeight) canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+      };
+      img.src = dataUrl;
+    };
+    GlassesSDK.onFrame(handleFrame);
+    return () => GlassesSDK.offFrame(handleFrame);
+  }, [captureMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Auto-connect phone camera on mount ────────────────────────────────────
+  useEffect(() => {
+    if (captureMode === 'glasses') return;
+    connectPhoneCamera();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Re-connect phone camera after glasses disconnect ──────────────────────
+  useEffect(() => {
+    if (cameraReconnectKey === 0) return; // skip initial mount
+    autoConnectAttempted.current = false;
+    connectPhoneCamera();
+  }, [cameraReconnectKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Retry after user clicks "Try Again" in the permission error state
+  function handleRetryAccess() {
+    setPermissionError(null);
+    autoConnectAttempted.current = false;
+    connectPhoneCamera();
   }
 
   // ── Device switching ───────────────────────────────────────────────────────
@@ -635,10 +620,19 @@ export default function HubScreen() {
             )}
           </div>
 
-          {/* Mobile — bottom-left: Flip */}
-          <div className="flex md:hidden absolute left-3 z-20 bg-black/35 rounded-xl p-1.5"
+          {/* Mobile — bottom-left: Flip + Glasses toggle */}
+          <div className="flex md:hidden absolute left-3 z-20 bg-black/35 rounded-xl p-1.5 gap-0.5"
                style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
-            <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
+            <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming || glassesConnected} className="text-white hover:bg-white/20" />
+            <div className="border-l border-white/20 my-1" />
+            <FloatButton
+              icon={GlassesIcon}
+              label={glassesConnected ? 'On' : 'Glasses'}
+              onClick={glassesConnected ? disconnectGlasses : connectGlasses}
+              className={glassesConnected
+                ? 'text-green-400 bg-green-900/40 hover:bg-green-900/60 rounded-lg'
+                : 'text-white hover:bg-white/20'}
+            />
           </div>
         </div>
 
@@ -665,6 +659,16 @@ export default function HubScreen() {
               <span className="text-red-400 text-xs font-semibold text-center px-2 mt-1 leading-snug">{isStreamingConnecting ? 'Connecting…' : 'CrowdView Live'}</span>
             </>
           )}
+
+          <div className="mt-auto mx-3 border-t border-slate-600" />
+          <SideButton
+            icon={GlassesIcon}
+            label={glassesConnected ? 'Glasses On' : 'Glasses'}
+            onClick={glassesConnected ? disconnectGlasses : connectGlasses}
+            className={glassesConnected
+              ? 'text-green-400 bg-green-900/40 hover:bg-green-900/60'
+              : 'text-white hover:bg-slate-600'}
+          />
 
           {liveStreams.filter(s => s.Friend_Id).length > 0 && (
             <div className="mt-3 w-full px-2 flex flex-col items-center gap-2">
