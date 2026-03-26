@@ -54,12 +54,34 @@ const GlassesSDK = {
    * faces: array of { friendName, status, confidence }
    *
    * Display format is platform-specific — implement per SDK:
-   *   Halo:        frame.display.text(label)
-   *   Ray-Ban:     display not available; call speak() instead
+   *   Halo:        frame.display.text(label) — use displayFace() for per-face detail
+   *   Ray-Ban:     display not available; audio-only via speak()
    *   Vuzix:       intent with JSON payload
    */
   sendResult(faces) {
     console.log('[GlassesSDK] sendResult stub — implement per platform:', faces);
+  },
+
+  /**
+   * Display a single face on the glasses screen with its name and status.
+   * Called sequentially as the user steps through results with next/prev.
+   *
+   * @param {string} cropDataUrl  - JPEG dataUrl of the face crop (padded, ~100–300px)
+   * @param {string} name         - friend name or 'Unknown'
+   * @param {string} status       - 'known' | 'identified' | 'unknown'
+   *
+   * Platform implementation:
+   *   Halo (640×400 microOLED):
+   *     Convert dataUrl → ArrayBuffer → frame.display.bitmap(buffer)
+   *     Overlay text: frame.display.text(`${name}  ${statusIcon}`)
+   *     Status icons: ✓ (known, green), ~ (identified, orange), ? (unknown, red)
+   *   Ray-Ban:
+   *     Display not accessible — speak() is the only output channel
+   *   Vuzix:
+   *     Android intent with crop + label JSON
+   */
+  displayFace(_cropDataUrl, name, status) {
+    console.log('[GlassesSDK] displayFace stub — implement per platform:', name, status);
   },
 
   /**

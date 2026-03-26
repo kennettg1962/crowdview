@@ -7,6 +7,7 @@ import FriendFormPopup from '../components/FriendFormPopup';
 import AddPhotoToFriendPopup from '../components/AddPhotoToFriendPopup';
 import { MovieCameraIcon, FriendsIcon, BackIcon } from '../components/Icons';
 import useVoiceCommands from '../hooks/useVoiceCommands';
+import useGlassesPresentation from '../hooks/useGlassesPresentation';
 import api from '../api/api';
 
 const STATUS_COLORS = {
@@ -73,6 +74,7 @@ export default function IdScreen() {
   });
   speakRef.current = speak;
 
+  useGlassesPresentation(faces, photoDataUrl, selectedFaceIndex);
 
   useEffect(() => {
     if (photoDataUrl) identifyFaces();
