@@ -37,8 +37,8 @@ export default function SplashScreen() {
     setLoading(true); setError('');
     try {
       const res = await api.post('/api/auth/login', { email, password });
-      const { token, userId, email: userEmail, name: userName } = res.data;
-      login({ userId, email: userEmail, name: userName }, token);
+      const { token, userId, email: userEmail, name: userName, lastSourceDeviceId, connectLastDevice, parentOrganizationId, corporateAdminFl } = res.data;
+      login({ userId, email: userEmail, name: userName, lastSourceDeviceId, connectLastDevice, parentOrganizationId: parentOrganizationId || null, corporateAdminFl: corporateAdminFl || 'N' }, token);
       navigate('/hub', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
@@ -56,7 +56,7 @@ export default function SplashScreen() {
     setLoading(true); setError('');
     try {
       const res = await api.post('/api/auth/signup', { email, password, name });
-      login({ userId: res.data.userId, email: res.data.email, name: res.data.name }, res.data.token);
+      login({ userId: res.data.userId, email: res.data.email, name: res.data.name, parentOrganizationId: null, corporateAdminFl: 'N' }, res.data.token);
       navigate('/hub', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Sign up failed. Please try again.');
