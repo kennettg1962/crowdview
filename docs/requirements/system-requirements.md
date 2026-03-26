@@ -18,22 +18,23 @@ Living specification of technical decisions, data contracts, and system behaviou
 | File Uploads | multer (memoryStorage) | Server |
 | HTTP Client | Axios | All platforms |
 | Video Playback | HLS.js | All platforms |
-| Speech Recognition | Browser SpeechRecognition (Windows/desktop) + `@capacitor-community/speech-recognition` (iOS/Android) | Platform-dependent |
+| Speech Recognition | Browser `SpeechRecognition` / `webkitSpeechRecognition` — single session owned by `GlobalVoiceCommands`; single-shot restart loop on WKWebView (iOS) | All platforms |
 | Process Manager | PM2 | Server |
 | Reverse Proxy | nginx | Server |
 | CI/CD | GitHub Actions (SSH deploy on push to `main`) | Server |
 
 ### Capacitor Architecture
 
-Capacitor wraps the existing React/Vite web app in a native iOS (WKWebView) and Android (WebView) shell without rewriting any UI code. Native plugins bridge capabilities that WebKit/WebView cannot provide reliably:
+Capacitor wraps the existing React/Vite web app in a native iOS (WKWebView) and Android (WebView) shell without rewriting any UI code.
 
 | Plugin | Purpose |
 |--------|---------|
-| `@capacitor-community/speech-recognition` | Always-on voice commands on iOS/Android using native SFSpeechRecognizer (iOS) / SpeechRecognizer (Android) — runs alongside `getUserMedia` audio without conflict |
 | `@capacitor/camera` | Optional: native camera picker for friend photo uploads |
 | `@capacitor/push-notifications` | Future: notify user when a friend goes live |
 
-The web app detects whether it is running inside Capacitor (`Capacitor.isNativePlatform()`) and uses the native speech plugin instead of the browser SpeechRecognition API accordingly.
+`@capacitor-community/speech-recognition` was evaluated but abandoned — SPM incompatibility on iOS. The app uses the browser `webkitSpeechRecognition` API on all platforms including WKWebView, with a single-shot restart loop to avoid the WKWebView continuous-mode loop bug.
+
+Capacitor is detected via `window.location.protocol === 'capacitor:'`. TTS (`SpeechSynthesis`) is skipped on Capacitor to avoid audio session conflict with the active mic.
 
 ---
 
@@ -263,8 +264,10 @@ CompreFace integration is fully implemented in `server/routes/rekognition.js`.
 - Hook field names in MediaMTX v1.16.3: `runOnReady` / `runOnNotReady` (NOT `runOnPublish` / `runOnUnpublish`)
 
 ### HLS Playback
-- Live: `{protocol}//{hostname}/hls/live/{streamKey}/index.m3u8`
+- Live: HLS.js, URL `{protocol}//{hostname}/hls/live/{streamKey}/index.m3u8`
+- Past (VOD): native `<video>` element with `.mp4` URL — HLS.js is not used for VOD playback
 - Recordings stored at `/var/www/crowdview-streams/`; served at `/recordings/`
+- ⚠ **Known limitation**: only the first recording segment is played for past streams. MediaMTX may split long recordings into multiple `.mp4` files; multi-segment VOD playback is not yet implemented.
 
 ### Recording
 - Configured under `pathDefaults` in `mediamtx.yml` (NOT at global level)
@@ -295,6 +298,10 @@ CompreFace integration is fully implemented in `server/routes/rekognition.js`.
 | `slideoutOpen` | boolean | MenuSlideout | Close |
 | `voicePaused` | boolean | SelectSourcePopup / IdScreen mount | Unmount of those screens |
 | `isStreamingOut` | boolean | startWhipStream() | stopWhipStream() / Logout |
+| `captureMode` | `'phone'\|'glasses'` | `setCaptureMode()` | Never auto-cleared |
+| `pendingGlassesFrameRef` | ref to callback | `useCaptureSource` when awaiting a glasses frame | Cleared after frame resolved |
+
+`injectGlassesFrame(dataUrl)` — called by `GlassesSDK.onFrame` callback; resolves the pending frame promise in `useCaptureSource`.
 
 Session persisted in `sessionStorage` (cleared on tab close). On mount, AppContext restores from sessionStorage.
 
@@ -302,20 +309,44 @@ Session persisted in `sessionStorage` (cleared on tab close). On mount, AppConte
 
 ## 10. Voice Command Architecture
 
-### GlobalVoiceCommands (component, mounted in App.jsx)
-- Runs one `SpeechRecognition` instance for the whole app lifetime
-- Defers start until first user gesture (click or keydown) — Chrome requirement
-- Handles: "scan" / "scan faces" → captures frame from `mediaStream` → navigates to `/id`
-- On `not-allowed` error: retries after 5 seconds
-- Paused (recognition stopped) when `voicePaused=true` in AppContext
+### Single-session design
+One `SpeechRecognition` instance for the entire app, owned by `GlobalVoiceCommands` (mounted in `App.jsx`, enabled when `isAuthenticated`). Screen-local commands are registered into AppContext via `screenVoiceRef` — no second instance is ever started.
 
-### useVoiceCommands (hook, used by IdScreen)
-- Runs a separate `SpeechRecognition` instance scoped to one screen
-- Screen-aware command matching (hub, id, friends)
-- Auto-restarts on `onend`
-- IdScreen must set `voicePaused=true` on mount to avoid two concurrent instances
+### GlobalVoiceCommands dispatch order
+1. **Screen-local first** — checks `screenVoiceRef.current.screen` and dispatches to registered command handlers
+2. **Global fallback** — commands active from any screen (snap/scan, stream, end)
 
-⚠ Two concurrent `SpeechRecognition` instances conflict on macOS/Chrome — always ensure only one is running at a time. IdScreen pauses GlobalVoiceCommands; SelectSourcePopup pauses GlobalVoiceCommands.
+### Global commands (any screen)
+| Command | Guard | Action |
+|---------|-------|--------|
+| `snap` / `scan` | `isStreaming` (camera live) | Capture frame → navigate to `/id` |
+| `stream` | `isStreaming && !isStreamingOut && !isStreamingConnecting` | Start WHIP stream |
+| `end` | `isStreamingOut \|\| isStreamingConnecting` | Stop WHIP stream |
+
+### Screen-local commands
+| Screen | Command | Action |
+|--------|---------|--------|
+| hub | `snap`/`scan` | `handleId()` |
+| id | `prev`/`previous` | Previous face (boundary: speaks "First face") |
+| id | `next` | Next face (boundary: speaks "Last face") |
+| id | `show` | Open friend form for selected face |
+| id | `cancel` | Close friend form |
+| id | `back` | Navigate to `/hub` |
+| friends | `name <text>` | Set name field |
+| friends | `note <text>` | Set note field |
+| friends | `update` | Save friend |
+| friends | `cancel` | Cancel edit |
+
+### useSpeechRecognition (hook)
+- `continuous = false` on Capacitor (WKWebView cannot sustain continuous sessions)
+- Normal restart delay: 200ms (Capacitor) / 0ms (desktop)
+- After `audio-capture`/`aborted` error: 1500ms restart delay
+- On `not-allowed` error: stops loop; restarts via `visibilitychange` (1500ms delay) when app returns to foreground
+- TTS (`SpeechSynthesis`) skipped on Capacitor to prevent mic/speaker conflict
+
+### useVoiceCommands (hook)
+- Used by screens to register local commands; does NOT start a recognition session
+- Returns `{ speak }` for TTS feedback (no-op on Capacitor)
 
 ---
 
@@ -333,17 +364,51 @@ Session persisted in `sessionStorage` (cleared on tab close). On mount, AppConte
 
 | Platform | Stream audio | Voice commands | Implementation |
 |----------|-------------|----------------|----------------|
-| macOS + Chrome | Yes | **No** | SpeechRecognition not started on macOS (`isMac` gate). `getUserMedia({video,audio})` owns the mic — identical to Zoom/Teams. |
-| Windows 11 + Chrome | Yes | Yes | Browser SpeechRecognition; WASAPI shared mode allows concurrent stream audio. |
-| iOS (Capacitor) | Yes | Yes | Native `SFSpeechRecognizer` via `@capacitor-community/speech-recognition`; `getUserMedia` handles stream audio separately. No WebKit conflict. |
-| Android (Capacitor) | Yes | Yes | Native `SpeechRecognizer` via plugin; concurrent with `getUserMedia`. |
-| Wearables (Capacitor) | Yes | Yes | Dedicated hardware mic; native plugin handles routing. |
+| macOS + Chrome | Yes | Yes | `webkitSpeechRecognition`; `isMac` gate removed — mic shared mode. |
+| Windows 11 + Chrome | Yes | Yes | `SpeechRecognition`; WASAPI shared mode allows concurrent stream audio. |
+| iOS (Capacitor) | Yes | Yes | `webkitSpeechRecognition` single-shot loop; TTS disabled; foreground resume on `visibilitychange`. |
+| Android (Capacitor) | Yes | Yes | `webkitSpeechRecognition` (same as iOS path). |
+| Wearables (Capacitor) | TBD | TBD | Via `GlassesSDK` abstraction — platform-dependent. |
 
-**OS detection**: `isMac` flag in `client/src/utils/platform.js`. `Capacitor.isNativePlatform()` used to switch between browser SpeechRecognition (desktop) and native plugin (mobile/wearable).
+**Capacitor detection**: `window.location.protocol === 'capacitor:'`.
 
 ---
 
-## 12. CORS & Allowed Origins
+## 12. Glasses Integration Architecture
+
+### Abstraction layer (client-side)
+
+| File | Role |
+|------|------|
+| `src/services/GlassesSDK.js` | Platform interface stub: `connect()`, `disconnect()`, `onFrame(cb)`, `offFrame(cb)`, `sendResult(faces)`, `_dispatchFrame(dataUrl)` |
+| `src/hooks/useCaptureSource.js` | `getCaptureFrame(maxW, quality)` → `Promise<HTMLCanvasElement>` — phone: reads `videoRef`; glasses: resolves on next `injectGlassesFrame()` call |
+| `src/hooks/useResultDisplay.js` | `showResult(photoDataUrl, { saveToLibrary, faces })` — always navigates to IdScreen; additionally calls `GlassesSDK.sendResult(faces)` when `captureMode === 'glasses'` |
+
+### AppContext additions
+- `captureMode: 'phone' | 'glasses'` — default `'phone'`; set via `setCaptureMode()`
+- `pendingGlassesFrameRef` — holds resolver set by `useCaptureSource`; cleared after one frame
+- `injectGlassesFrame(dataUrl)` — called by `GlassesSDK.onFrame` callback to deliver a frame
+
+### Enabling glasses mode
+```js
+setCaptureMode('glasses');
+GlassesSDK.connect();
+GlassesSDK.onFrame(dataUrl => injectGlassesFrame(dataUrl));
+```
+
+### Platform implementation notes
+| Platform | SDK | Display format |
+|----------|-----|---------------|
+| Brilliant Labs Halo | `@brilliantlabs/frame-sdk` (BLE) | `frame.display.text(label)` |
+| Vuzix Blade 2 | Android intent / WebSocket | JSON payload to activity |
+| Meta Ray-Ban Display | Meta Wearables Device Access Toolkit | **Camera capture only — display not accessible to third parties** |
+
+### Result routing
+In glasses mode, `showResult` sends to `GlassesSDK.sendResult()` **and** navigates to IdScreen. Both outputs are always active when `captureMode === 'glasses'`.
+
+---
+
+## 13. CORS & Allowed Origins
 
 **Server (`server/server.js`):**
 - `http://localhost:4173`

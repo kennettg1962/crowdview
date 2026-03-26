@@ -4,6 +4,37 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 
 ---
 
+## 2026-03-25
+
+### [2026-03-25] Fix Capacitor iOS startup crash — `#ios #capacitor #bug`
+- App would not load on iOS device after adding speech recognition. Error: "Cannot access 'a' before initialization" (TDZ crash in minified bundle). Root cause: `cap` variable used in `console.log` before its `const` declaration in `useSpeechRecognition.js`.
+
+### [2026-03-25] iOS speech recognition — background/foreground handling — `#ios #voice #bug`
+- When app is sent to background and returned, `not-allowed` error was thrown and recognition loop stopped permanently. Fix: stop restart loop on `not-allowed`; restart via `visibilitychange` event with 1500ms delay to allow iOS audio session to re-establish.
+
+### [2026-03-25] iOS speech recognition — reduce command latency — `#ios #voice #ux`
+- 2+ second lag before commands registered. Restart delay reduced from 500ms to 200ms for normal cycle; 1500ms delay only after `audio-capture`/`aborted` errors (background return).
+
+### [2026-03-25] Skip TTS on Capacitor iOS — `#ios #voice #bug`
+- SpeechSynthesis conflicts with active SpeechRecognition mic session on WKWebView. Fix: skip TTS when `window.location.protocol === 'capacitor:'`.
+
+### [2026-03-25] Global 'stream' and 'end' voice commands — `#voice #hub`
+- Add globally active voice commands: "stream" (starts WHIP stream) and "end" (stops stream).
+- "snap"/"scan" guard: only fires when camera is live (Id button enabled).
+- "stream" guard: only fires when camera live and not already streaming out.
+- "end" guard: only fires when stream is active or connecting.
+- All three work from any screen.
+
+### [2026-03-25] Wearable glasses integration — research & architecture — `#glasses #architecture`
+- Researched smart glasses platforms for capture → process → display result loop.
+- Meta Ray-Ban Display SDK does not expose the HUD display to third-party developers (camera access only). Not suitable for result feedback.
+- Brilliant Labs Halo (not yet shipping) identified as best fit when available.
+- Designed glasses abstraction layer: `GlassesSDK.js` (interface stub), `useCaptureSource` hook (abstracts frame source), `useResultDisplay` hook (routes results to screen and/or glasses).
+- `captureMode` in AppContext ('phone' | 'glasses') controls routing. Phone behaviour unchanged.
+- In glasses mode: results sent to `GlassesSDK.sendResult()` AND IdScreen is navigated to (both).
+
+---
+
 ## 2026-03-18
 
 ### [2026-03-18] HubScreen mobile overlay icon repositioning — `#hub #mobile #ui`
