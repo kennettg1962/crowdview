@@ -31,17 +31,30 @@ router.post('/identify', auth, async (req, res) => {
 
     const userId = req.user.userId;
 
-    // Build friends-of-friends map: { friendUserId -> { name } }
-    const [linkedFriends] = await pool.execute(
-      'SELECT Friend_User_Id, Name_Txt FROM Friend WHERE User_Id = ? AND Friend_User_Id IS NOT NULL',
-      [userId]
-    );
-    const friendUserMap = {};
-    for (const row of linkedFriends) {
-      friendUserMap[row.Friend_User_Id] = { name: row.Name_Txt };
+    // Build the set of user IDs whose faces we match against.
+    // Corporate users: all users in the same organisation.
+    // Individual users: just themselves.
+    let orgUserIds = [userId];
+    if (req.user.parentOrganizationId) {
+      const [orgUsers] = await pool.execute(
+        'SELECT User_Id FROM User WHERE Parent_Organization_Id = ?',
+        [req.user.parentOrganizationId]
+      );
+      orgUserIds = orgUsers.map(r => r.User_Id);
     }
+    const orgPrefixes = orgUserIds.map(id => `u${id}_`);
 
-    const userPrefix = `u${userId}_`;
+    // Build friends-of-friends map (individual users only — not needed for corporate)
+    const friendUserMap = {};
+    if (!req.user.parentOrganizationId) {
+      const [linkedFriends] = await pool.execute(
+        'SELECT Friend_User_Id, Name_Txt FROM Friend WHERE User_Id = ? AND Friend_User_Id IS NOT NULL',
+        [userId]
+      );
+      for (const row of linkedFriends) {
+        friendUserMap[row.Friend_User_Id] = { name: row.Name_Txt };
+      }
+    }
 
     // Crop all faces and search CompreFace in parallel
     const faces = await Promise.all(faceDetails.map(async (detail, i) => {
@@ -62,14 +75,14 @@ router.post('/identify', auth, async (req, res) => {
       // 3. Search collection for this face crop
       const matches = await searchFace(cropBuf);
 
-      console.log(`[identify] face ${i + 1} — userId=${userId} prefix=${userPrefix}`);
+      console.log(`[identify] face ${i + 1} — userId=${userId} orgPrefixes=${orgPrefixes}`);
       console.log(`[identify] all matches:`, JSON.stringify(matches.map(m => ({ id: m.Face.ExternalImageId, sim: m.Similarity }))));
 
       const userMatches = matches.filter(m =>
-        m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 70
+        orgPrefixes.some(p => m.Face.ExternalImageId.startsWith(p)) && m.Similarity >= 70
       );
       const fofMatches = matches.filter(m =>
-        !m.Face.ExternalImageId.startsWith(userPrefix) && m.Similarity >= 72
+        !orgPrefixes.some(p => m.Face.ExternalImageId.startsWith(p)) && m.Similarity >= 72
       );
       console.log(`[identify] userMatches: ${userMatches.length}, fofMatches: ${fofMatches.length}`);
 
@@ -85,22 +98,24 @@ router.post('/identify', auth, async (req, res) => {
         const best = userMatches[0]; // already sorted by similarity desc
         faceId = best.Face.FaceId;
 
-        // Parse friendId from ExternalImageId: u{userId}_f{friendId}_p{photoId}
+        // Parse friendId and owning userId from ExternalImageId: u{userId}_f{friendId}_p{photoId}
         const parts = best.Face.ExternalImageId.split('_');
+        const uPart = parts.find(p => p.startsWith('u'));
         const fPart = parts.find(p => p.startsWith('f'));
         if (fPart) {
           friendId = parseInt(fPart.slice(1), 10);
+          const ownerUserId = uPart ? parseInt(uPart.slice(1), 10) : userId;
 
           const [rows] = await pool.execute(
             'SELECT Name_Txt, Note_Multi_Line_Txt, Friend_Group FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
-            [friendId, userId]
+            [friendId, ownerUserId]
           );
           if (rows.length) {
             friendName = rows[0].Name_Txt;
             note = rows[0].Note_Multi_Line_Txt || null;
             friendGroup = rows[0].Friend_Group || null;
             status = 'known';
-            matchedLabel = `Friend: ${friendName}`;
+            matchedLabel = `Customer: ${friendName}`;
           }
         }
       } else if (Object.keys(friendUserMap).length > 0) {

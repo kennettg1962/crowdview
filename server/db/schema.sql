@@ -1,8 +1,24 @@
 CREATE DATABASE IF NOT EXISTS crowdview;
 USE crowdview;
 
+CREATE TABLE IF NOT EXISTS Organization (
+  Organization_Id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'Primary Key',
+  Organization_Name_Txt VARCHAR(255) NOT NULL UNIQUE COMMENT 'Organization Name',
+  Contact_Name_Txt VARCHAR(255) NOT NULL COMMENT 'Contact Name',
+  Contact_Email_Txt VARCHAR(255) NOT NULL COMMENT 'Contact Email',
+  Contact_Phone_Txt VARCHAR(255) NOT NULL COMMENT 'Contact Phone',
+  Contact_Address_Multi_Line_Txt TEXT COMMENT 'Contact Address',
+  Contact_City_Txt VARCHAR(255) NOT NULL COMMENT 'Contact City',
+  Contact_State_Txt VARCHAR(255) NOT NULL COMMENT 'Contact State',
+  Contact_Zip_Txt VARCHAR(255) NOT NULL COMMENT 'Contact Zip',
+  Contact_Country_Txt VARCHAR(255) NOT NULL COMMENT 'Contact Country',
+  Description_Multi_Line_Txt TEXT COMMENT 'Organization Description',
+  Created_At DATETIME DEFAULT NULL COMMENT 'Create Time',
+  Updated_At DATETIME DEFAULT NULL COMMENT 'Update Time'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS User (
-  User_Id INT AUTO_INCREMENT PRIMARY KEY,
+  User_Id BIGINT AUTO_INCREMENT PRIMARY KEY,
   Email VARCHAR(255) NOT NULL UNIQUE,
   Password_Hash VARCHAR(255) NOT NULL,
   Name_Txt VARCHAR(100),
@@ -14,6 +30,9 @@ CREATE TABLE IF NOT EXISTS User (
   User_Level INT DEFAULT 0,
   Password_Reset_Token VARCHAR(255),
   Password_Reset_Expires DATETIME,
+  Stream_Key_Txt VARCHAR(255),
+  Parent_Organization_Id BIGINT DEFAULT NULL,
+  Corporate_Admin_Fl CHAR(1) DEFAULT 'N',
   Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

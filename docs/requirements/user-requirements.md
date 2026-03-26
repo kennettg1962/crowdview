@@ -35,6 +35,70 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 
 ---
 
+## 2026-03-26
+
+### [2026-03-26] Glasses audio feedback via GlassesSDK.speak — `#glasses #voice`
+- TTS feedback routed through `GlassesSDK.speak()` when in glasses mode, instead of browser `SpeechSynthesis`.
+- `useVoiceCommands` hook's `speak()` function checks `captureMode`: glasses mode → `GlassesSDK.speak(text)`; Capacitor → silent; desktop → `SpeechSynthesis`.
+- `GlassesSDK.speak()` stub added — platform implementations: Halo (BLE TTS bridge), Ray-Ban (Meta Wearables SDK audio output), Vuzix (Android TextToSpeech intent).
+
+### [2026-03-26] Sequential face presentation on Halo glasses — `#glasses #id #ux`
+- On face ID result: audio summary announced (e.g. "3 faces. 1 friend, 1 identified, 1 unknown.").
+- Face 0 auto-displayed on Halo screen with crop image + name; announced via audio.
+- User navigates with "next"/"prev" voice commands; each step updates Halo display and announces face name.
+- Implemented in `useGlassesPresentation` hook (used by IdScreen); crops per bounding box with 15% padding.
+- `GlassesSDK.displayFace(cropDataUrl, name, status)` stub added for platform-specific display.
+- `GlassesSDK.onTranscript(cb)` / `offTranscript(cb)` / `_dispatchTranscript(text)` added for glasses mic input.
+
+### [2026-03-26] Glasses camera feed shown on HubScreen — `#glasses #hub #ux`
+- When glasses are connected, HubScreen shows a `<canvas>` fed by `GlassesSDK.onFrame()` instead of the phone `<video>` element.
+- Glasses frames also stored in `latestGlassesFrameRef` (replaces one-shot `pendingGlassesFrameRef`; continuously updated).
+- `useCaptureSource` reads `latestGlassesFrameRef.current` for snap; no longer awaits a promise resolver.
+
+### [2026-03-26] Single toggle button to connect/disconnect all glasses I/O — `#glasses #hub #ux`
+- One button switches ALL I/O (camera, microphone, display, audio/speakers) to/from glasses simultaneously.
+- Connects: `GlassesSDK.connect()`, `setCaptureMode('glasses')`, `setGlassesConnected(true)`, `setIsStreaming(true)`, clears phone MediaStream.
+- Disconnects: `GlassesSDK.disconnect()`, `setCaptureMode('phone')`, `setGlassesConnected(false)`, `setIsStreaming(false)`, increments `cameraReconnectKey` to trigger HubScreen phone camera re-connect.
+- Phone speech recognition disabled while glasses connected; glasses mic (via `GlassesSDK.onTranscript`) takes over.
+- Button shown in HubScreen desktop sidebar (SideButton) and mobile overlay (FloatButton, bottom row alongside Flip).
+- Button styled green when connected, default white when disconnected.
+- `connectGlasses()` and `disconnectGlasses()` functions in AppContext; exported to all screens.
+
+### [2026-03-26] Desktop glasses connectivity research — `#glasses #platform #research`
+- Meta Ray-Ban / Ray-Ban Display: Android/iOS SDK only. No desktop or web support, no Web Bluetooth interface. Cannot connect to desktop.
+- Brilliant Labs Halo: BLE 5.3. Web Bluetooth (Chrome desktop) is the likely desktop path — `navigator.bluetooth.requestDevice()` would be called from `GlassesSDK.connect()` on desktop.
+- Web Bluetooth: stable but experimental in Chrome desktop (macOS/Windows 10+); requires HTTPS; not supported in Safari/Firefox.
+- Frame (Halo predecessor) has a Python SDK (`pip3 install frame-sdk`); Halo desktop SDK docs not yet published.
+- CrowdView implication: `GlassesSDK.connect()` will branch by platform — Web Bluetooth on Chrome desktop, native BLE Capacitor plugin on iOS/Android. All other app code unaffected.
+
+### [2026-03-26] CrowdView Corporate mode — organisation users — `#corporate #auth`
+- Introduced a corporate tier sitting above individual users. An organisation (Organisation table) can have multiple member users. Corporate users are detected at runtime by `user.parentOrganizationId !== null` in the JWT payload.
+- Org Admin Users (OAUs) are identified by `corporateAdminFl === 'Y'` in the JWT. OAUs have elevated permissions within their organisation.
+- Login/signup flows updated: corporate users receive `parentOrganizationId` and `corporateAdminFl` in the JWT; individual users receive `null` for both.
+- Organisations are bootstrapped by sysadmin directly in the DB (no self-service registration for organisations).
+
+### [2026-03-26] Corporate Manage Users screen (OAU only) — `#corporate #admin`
+- New screen `CorporateUsersScreen` at `/corporate/users`, accessible to OAUs only via `OAUGuard` route wrapper.
+- OAUs can list all users in their organisation, add new users, edit user details, reset user passwords, and delete users.
+- OAUs cannot delete themselves or remove their own admin role.
+- New API routes: GET/POST/PUT/DELETE `/api/corporate/users`, POST `/api/corporate/users/:id/reset-password`.
+- New middleware: `server/middleware/corporateAdmin.js` enforces OAU-only access on corporate management routes.
+
+### [2026-03-26] Corporate label changes (friends→customers, header, navbar) — `#corporate #ux`
+- For corporate users, the Friends list is relabelled as "Customers" throughout the UI (NavBar tab, ManageFriendsScreen header, FriendFormPopup title).
+- HubScreen header label changes to "CrowdView Corporate" for corporate users.
+- NavBar: corporate users receive a Logout tab in place of the User Menu tab (no ProfileScreen access). OAUs additionally receive a Users tab linking to `/corporate/users`.
+
+### [2026-03-26] Org-wide face identification and streams — `#corporate #rekognition #streaming`
+- Corporate users share a single customer (friend) database scoped by `Parent_Organization_Id`. All org members see and can manage the same customer records.
+- `friendsScope()` helper in `server/routes/friends.js` returns the appropriate `User_Id` list (own ID only for individual users; all IDs sharing the same `Parent_Organization_Id` for corporate users).
+- Rekognition: `orgPrefixes` array built from all org users' face collection prefixes; identification searches all of them.
+- Live streams: `/api/stream/live` returns streams for all users sharing the same `Parent_Organization_Id`.
+- Past streams: `/api/stream/past` scoped to `Parent_Organization_Id`.
+- Past stream retention capped at 200 per organisation; enforced in the on-unpublish webhook handler.
+
+---
+
 ## 2026-03-18
 
 ### [2026-03-18] HubScreen mobile overlay icon repositioning — `#hub #mobile #ui`

@@ -14,7 +14,7 @@ import {
   FriendsIcon, LibraryIcon,
   IdIcon, ActionIcon, CutIcon, MicIcon,
   MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon, FlipCameraIcon,
-  HomeIcon, BroadcastIcon, UserProfileIcon, GlassesIcon,
+  HomeIcon, BroadcastIcon, UserProfileIcon, LogoutIcon, UsersIcon,
 } from '../components/Icons';
 import api from '../api/api';
 
@@ -56,7 +56,7 @@ export default function HubScreen() {
     currentAudioIn, setCurrentAudioIn,
     startStream, stopStream,
     isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
-    setSlideoutOpen, captureMode, glassesConnected, connectGlasses, disconnectGlasses,
+    setSlideoutOpen, captureMode, isCorporate, isOAU, logout,
     injectGlassesFrame, cameraReconnectKey,
   } = useApp();
   const videoRef = useRef(null);
@@ -456,7 +456,7 @@ export default function HubScreen() {
           <span className="text-xs font-medium">Friends</span>
         </button>
 
-        <span className="text-white font-bold text-2xl tracking-wide">CrowdView</span>
+        <span className="text-white font-bold text-2xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>
 
         <button
           onClick={() => navigate('/library')}
@@ -473,7 +473,7 @@ export default function HubScreen() {
           <FriendsIcon className="w-9 h-9" />
           <span className="text-xs font-medium">Friends</span>
         </button>
-        <span className="text-white font-bold text-2xl tracking-wide">CrowdView</span>
+        <span className="text-white font-bold text-2xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>
         <button onClick={() => navigate('/library')} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
           <LibraryIcon className="w-9 h-9" />
           <span className="text-xs font-medium">Library</span>
@@ -512,11 +512,15 @@ export default function HubScreen() {
           )}
           <div className="mx-3 border-t border-slate-600" />
           <SideButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-slate-600" />
-          <div className="mx-3 border-t border-slate-600" />
-          {!isRecordingAction ? (
-            <SideButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
-          ) : (
-            <SideButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-xl animate-pulse" />
+          {!isCorporate && (
+            <>
+              <div className="mx-3 border-t border-slate-600" />
+              {!isRecordingAction ? (
+                <SideButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
+              ) : (
+                <SideButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-xl animate-pulse" />
+              )}
+            </>
           )}
         </div>
 
@@ -588,12 +592,16 @@ export default function HubScreen() {
           <div className="flex md:hidden absolute right-3 z-20 flex-col items-end"
                style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}>
             <div className="flex bg-black/35 rounded-xl p-1.5 gap-0.5">
-              {!isRecordingAction ? (
-                <FloatButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-white/20" />
-              ) : (
-                <FloatButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-lg animate-pulse" />
+              {!isCorporate && (
+                <>
+                  {!isRecordingAction ? (
+                    <FloatButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-white/20" />
+                  ) : (
+                    <FloatButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-lg animate-pulse" />
+                  )}
+                  <div className="border-l border-white/20 my-1" />
+                </>
               )}
-              <div className="border-l border-white/20 my-1" />
               {!(isStreamingOut || isStreamingConnecting) ? (
                 <FloatButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-white/20" />
               ) : (
@@ -620,19 +628,10 @@ export default function HubScreen() {
             )}
           </div>
 
-          {/* Mobile — bottom-left: Flip + Glasses toggle */}
-          <div className="flex md:hidden absolute left-3 z-20 bg-black/35 rounded-xl p-1.5 gap-0.5"
+          {/* Mobile — bottom-left: Flip */}
+          <div className="flex md:hidden absolute left-3 z-20 bg-black/35 rounded-xl p-1.5"
                style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
-            <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming || glassesConnected} className="text-white hover:bg-white/20" />
-            <div className="border-l border-white/20 my-1" />
-            <FloatButton
-              icon={GlassesIcon}
-              label={glassesConnected ? 'On' : 'Glasses'}
-              onClick={glassesConnected ? disconnectGlasses : connectGlasses}
-              className={glassesConnected
-                ? 'text-green-400 bg-green-900/40 hover:bg-green-900/60 rounded-lg'
-                : 'text-white hover:bg-white/20'}
-            />
+            <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
           </div>
         </div>
 
@@ -659,16 +658,6 @@ export default function HubScreen() {
               <span className="text-red-400 text-xs font-semibold text-center px-2 mt-1 leading-snug">{isStreamingConnecting ? 'Connecting…' : 'CrowdView Live'}</span>
             </>
           )}
-
-          <div className="mt-auto mx-3 border-t border-slate-600" />
-          <SideButton
-            icon={GlassesIcon}
-            label={glassesConnected ? 'Glasses On' : 'Glasses'}
-            onClick={glassesConnected ? disconnectGlasses : connectGlasses}
-            className={glassesConnected
-              ? 'text-green-400 bg-green-900/40 hover:bg-green-900/60'
-              : 'text-white hover:bg-slate-600'}
-          />
 
           {liveStreams.filter(s => s.Friend_Id).length > 0 && (
             <div className="mt-3 w-full px-2 flex flex-col items-center gap-2">
@@ -702,10 +691,10 @@ export default function HubScreen() {
       >
         <div className="flex w-full px-2 pt-4 pb-2">
           {[
-            { icon: HomeIcon,        label: 'Home',      path: '/hub' },
-            { icon: FriendsIcon,     label: 'Friends',   path: '/friends' },
-            { icon: LibraryIcon,     label: 'Library',   path: '/library' },
-            { icon: BroadcastIcon,   label: 'Streams',   path: '/streams' },
+            { icon: HomeIcon,      label: 'Home',                    path: '/hub' },
+            { icon: FriendsIcon,   label: isCorporate ? 'Customers' : 'Friends', path: '/friends' },
+            { icon: LibraryIcon,   label: 'Library',                 path: '/library' },
+            { icon: BroadcastIcon, label: 'Streams',                 path: '/streams' },
           ].map(({ icon: Icon, label, path }) => (
             <button key={path} onClick={() => navigate(path)}
               className={`flex-1 flex flex-col items-center gap-1 text-xs transition-colors
@@ -715,12 +704,31 @@ export default function HubScreen() {
               <span>{label}</span>
             </button>
           ))}
-          <button onClick={() => setSlideoutOpen(true)}
-            className="flex-1 flex flex-col items-center gap-1 text-xs text-white/60 hover:text-white transition-colors"
-          >
-            <UserProfileIcon className="w-5 h-5" />
-            <span>Menu</span>
-          </button>
+          {isCorporate ? (
+            <>
+              {isOAU && (
+                <button onClick={() => navigate('/corporate/users')}
+                  className="flex-1 flex flex-col items-center gap-1 text-xs text-white/60 hover:text-white transition-colors"
+                >
+                  <UsersIcon className="w-5 h-5" />
+                  <span>Users</span>
+                </button>
+              )}
+              <button onClick={() => { logout(); navigate('/'); }}
+                className="flex-1 flex flex-col items-center gap-1 text-xs text-white/60 hover:text-white transition-colors"
+              >
+                <LogoutIcon className="w-5 h-5" />
+                <span>Logout</span>
+              </button>
+            </>
+          ) : (
+            <button onClick={() => setSlideoutOpen(true)}
+              className="flex-1 flex flex-col items-center gap-1 text-xs text-white/60 hover:text-white transition-colors"
+            >
+              <UserProfileIcon className="w-5 h-5" />
+              <span>Menu</span>
+            </button>
+          )}
         </div>
       </nav>
 

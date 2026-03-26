@@ -39,14 +39,22 @@ router.post('/login', async (req, res) => {
     const user = rows[0];
     const match = await bcrypt.compare(password, user.Password_Hash);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-    const token = jwt.sign({ userId: user.User_Id, email: user.Email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const payload = {
+      userId: user.User_Id,
+      email: user.Email,
+      parentOrganizationId: user.Parent_Organization_Id || null,
+      corporateAdminFl: user.Corporate_Admin_Fl || 'N',
+    };
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.json({
       token,
       userId: user.User_Id,
       email: user.Email,
       name: user.Name_Txt,
       lastSourceDeviceId: user.Last_Source_Device_Id,
-      connectLastDevice: user.Connect_Last_Used_Device_After_Login_Fl
+      connectLastDevice: user.Connect_Last_Used_Device_After_Login_Fl,
+      parentOrganizationId: user.Parent_Organization_Id || null,
+      corporateAdminFl: user.Corporate_Admin_Fl || 'N',
     });
   } catch (err) {
     console.error(err);
@@ -59,16 +67,25 @@ router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
   try {
-    const [rows] = await pool.execute('SELECT User_Id FROM User WHERE Email = ?', [email.toLowerCase()]);
+    const [rows] = await pool.execute(
+      'SELECT User_Id, Parent_Organization_Id, Corporate_Admin_Fl FROM User WHERE Email = ?',
+      [email.toLowerCase()]
+    );
     // Always respond with success to prevent email enumeration
     if (!rows.length) return res.json({ message: 'If that email exists, a reset link has been sent.' });
+
+    // Corporate non-admin users cannot self-serve password reset — the OAU resets for them
+    const user = rows[0];
+    if (user.Parent_Organization_Id && user.Corporate_Admin_Fl !== 'Y') {
+      return res.status(403).json({ error: 'Contact your administrator to reset your password.' });
+    }
 
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await pool.execute(
       'UPDATE User SET Password_Reset_Token = ?, Password_Reset_Expires = ? WHERE User_Id = ?',
-      [token, expires, rows[0].User_Id]
+      [token, expires, user.User_Id]
     );
 
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';

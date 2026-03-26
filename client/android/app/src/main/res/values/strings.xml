@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CrowdView</string>
+    <string name="title_activity_main">CrowdView</string>
+    <string name="package_name">tv.crowdview.app</string>
+    <string name="custom_url_scheme">tv.crowdview.app</string>
+</resources>

@@ -8,6 +8,7 @@ import AddPhotoToFriendPopup from '../components/AddPhotoToFriendPopup';
 import { MovieCameraIcon, FriendsIcon, BackIcon } from '../components/Icons';
 import useVoiceCommands from '../hooks/useVoiceCommands';
 import useGlassesPresentation from '../hooks/useGlassesPresentation';
+import { useApp } from '../context/AppContext';
 import api from '../api/api';
 
 const STATUS_COLORS = {
@@ -40,6 +41,7 @@ function cropFace(photoDataUrl, box) {
 export default function IdScreen() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isCorporate } = useApp();
   const [faces, setFaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [identifyError, setIdentifyError] = useState(null);
@@ -180,7 +182,7 @@ export default function IdScreen() {
             <MovieCameraIcon className="w-[30px] h-[30px]" />
           </button>
         }
-        center={<span className="text-white font-bold text-xl tracking-wide">CrowdView</span>}
+        center={<span className="text-white font-bold text-xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>}
         right={
           <button onClick={() => navigate('/friends')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
             <FriendsIcon className="w-[30px] h-[30px]" />

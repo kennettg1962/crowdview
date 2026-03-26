@@ -140,6 +140,35 @@ router.post('/on-unpublish', async (req, res) => {
     );
 
     console.log(`[stream] ${streamKey} ended — recording: ${recFile || 'none'}`);
+
+    // Enforce 200 past-stream cap per organisation (corporate orgs only)
+    const [orgRows] = await pool.execute(
+      'SELECT Parent_Organization_Id FROM User WHERE User_Id = ?',
+      [users[0].User_Id]
+    );
+    const orgId = orgRows[0]?.Parent_Organization_Id;
+    if (orgId) {
+      const [excess] = await pool.execute(
+        `SELECT s.Stream_Id, s.Recording_File_Txt
+           FROM Stream s JOIN User u ON u.User_Id = s.User_Id
+          WHERE u.Parent_Organization_Id = ? AND s.Status_Fl = 'ended'
+          ORDER BY s.Started_At DESC
+          LIMIT 18446744073709551615 OFFSET 200`,
+        [orgId]
+      );
+      for (const old of excess) {
+        if (old.Recording_File_Txt && fs.existsSync(old.Recording_File_Txt)) {
+          try {
+            fs.unlinkSync(old.Recording_File_Txt);
+            const dir = path.dirname(old.Recording_File_Txt);
+            if (fs.readdirSync(dir).length === 0) fs.rmdirSync(dir);
+          } catch (_) {}
+        }
+        await pool.execute('DELETE FROM Stream WHERE Stream_Id = ?', [old.Stream_Id]);
+      }
+      if (excess.length) console.log(`[stream] pruned ${excess.length} old org streams for org ${orgId}`);
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error('on-unpublish error:', err);
@@ -152,22 +181,35 @@ router.post('/on-unpublish', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.get('/live', auth, async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt, s.Started_At,
-              u.Name_Txt AS Streamer_Name, s.User_Id AS Streamer_User_Id
-         FROM Stream s
-         JOIN User u ON u.User_Id = s.User_Id
-        WHERE s.Status_Fl = 'live'
-          AND (
-            s.User_Id = ?
-            OR s.User_Id IN (
-              SELECT f.Friend_User_Id FROM Friend f
-               WHERE f.User_Id = ? AND f.Friend_User_Id IS NOT NULL
-            )
-          )
-        ORDER BY s.Started_At DESC`,
-      [req.user.userId, req.user.userId]
-    );
+    let query, params;
+    if (req.user.parentOrganizationId) {
+      // Corporate: all streams from users in the same organisation
+      query = `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt, s.Started_At,
+                      u.Name_Txt AS Streamer_Name, s.User_Id AS Streamer_User_Id
+                 FROM Stream s
+                 JOIN User u ON u.User_Id = s.User_Id
+                WHERE s.Status_Fl = 'live'
+                  AND u.Parent_Organization_Id = ?
+                ORDER BY s.Started_At DESC`;
+      params = [req.user.parentOrganizationId];
+    } else {
+      // Individual: own streams + linked friends' streams
+      query = `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt, s.Started_At,
+                      u.Name_Txt AS Streamer_Name, s.User_Id AS Streamer_User_Id
+                 FROM Stream s
+                 JOIN User u ON u.User_Id = s.User_Id
+                WHERE s.Status_Fl = 'live'
+                  AND (
+                    s.User_Id = ?
+                    OR s.User_Id IN (
+                      SELECT f.Friend_User_Id FROM Friend f
+                       WHERE f.User_Id = ? AND f.Friend_User_Id IS NOT NULL
+                    )
+                  )
+                ORDER BY s.Started_At DESC`;
+      params = [req.user.userId, req.user.userId];
+    }
+    const [rows] = await pool.execute(query, params);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -179,26 +221,41 @@ router.get('/live', auth, async (req, res) => {
 // ---------------------------------------------------------------------------
 router.get('/past', auth, async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt,
-              s.Started_At, s.Ended_At,
-              s.Recording_File_Txt,
-              s.User_Id AS Streamer_User_Id,
-              u.Name_Txt AS Streamer_Name
-         FROM Stream s
-         JOIN User u ON u.User_Id = s.User_Id
-        WHERE s.Status_Fl = 'ended'
-          AND (
-            s.User_Id = ?
-            OR s.User_Id IN (
-              SELECT f.Friend_User_Id FROM Friend f
-               WHERE f.User_Id = ? AND f.Friend_User_Id IS NOT NULL
-            )
-          )
-        ORDER BY s.Started_At DESC
-        LIMIT 100`,
-      [req.user.userId, req.user.userId]
-    );
+    let query, params;
+    if (req.user.parentOrganizationId) {
+      query = `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt,
+                      s.Started_At, s.Ended_At,
+                      s.Recording_File_Txt,
+                      s.User_Id AS Streamer_User_Id,
+                      u.Name_Txt AS Streamer_Name
+                 FROM Stream s
+                 JOIN User u ON u.User_Id = s.User_Id
+                WHERE s.Status_Fl = 'ended'
+                  AND u.Parent_Organization_Id = ?
+                ORDER BY s.Started_At DESC
+                LIMIT 200`;
+      params = [req.user.parentOrganizationId];
+    } else {
+      query = `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt,
+                      s.Started_At, s.Ended_At,
+                      s.Recording_File_Txt,
+                      s.User_Id AS Streamer_User_Id,
+                      u.Name_Txt AS Streamer_Name
+                 FROM Stream s
+                 JOIN User u ON u.User_Id = s.User_Id
+                WHERE s.Status_Fl = 'ended'
+                  AND (
+                    s.User_Id = ?
+                    OR s.User_Id IN (
+                      SELECT f.Friend_User_Id FROM Friend f
+                       WHERE f.User_Id = ? AND f.Friend_User_Id IS NOT NULL
+                    )
+                  )
+                ORDER BY s.Started_At DESC
+                LIMIT 100`;
+      params = [req.user.userId, req.user.userId];
+    }
+    const [rows] = await pool.execute(query, params);
 
     // Build recording URL from the stored file path for each past stream
     const base = process.env.CLIENT_URL || 'https://crowdview.tv';

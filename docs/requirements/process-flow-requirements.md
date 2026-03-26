@@ -1,6 +1,6 @@
 # Process Flow Requirements
 
-Living specification ordered by screen. Detailed enough to produce wireframes. Last updated: 2026-03-13.
+Living specification ordered by screen. Detailed enough to produce wireframes. Last updated: 2026-03-26.
 
 ---
 
@@ -10,13 +10,14 @@ Living specification ordered by screen. Detailed enough to produce wireframes. L
 / (SplashScreen)
 ├── /hub (HubScreen) ←→ SelectSourcePopup, StreamToPopup
 │   ├── /id (IdScreen) ←→ FriendFormPopup, AddPhotoToFriendPopup
-│   ├── /friends (ManageFriendsScreen) ←→ FriendFormPopup
+│   ├── /friends (ManageFriendsScreen) ←→ FriendFormPopup   [labelled "Customers" for corporate users]
 │   │   └── /id (IdScreen) [photo upload path]
 │   ├── /library (LibraryScreen) ←→ /id (IdScreen) [re-view path]
 │   ├── /streams (StreamsScreen)
 │   │   └── /streams/watch (StreamWatchScreen)
-│   └── /post (PostScreen) [stub]
-├── /profile (ProfileScreen)
+│   ├── /post (PostScreen) [stub]
+│   └── /corporate/users (CorporateUsersScreen) [OAU only] ←→ CorporateUserForm popup
+├── /profile (ProfileScreen)  [individual users only]
 └── /reset-password?token= (ResetPasswordScreen)
 ```
 
@@ -529,10 +530,9 @@ cropped face data URL (padded 12%)
 ```
 
 ### Video Player
-- Uses HLS.js for playback
-- Live URL: `{HLS_BASE}/live/{Stream_Key_Txt}/index.m3u8`
-- VOD URL: first entry in `stream.recordings` array
-- `lowLatencyMode: true` for live streams
+- Live streams: HLS.js with `lowLatencyMode: true`, URL `{HLS_BASE}/live/{Stream_Key_Txt}/index.m3u8`
+- Past streams (VOD): native `<video src>` set directly to the `.mp4` recording URL (HLS.js is NOT used for VOD — it only handles `.m3u8` manifests)
+- VOD plays the **first segment only** from `stream.recordings[0]`. ⚠ Multi-segment recordings (long streams split by MediaMTX) are not yet supported — only the first `.mp4` file is played. Full multi-segment playback is a future requirement.
 
 ### States
 - Loading: spinner
@@ -595,24 +595,138 @@ cropped face data URL (padded 12%)
 
 ### Layout
 - Fixed bottom bar, full width
-- 5 tabs, equally spaced
+- Tabs equally spaced (5 for individual users; 5 for corporate non-OAU; 6 for OAU)
 
-### Tabs
-| Tab | Icon | Path |
-|-----|------|------|
+### Tabs — Individual users
+| Tab | Icon | Path / Action |
+|-----|------|--------------|
 | Home | HomeIcon | `/hub` |
 | Friends | FriendsIcon | `/friends` |
 | Library | LibraryIcon | `/library` |
 | Streams | StreamsIcon | `/streams` |
-| User Menu | PersonIcon | → opens MenuSlideout |
+| User Menu | PersonIcon | Opens MenuSlideout |
 
 - Active tab highlighted (based on current route)
 - "User Menu" opens a slide-out menu (not a navigation route)
 
-### MenuSlideout
+### MenuSlideout (individual users only)
 - Slides in from left
 - Items: Profile (→ `/profile`), About, Contact, Logout
 - Logout clears session and navigates to `/`
+
+### Tabs — Corporate users (non-OAU)
+| Tab | Icon | Path / Action |
+|-----|------|--------------|
+| Home | HomeIcon | `/hub` |
+| Customers | FriendsIcon | `/friends` |
+| Library | LibraryIcon | `/library` |
+| Streams | StreamsIcon | `/streams` |
+| Logout | LogoutIcon | Calls `logout()` directly; navigates to `/` |
+
+- No User Menu tab; no MenuSlideout; no ProfileScreen access
+- "Friends" tab relabelled "Customers"
+
+### Tabs — OAU (Org Admin User)
+| Tab | Icon | Path / Action |
+|-----|------|--------------|
+| Home | HomeIcon | `/hub` |
+| Customers | FriendsIcon | `/friends` |
+| Library | LibraryIcon | `/library` |
+| Streams | StreamsIcon | `/streams` |
+| Users | UsersIcon | `/corporate/users` |
+| Logout | LogoutIcon | Calls `logout()` directly; navigates to `/` |
+
+- Same as corporate non-OAU plus an additional "Users" tab
+
+---
+
+## 15. CorporateUsersScreen (`/corporate/users`) — OAU only
+
+### Access Guard
+- `OAUGuard` wrapper in `App.jsx`; redirects non-OAU users to `/hub`
+
+### Layout
+```
+[AppHeader: HubIcon (→/hub) | "CrowdView Corporate" | PlusIcon (add user)]
+[A-Z indexed user list]
+[NavBar (OAU tabs)]
+[TrueFooter]
+```
+
+### Header
+- Left: Hub icon → navigates to `/hub`
+- Center: "CrowdView Corporate" (bold)
+- Right: Plus icon → opens CorporateUserForm popup in add mode
+
+### User List
+- A-Z indexed, same visual structure as ManageFriendsScreen
+- Sorted alphabetically by name; letter section headers
+- Each user row:
+  - Left: circular avatar placeholder (initials or generic icon)
+  - Center: Name (bold), Email (small, gray)
+  - Right: "Admin" badge (blue pill) if `Corporate_Admin_Fl = 'Y'`; red trash icon button → delete confirmation
+- Tapping/clicking a row (not trash) → opens CorporateUserForm popup in edit mode
+
+### Delete Flow
+- Trash button → confirmation dialog ("Are you sure you want to remove [name] from the organisation?") → DELETE `/api/corporate/users/:id`
+- If OAU attempts to delete themselves: button disabled or shows error "You cannot delete your own account"
+- List refreshes after delete
+
+### Empty State
+- "No users in your organisation" + "Add your first user" link
+
+---
+
+## 16. CorporateUserForm Popup (Overlay from CorporateUsersScreen)
+
+### Modes
+- **Add mode** (no existing user): create a new org user
+- **Edit mode** (existing user): update user details; reset password
+
+### Layout
+- Fixed full-screen dark backdrop
+- Modal card, max-width ~448px, scrollable body
+- Header: "Add User" (add mode) or user's name (edit mode) + X close button
+
+### Fields — Add mode
+
+| Field | Type | Notes |
+|-------|------|-------|
+| Email | email input | Required; must be unique across the system |
+| Password | password input | Required; minimum 6 characters |
+| Name | text input | Required; max 100 characters |
+| Connect Last Device | toggle (Yes/No) | Sets `Connect_Last_Used_Device_After_Login_Fl`; default No |
+| Organisation Admin | toggle (Yes/No) | Sets `Corporate_Admin_Fl`; default No |
+
+### Fields — Edit mode
+
+| Field | Type | Notes |
+|-------|------|-------|
+| Email | read-only display | Cannot be changed after creation |
+| Name | text input | Editable |
+| Connect Last Device | toggle (Yes/No) | Editable |
+| Organisation Admin | toggle (Yes/No) | Editable; disabled and locked to 'Y' when editing own record (OAU cannot demote themselves) |
+
+### Reset Password Section (edit mode only)
+- Section heading: "Reset Password"
+- New Password field (type=password, placeholder "Enter new password")
+- "Reset Password" button (blue) → POST `/api/corporate/users/:id/reset-password`
+- Success: inline green confirmation message; field cleared
+- Error: inline red error message
+
+### Buttons
+- Save (primary) → POST `/api/corporate/users` (add) or PUT `/api/corporate/users/:id` (edit)
+- Cancel → closes popup without saving
+
+### Validation
+- Email required and valid format (add mode only)
+- Password required, ≥ 6 chars (add mode); Reset Password field ≥ 6 chars
+- Name required
+- API errors shown inline below the relevant field
+
+### Constraints
+- OAU cannot toggle their own Organisation Admin toggle to 'No' — toggle is disabled on own record
+- OAU cannot see or trigger delete from within the form — delete is only available from the list row
 
 ---
 
@@ -633,3 +747,7 @@ cropped face data URL (padded 12%)
 | LibraryScreen | Id button | IdScreen | `photoDataUrl`, `saveToLibrary:false` |
 | ManageFriendsScreen | Plus → upload photo | IdScreen | `photoDataUrl`, `saveToLibrary:false` |
 | StreamsScreen | Watch button | StreamWatchScreen | `stream`, `isLive:bool` |
+| NavBar (OAU) | Users tab | CorporateUsersScreen | — |
+| CorporateUsersScreen | Plus icon / row tap | CorporateUserForm (overlay) | user object (edit) or null (add) |
+| CorporateUserForm | Save (add) | CorporateUsersScreen | List refresh |
+| CorporateUsersScreen | Hub icon | HubScreen | — |

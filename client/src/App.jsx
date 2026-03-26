@@ -13,10 +13,18 @@ import PostScreen from './screens/PostScreen';
 import StreamsScreen from './screens/StreamsScreen';
 import StreamWatchScreen from './screens/StreamWatchScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
+import CorporateUsersScreen from './screens/CorporateUsersScreen';
 
 function AuthGuard({ children }) {
   const { isAuthenticated } = useApp();
   if (!isAuthenticated) return <Navigate to="/" replace />;
+  return children;
+}
+
+function OAUGuard({ children }) {
+  const { isAuthenticated, isOAU } = useApp();
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (!isOAU) return <Navigate to="/hub" replace />;
   return children;
 }
 
@@ -43,6 +51,7 @@ function AppRoutes() {
       <Route path="/streams" element={<AuthGuard><StreamsScreen /></AuthGuard>} />
       <Route path="/streams/watch" element={<AuthGuard><StreamWatchScreen /></AuthGuard>} />
       <Route path="/reset-password" element={<ResetPasswordScreen />} />
+      <Route path="/corporate/users" element={<OAUGuard><CorporateUsersScreen /></OAUGuard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </>

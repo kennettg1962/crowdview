@@ -14,6 +14,9 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export default function ManageFriendsScreen() {
   const navigate = useNavigate();
+  const { isCorporate } = useApp();
+  const noun = isCorporate ? 'customer' : 'friend';
+  const Noun = isCorporate ? 'Customer' : 'Friend';
   const [friends, setFriends] = useState([]);
   const [group, setGroup] = useState('All');
   const [loading, setLoading] = useState(false);
@@ -128,9 +131,9 @@ export default function ManageFriendsScreen() {
             <MovieCameraIcon className="w-[30px] h-[30px]" />
           </button>
         }
-        center={<span className="text-white font-bold text-xl tracking-wide">CrowdView</span>}
+        center={<span className="text-white font-bold text-xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>}
         right={
-          <button onClick={handleAddNew} title="Add Friend" className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
+          <button onClick={handleAddNew} title={`Add ${Noun}`} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
             <PlusIcon className="w-[30px] h-[30px]" />
           </button>
         }
@@ -171,9 +174,9 @@ export default function ManageFriendsScreen() {
                 </div>
               ) : friends.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-32 text-gray-500 gap-2">
-                  <p>No friends found</p>
+                  <p>No {noun}s found</p>
                   <button onClick={handleAddNew} className="text-blue-400 hover:text-blue-300 text-sm underline">
-                    Add your first friend
+                    Add your first {noun}
                   </button>
                 </div>
               ) : (
@@ -219,7 +222,7 @@ export default function ManageFriendsScreen() {
                         <button
                           onClick={() => setDeletingFriend(friend)}
                           className="p-3 text-red-400/50 hover:text-red-400 transition-colors flex-shrink-0"
-                          title="Delete friend"
+                          title={`Delete ${noun}`}
                         >
                           <DeleteIcon className="w-5 h-5" />
                         </button>
@@ -250,7 +253,7 @@ export default function ManageFriendsScreen() {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
             <p className="text-white font-medium mb-1">Delete {deletingFriend.Name_Txt}?</p>
-            <p className="text-gray-400 text-sm mb-4">This will permanently remove the friend and all their photos. This cannot be undone.</p>
+            <p className="text-gray-400 text-sm mb-4">This will permanently remove the {noun} and all their photos. This cannot be undone.</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeletingFriend(null)}

@@ -1,6 +1,6 @@
 # System Requirements
 
-Living specification of technical decisions, data contracts, and system behaviour. Last updated: 2026-03-13.
+Living specification of technical decisions, data contracts, and system behaviour. Last updated: 2026-03-26.
 
 ---
 
@@ -298,10 +298,14 @@ CompreFace integration is fully implemented in `server/routes/rekognition.js`.
 | `slideoutOpen` | boolean | MenuSlideout | Close |
 | `voicePaused` | boolean | SelectSourcePopup / IdScreen mount | Unmount of those screens |
 | `isStreamingOut` | boolean | startWhipStream() | stopWhipStream() / Logout |
-| `captureMode` | `'phone'\|'glasses'` | `setCaptureMode()` | Never auto-cleared |
-| `pendingGlassesFrameRef` | ref to callback | `useCaptureSource` when awaiting a glasses frame | Cleared after frame resolved |
+| `captureMode` | `'phone'\|'glasses'` | `connectGlasses()` / `disconnectGlasses()` | Never auto-cleared |
+| `glassesConnected` | boolean | `connectGlasses()` | `disconnectGlasses()` |
+| `cameraReconnectKey` | number | `disconnectGlasses()` (incremented) | Never reset |
+| `latestGlassesFrameRef` | ref to dataUrl string | `injectGlassesFrame()` on every frame | Cleared on disconnect |
 
-`injectGlassesFrame(dataUrl)` — called by `GlassesSDK.onFrame` callback; resolves the pending frame promise in `useCaptureSource`.
+`injectGlassesFrame(dataUrl)` — called by `GlassesSDK.onFrame` callback in HubScreen; continuously updates `latestGlassesFrameRef.current`.
+`connectGlasses()` — calls `GlassesSDK.connect()`, sets `captureMode='glasses'`, `glassesConnected=true`, `isStreaming=true`, clears `mediaStream`.
+`disconnectGlasses()` — calls `GlassesSDK.disconnect()`, restores `captureMode='phone'`, `glassesConnected=false`, `isStreaming=false`, increments `cameraReconnectKey`.
 
 Session persisted in `sessionStorage` (cleared on tab close). On mount, AppContext restores from sessionStorage.
 
@@ -380,28 +384,55 @@ One `SpeechRecognition` instance for the entire app, owned by `GlobalVoiceComman
 
 | File | Role |
 |------|------|
-| `src/services/GlassesSDK.js` | Platform interface stub: `connect()`, `disconnect()`, `onFrame(cb)`, `offFrame(cb)`, `sendResult(faces)`, `_dispatchFrame(dataUrl)` |
-| `src/hooks/useCaptureSource.js` | `getCaptureFrame(maxW, quality)` → `Promise<HTMLCanvasElement>` — phone: reads `videoRef`; glasses: resolves on next `injectGlassesFrame()` call |
-| `src/hooks/useResultDisplay.js` | `showResult(photoDataUrl, { saveToLibrary, faces })` — always navigates to IdScreen; additionally calls `GlassesSDK.sendResult(faces)` when `captureMode === 'glasses'` |
+| `src/services/GlassesSDK.js` | Platform interface stub: `connect()`, `disconnect()`, `onFrame(cb)`, `offFrame(cb)`, `_dispatchFrame(dataUrl)`, `onTranscript(cb)`, `offTranscript(cb)`, `_dispatchTranscript(text)`, `sendResult(faces)`, `displayFace(cropDataUrl, name, status)`, `speak(text)` |
+| `src/hooks/useCaptureSource.js` | `getCaptureFrame(maxW)` → `Promise<HTMLCanvasElement>` — phone: reads `videoRef`; glasses: reads `latestGlassesFrameRef.current` |
+| `src/hooks/useResultDisplay.js` | `showResult(photoDataUrl, { saveToLibrary, faces })` — always navigates to IdScreen; additionally calls `GlassesSDK.sendResult(faces)` + `GlassesSDK.speak(summary)` when `captureMode === 'glasses'` |
+| `src/hooks/useGlassesPresentation.js` | Sequential face presentation on Halo: crops faces, speaks summary, calls `GlassesSDK.displayFace()` + `GlassesSDK.speak()` on load and on index change. Used by IdScreen. |
 
 ### AppContext additions
-- `captureMode: 'phone' | 'glasses'` — default `'phone'`; set via `setCaptureMode()`
-- `pendingGlassesFrameRef` — holds resolver set by `useCaptureSource`; cleared after one frame
-- `injectGlassesFrame(dataUrl)` — called by `GlassesSDK.onFrame` callback to deliver a frame
+- `captureMode: 'phone' | 'glasses'` — default `'phone'`
+- `glassesConnected: boolean` — true while glasses connected
+- `latestGlassesFrameRef` — ref continuously updated with latest frame dataUrl from `GlassesSDK.onFrame`
+- `injectGlassesFrame(dataUrl)` — updates `latestGlassesFrameRef.current`; called per frame in HubScreen
+- `cameraReconnectKey` — counter incremented by `disconnectGlasses()`; triggers HubScreen `useEffect` to re-connect phone camera
+- `connectGlasses()` — single call to enable all glasses I/O
+- `disconnectGlasses()` — single call to disable all glasses I/O and restore phone
 
-### Enabling glasses mode
-```js
-setCaptureMode('glasses');
-GlassesSDK.connect();
-GlassesSDK.onFrame(dataUrl => injectGlassesFrame(dataUrl));
-```
+### Toggle design
+One button on HubScreen (desktop sidebar + mobile overlay) calls `connectGlasses()` or `disconnectGlasses()`. A single toggle switches camera input, microphone input, display output, and audio output simultaneously — no partial state.
+
+### Phone mic vs glasses mic
+- `GlobalVoiceCommands` runs `useSpeechRecognition` only when `!glassesConnected`
+- When glasses connected, `GlobalVoiceCommands` subscribes to `GlassesSDK.onTranscript(handleResult)` instead
+- Voice command dispatch logic (`handleResult`) is shared by both paths
+
+### HubScreen display
+- Phone mode: `<video ref={videoRef}>` shows camera feed
+- Glasses mode: `<canvas ref={glassesCanvasRef}>` fed by `GlassesSDK.onFrame()` per-frame draw; overlaid by face-detection canvas as normal
+
+### TTS routing (`useVoiceCommands` speak function)
+| Condition | Output |
+|-----------|--------|
+| `captureMode === 'glasses'` | `GlassesSDK.speak(text)` |
+| Capacitor iOS/Android | Silent (mic/speaker conflict) |
+| Desktop | `window.speechSynthesis` |
+
+### Sequential face presentation (Halo)
+1. Faces loaded → speak summary ("N faces. X friend, Y identified, Z unknown.")
+2. Crop face 0 image (15% padding) → `GlassesSDK.displayFace(crop, name, status)` → speak "Face 1: Name."
+3. User says "next"/"prev" → `selectedFaceIndex` changes → `useGlassesPresentation` updates Halo display + speaks next announcement
 
 ### Platform implementation notes
-| Platform | SDK | Display format |
-|----------|-----|---------------|
-| Brilliant Labs Halo | `@brilliantlabs/frame-sdk` (BLE) | `frame.display.text(label)` |
-| Vuzix Blade 2 | Android intent / WebSocket | JSON payload to activity |
-| Meta Ray-Ban Display | Meta Wearables Device Access Toolkit | **Camera capture only — display not accessible to third parties** |
+| Platform | Desktop support | SDK | Display |
+|----------|----------------|-----|---------|
+| Brilliant Labs Halo | Potentially (Web Bluetooth in Chrome) | `@brilliantlabs/frame-sdk` (BLE 5.3) | 640×400 microOLED monocular; `frame.display.bitmap()` / `frame.display.text()` |
+| Meta Ray-Ban Display | **No** — Android/iOS SDK only | Meta Wearables Device Access Toolkit | **Camera capture only — HUD not accessible to third parties** |
+| Vuzix Blade 2 | Via Android bridge | Android intent / WebSocket | JSON payload to activity |
+
+### Desktop connectivity (research findings 2026-03-26)
+- **Web Bluetooth** (Chrome desktop, macOS/Windows 10+): `navigator.bluetooth.requestDevice()` can connect to Halo via BLE 5.3. Requires HTTPS. Experimental but stable in Chrome.
+- `GlassesSDK.connect()` will branch by platform: Web Bluetooth on desktop, native BLE Capacitor plugin on iOS/Android. All upstream app code is unaffected.
+- Halo Python SDK (`frame-sdk`) is an alternative for desktop tooling but not the web app path.
 
 ### Result routing
 In glasses mode, `showResult` sends to `GlassesSDK.sendResult()` **and** navigates to IdScreen. Both outputs are always active when `captureMode === 'glasses'`.
@@ -423,7 +454,7 @@ In glasses mode, `showResult` sends to `GlassesSDK.sendResult()` **and** navigat
 
 ---
 
-## 13. Known Stubs / Not-Yet-Implemented
+## 14. Known Stubs / Not-Yet-Implemented
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -432,3 +463,110 @@ In glasses mode, `showResult` sends to `GlassesSDK.sendResult()` **and** navigat
 | Platform tokens (FB/IG/YT/TT) | Stub | Stored in DB but not used |
 | Email sending (SMTP) | Conditional | Forgot-password only works if SMTP env vars configured |
 | Devices API endpoint | Stub | Returns message saying to use client-side enumeration |
+
+---
+
+## 15. Corporate Mode
+
+### Detection
+
+| Condition | Meaning |
+|-----------|---------|
+| `user.parentOrganizationId !== null` | User belongs to a corporate organisation |
+| `user.corporateAdminFl === 'Y'` | User is an Org Admin User (OAU) |
+
+Individual (non-corporate) users have `parentOrganizationId: null` and `corporateAdminFl: 'N'`.
+
+### JWT Payload (additions)
+
+```json
+{
+  "userId": 1,
+  "email": "user@example.com",
+  "parentOrganizationId": 42,
+  "corporateAdminFl": "Y"
+}
+```
+
+Both fields are present for all users. Individual users receive `parentOrganizationId: null` and `corporateAdminFl: 'N'`.
+
+### New Middleware
+
+| File | Purpose |
+|------|---------|
+| `server/middleware/corporateAdmin.js` | Rejects (403) any request whose JWT does not have `corporateAdminFl === 'Y'`; used on all corporate management routes |
+
+### New Routes (`server/routes/corporate.js`)
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| GET | `/api/corporate/users` | OAU | Returns all users with matching `Parent_Organization_Id` |
+| POST | `/api/corporate/users` | OAU | Create new org user; password hashed with bcrypt |
+| PUT | `/api/corporate/users/:id` | OAU | Update name, `Connect_Last_Used_Device_After_Login_Fl`, `corporateAdminFl`; OAU cannot edit own admin flag |
+| DELETE | `/api/corporate/users/:id` | OAU | Delete org user; OAU cannot delete themselves |
+| POST | `/api/corporate/users/:id/reset-password` | OAU | Set a new password for a specified org user |
+
+### Org-Wide Friends (`friendsScope()` helper — `server/routes/friends.js`)
+
+- For individual users: scope = `[req.user.userId]`
+- For corporate users: scope = all `User_Id` values where `Parent_Organization_Id` matches the requester's org
+- All friend CRUD routes use this helper to determine the query scope; corporate users can read and manage all org-owned friend records
+
+### Org-Wide Rekognition
+
+- On `/api/rekognition/identify`, an `orgPrefixes` array is constructed from all user IDs in the organisation
+- Face search runs against every org user's CompreFace collection prefix; first match above threshold wins
+- Match thresholds unchanged (own-org ≥70%; friends-of-friends ≥72%)
+
+### Org-Wide Streams
+
+- `/api/stream/live`: for corporate users, returns streams for all users sharing the same `Parent_Organization_Id`
+- `/api/stream/past`: similarly scoped by `Parent_Organization_Id`
+- **Retention cap**: 200 past stream records per organisation. Enforced in the `POST /api/stream/on-unpublish` webhook handler — oldest records beyond the cap are deleted after each new stream ends
+
+### Forgot-Password Restriction
+
+- `POST /api/auth/forgot-password`: if the email belongs to a corporate user whose `corporateAdminFl !== 'Y'`, the request is rejected with a message instructing the user to contact their OAU for a password reset
+- OAUs may still use self-service forgot-password
+
+### New Screens
+
+| Screen | Path | Guard |
+|--------|------|-------|
+| `CorporateUsersScreen` | `/corporate/users` | `OAUGuard` (redirects non-OAU to `/hub`) |
+| `CorporateUserForm` (popup) | Overlay on `CorporateUsersScreen` | — |
+
+`OAUGuard` is a route wrapper in `App.jsx` analogous to `AuthGuard`. It checks `user.corporateAdminFl === 'Y'`; if not, redirects to `/hub`.
+
+### NavBar Behaviour (corporate users)
+
+| User type | NavBar tabs |
+|-----------|-------------|
+| Individual | Home, Friends, Library, Streams, User Menu |
+| Corporate (non-OAU) | Home, Customers, Library, Streams, Logout |
+| OAU | Home, Customers, Library, Streams, Logout, Users |
+
+- "Customers" tab links to `/friends` (same screen, relabelled)
+- "Users" tab links to `/corporate/users`
+- "Logout" tab directly calls `logout()` (no MenuSlideout); no ProfileScreen access for corporate users
+
+### Org Bootstrapping
+
+- No self-service organisation registration
+- A sysadmin inserts a row into the `Organization` table and inserts the first OAU directly into the `User` table with `Parent_Organization_Id` set and `Corporate_Admin_Fl = 'Y'`
+- Subsequent org users are created by the OAU via the Corporate Users screen
+
+### DB Schema Additions
+
+#### `Organization`
+| Column | Type | Notes |
+|--------|------|-------|
+| Organization_Id | INT PK auto-increment | |
+| Name_Txt | VARCHAR(200) | Organisation display name |
+| Created_At | TIMESTAMP | default NOW() |
+
+#### `User` table additions
+| Column | Type | Notes |
+|--------|------|-------|
+| Parent_Organization_Id | INT FK → Organization | nullable; NULL = individual user |
+| Corporate_Admin_Fl | CHAR(1) | 'Y'/'N', default 'N' |

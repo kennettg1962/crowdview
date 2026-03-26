@@ -5,6 +5,7 @@ import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import { MovieCameraIcon, FriendsIcon, DeleteIcon } from '../components/Icons';
 import AuthImage from '../components/AuthImage';
+import { useApp } from '../context/AppContext';
 import api from '../api/api';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -183,6 +184,7 @@ function MediaViewer({ item, allItems, onClose }) {
 
 export default function LibraryScreen() {
   const navigate = useNavigate();
+  const { isCorporate } = useApp();
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all');
@@ -312,7 +314,7 @@ export default function LibraryScreen() {
             <MovieCameraIcon className="w-[30px] h-[30px]" />
           </button>
         }
-        center={<span className="text-white font-bold text-xl tracking-wide">CrowdView</span>}
+        center={<span className="text-white font-bold text-xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>}
         right={
           <button onClick={() => navigate('/friends')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
             <FriendsIcon className="w-[30px] h-[30px]" />

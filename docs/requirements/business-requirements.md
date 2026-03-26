@@ -1,6 +1,6 @@
 # Business Requirements
 
-Living specification. Entries are merged/rewritten as requirements evolve. Last updated: 2026-03-13.
+Living specification. Entries are merged/rewritten as requirements evolve. Last updated: 2026-03-26.
 
 ---
 
@@ -84,3 +84,27 @@ CrowdView is a real-time crowd face-identification and live-streaming applicatio
 | BC-03 | Social platform tokens (Facebook, Instagram, YouTube, TikTok) are stored per user but the posting feature is currently a stub — no actual OAuth or API integration is implemented. ⚠ Confirm whether social posting is in scope for MVP. |
 | BC-04 | The production site runs at `https://crowdview.tv` (and `www.`). Both must be whitelisted in CORS and Vite preview allowedHosts. |
 | BC-05 | On macOS + Chrome, SpeechRecognition is not started — the mic is owned by `getUserMedia({audio})` for stream audio. Voice commands are a Windows/Android/wearable feature only. |
+
+---
+
+## 7. Corporate Mode
+
+### Overview
+
+CrowdView Corporate is a separate operational tier for business organisations. An organisation is a managed entity with one or more member users. All org members share a common customer database and stream history scoped by the organisation.
+
+### Business Rules
+
+| ID | Rule |
+|----|------|
+| BR-C01 | A corporate organisation is a named entity stored in the `Organization` table. An organisation can have any number of member users. |
+| BR-C02 | All org members share a single customer (friend) database. Records are scoped by `Parent_Organization_Id`, not by individual `User_Id`. Any org member can create, edit, or delete customer records. |
+| BR-C03 | Only an OAU (Org Admin User, identified by `Corporate_Admin_Fl = 'Y'`) can manage org users: create, edit, delete, and reset passwords. |
+| BR-C04 | An OAU cannot delete their own account or remove their own admin role via the Corporate Users screen. At least one OAU must remain at all times. |
+| BR-C05 | Non-admin corporate users cannot use self-service password reset. They must contact their OAU to have their password reset. |
+| BR-C06 | OAUs can use self-service forgot-password (same flow as individual users). |
+| BR-C07 | Past stream history for an organisation is capped at 200 records. When a new stream ends and the cap is exceeded, the oldest records are automatically deleted. |
+| BR-C08 | Corporate users do not have access to ProfileScreen. Account settings (name, device preference, admin flag) are managed by the OAU via the Corporate Users screen. |
+| BR-C09 | Live and past stream visibility for corporate users is scoped to all members of the same organisation (equivalent to every org member being a "friend" of every other). |
+| BR-C10 | Face identification searches the CompreFace collections of all org members, not just the requesting user's own collection. |
+| BR-C11 | Organisations are provisioned by sysadmin only. There is no self-service organisation sign-up flow. |

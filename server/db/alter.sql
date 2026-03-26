@@ -1,6 +1,10 @@
 -- Run this against an existing crowdview database to add new columns.
 -- Safe to re-run (IF NOT EXISTS requires MySQL 8.0+).
 USE crowdview;
+
+-- Corporate fields (already applied to production DB 2026-03-26)
+ALTER TABLE User ADD COLUMN IF NOT EXISTS Parent_Organization_Id BIGINT DEFAULT NULL;
+ALTER TABLE User ADD COLUMN IF NOT EXISTS Corporate_Admin_Fl CHAR(1) DEFAULT 'N';
 ALTER TABLE User ADD COLUMN IF NOT EXISTS Password_Reset_Token VARCHAR(255);
 ALTER TABLE User ADD COLUMN IF NOT EXISTS Password_Reset_Expires DATETIME;
 ALTER TABLE Friend_Photo ADD COLUMN IF NOT EXISTS Rekognition_Face_Id VARCHAR(255);

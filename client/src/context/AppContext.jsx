@@ -83,6 +83,10 @@ export function AppProvider({ children }) {
     }
   }, []);
 
+  // Derived corporate flags — true only when parentOrganizationId is set
+  const isCorporate = !!(user?.parentOrganizationId);
+  const isOAU = isCorporate && user?.corporateAdminFl === 'Y';
+
   const login = (userData, token) => {
     sessionStorage.setItem('cv_token', token);
     sessionStorage.setItem('cv_user', JSON.stringify(userData));
@@ -211,7 +215,8 @@ export function AppProvider({ children }) {
       screenVoiceRef, registerScreenVoice, unregisterScreenVoice,
       isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
       captureMode, glassesConnected, connectGlasses, disconnectGlasses,
-      latestGlassesFrameRef, injectGlassesFrame, cameraReconnectKey
+      latestGlassesFrameRef, injectGlassesFrame, cameraReconnectKey,
+      isCorporate, isOAU
     }}>
       {children}
     </AppContext.Provider>

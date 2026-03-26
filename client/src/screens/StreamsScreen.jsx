@@ -25,7 +25,7 @@ function duration(start, end) {
 
 export default function StreamsScreen() {
   const navigate = useNavigate();
-  const { user } = useApp();
+  const { user, isCorporate } = useApp();
   const [liveStreams, setLiveStreams]   = useState([]);
   const [pastStreams, setPastStreams]   = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -82,7 +82,7 @@ export default function StreamsScreen() {
             <MovieCameraIcon className="w-[30px] h-[30px]" />
           </button>
         }
-        center={<span className="text-white font-bold text-xl tracking-wide">CrowdView</span>}
+        center={<span className="text-white font-bold text-xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>}
         right={
           <button onClick={() => navigate('/friends')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
             <FriendsIcon className="w-[30px] h-[30px]" />

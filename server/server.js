@@ -27,6 +27,7 @@ app.use("/api/media", require("./routes/media"));
 app.use("/api/devices", require("./routes/devices"));
 app.use("/api/rekognition", require("./routes/rekognition"));
 app.use("/api/stream",     require("./routes/stream"));
+app.use("/api/corporate",  require("./routes/corporate"));
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
