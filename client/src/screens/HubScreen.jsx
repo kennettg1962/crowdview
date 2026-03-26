@@ -453,7 +453,7 @@ export default function HubScreen() {
           className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
         >
           <FriendsIcon className="w-9 h-9" />
-          <span className="text-xs font-medium">Friends</span>
+          <span className="text-xs font-medium">{isCorporate ? 'Customers' : 'Friends'}</span>
         </button>
 
         <span className="text-white font-bold text-2xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>
@@ -471,7 +471,7 @@ export default function HubScreen() {
       <header className="hidden md:flex bg-slate-700 px-6 py-3 items-center justify-between">
         <button onClick={() => navigate('/friends')} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
           <FriendsIcon className="w-9 h-9" />
-          <span className="text-xs font-medium">Friends</span>
+          <span className="text-xs font-medium">{isCorporate ? 'Customers' : 'Friends'}</span>
         </button>
         <span className="text-white font-bold text-2xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>
         <button onClick={() => navigate('/library')} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
