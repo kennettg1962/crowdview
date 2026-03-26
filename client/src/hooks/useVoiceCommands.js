@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
+import GlassesSDK from '../services/GlassesSDK';
 
 /**
  * Register screen-local voice commands with the single GlobalVoiceCommands session.
@@ -9,11 +10,16 @@ import { useApp } from '../context/AppContext';
  * @param {Object} options.commands - map of command name → handler
  */
 export default function useVoiceCommands({ screen, commands = {} }) {
-  const { registerScreenVoice, unregisterScreenVoice } = useApp();
+  const { registerScreenVoice, unregisterScreenVoice, captureMode } = useApp();
   const commandsRef = useRef(commands);
   commandsRef.current = commands;
 
   const speak = useCallback((text) => {
+    // Glasses mode: route audio through the glasses speakers
+    if (captureMode === 'glasses') {
+      GlassesSDK.speak(text);
+      return;
+    }
     // WKWebView's SpeechSynthesis conflicts with the active mic session
     if (window.location.protocol === 'capacitor:') return;
     if (!window.speechSynthesis) return;
@@ -21,7 +27,7 @@ export default function useVoiceCommands({ screen, commands = {} }) {
     utterance.rate   = 1.1;
     utterance.volume = 0.7;
     window.speechSynthesis.speak(utterance);
-  }, []);
+  }, [captureMode]);
 
   const speakRef = useRef(speak);
   speakRef.current = speak;

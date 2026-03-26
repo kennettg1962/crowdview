@@ -23,7 +23,14 @@ export default function useResultDisplay() {
   const navigate = useNavigate();
 
   const showResult = useCallback((photoDataUrl, { saveToLibrary = true, faces } = {}) => {
-    if (captureMode === 'glasses' && faces) GlassesSDK.sendResult(faces);
+    if (captureMode === 'glasses' && faces) {
+      GlassesSDK.sendResult(faces);
+      // Announce a brief audio summary through the glasses speakers
+      const summary = faces.length === 0
+        ? 'No faces found'
+        : faces.map(f => f.friendName || 'Unknown').join(', ');
+      GlassesSDK.speak(summary);
+    }
     navigate('/id', { state: { photoDataUrl, saveToLibrary } });
   }, [captureMode, navigate]);
 
