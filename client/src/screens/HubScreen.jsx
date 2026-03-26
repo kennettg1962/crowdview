@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import useVoiceCommands from '../hooks/useVoiceCommands';
 import useCaptureSource from '../hooks/useCaptureSource';
 import useResultDisplay from '../hooks/useResultDisplay';
+import GlassesSDK from '../services/GlassesSDK';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import DevicePicker from '../components/DevicePicker';
@@ -55,9 +56,10 @@ export default function HubScreen() {
     currentAudioIn, setCurrentAudioIn,
     startStream, stopStream,
     isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
-    setSlideoutOpen, captureMode,
+    setSlideoutOpen, captureMode, injectGlassesFrame,
   } = useApp();
   const videoRef = useRef(null);
+  const glassesCanvasRef = useRef(null);
   const { getCaptureFrame } = useCaptureSource(videoRef);
   const { showResult } = useResultDisplay();
   const overlayCanvasRef = useRef(null);
@@ -90,10 +92,34 @@ export default function HubScreen() {
     };
   }, [selectedFace]);
 
+  // ── Glasses camera feed ───────────────────────────────────────────────────
+  // Subscribe to frames from GlassesSDK, paint them to the glasses canvas,
+  // and store the latest frame for getCaptureFrame() (snap / live scan).
+  useEffect(() => {
+    if (captureMode !== 'glasses') return;
+    const handleFrame = (dataUrl) => {
+      injectGlassesFrame(dataUrl);
+      const canvas = glassesCanvasRef.current;
+      if (!canvas) return;
+      const img = new Image();
+      img.onload = () => {
+        if (canvas.width !== img.naturalWidth)   canvas.width  = img.naturalWidth;
+        if (canvas.height !== img.naturalHeight) canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+      };
+      img.src = dataUrl;
+    };
+    // Mark as streaming so buttons (Id, Live, etc.) become enabled
+    startStream(null);
+    GlassesSDK.onFrame(handleFrame);
+    return () => GlassesSDK.offFrame(handleFrame);
+  }, [captureMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Auto-connect on mount ──────────────────────────────────────────────────
   // Always attempt camera + mic on load (like Zoom/Teams). Uses the last-used
   // camera as an ideal hint; falls back to system default if unavailable.
   useEffect(() => {
+    if (captureMode === 'glasses') return; // glasses supply the feed — skip getUserMedia
     if (isStreaming || autoConnectAttempted.current) return;
     autoConnectAttempted.current = true;
     (async () => {
@@ -518,9 +544,12 @@ export default function HubScreen() {
             ${selectedFace ? 'md:w-[42%]' : 'md:w-[70%]'}`}
         >
           <div className="w-full video-container bg-black border-0 md:border-2 md:border-white md:rounded-sm overflow-hidden relative">
-            {mediaStream ? (
+            {(captureMode === 'glasses' || mediaStream) ? (
               <>
-                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                {captureMode === 'glasses'
+                  ? <canvas ref={glassesCanvasRef} className="w-full h-full object-cover" />
+                  : <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                }
                 <canvas
                   ref={overlayCanvasRef}
                   onClick={handleCanvasClick}

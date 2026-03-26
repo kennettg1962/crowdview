@@ -9,27 +9,27 @@ import { useApp } from '../context/AppContext';
  *
  * getCaptureFrame(maxW, quality) → Promise<HTMLCanvasElement>
  *   Phone mode  : draws the current video frame into a scaled canvas.
- *   Glasses mode: resolves with the next frame pushed via injectGlassesFrame().
+ *   Glasses mode: draws the latest frame stored in latestGlassesFrameRef
+ *                 (populated continuously by HubScreen's GlassesSDK.onFrame subscription).
  */
 export default function useCaptureSource(videoRef) {
-  const { captureMode, pendingGlassesFrameRef } = useApp();
+  const { captureMode, latestGlassesFrameRef } = useApp();
 
-  const getCaptureFrame = useCallback((maxW = 640, quality = 0.8) => {
+  const getCaptureFrame = useCallback((maxW = 640) => {
     if (captureMode === 'glasses') {
-      // Glasses push frames asynchronously — resolve when injectGlassesFrame fires.
+      const dataUrl = latestGlassesFrameRef.current;
+      if (!dataUrl) return Promise.reject(new Error('No glasses frame available'));
       return new Promise(resolve => {
-        pendingGlassesFrameRef.current = (dataUrl) => {
-          const img = new Image();
-          img.onload = () => {
-            const scale = Math.min(1, maxW / img.width);
-            const canvas = document.createElement('canvas');
-            canvas.width  = Math.round(img.width  * scale);
-            canvas.height = Math.round(img.height * scale);
-            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-            resolve(canvas);
-          };
-          img.src = dataUrl;
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxW / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width  = Math.round(img.width  * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas);
         };
+        img.src = dataUrl;
       });
     }
 
@@ -42,7 +42,7 @@ export default function useCaptureSource(videoRef) {
     canvas.height = Math.round(video.videoHeight * scale);
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
     return Promise.resolve(canvas);
-  }, [captureMode, videoRef, pendingGlassesFrameRef]);
+  }, [captureMode, videoRef, latestGlassesFrameRef]);
 
   return { getCaptureFrame };
 }

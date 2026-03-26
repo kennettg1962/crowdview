@@ -18,13 +18,10 @@ export function AppProvider({ children }) {
   // 'phone': existing camera behaviour (default)
   // 'glasses': frames come from GlassesSDK; results route to glasses display
   const [captureMode, setCaptureMode] = useState('phone');
-  // Holds a resolver set by useCaptureSource; called by injectGlassesFrame
-  const pendingGlassesFrameRef = useRef(null);
+  // Always holds the most recent frame dataUrl pushed by GlassesSDK.onFrame
+  const latestGlassesFrameRef = useRef(null);
   const injectGlassesFrame = useCallback((dataUrl) => {
-    if (pendingGlassesFrameRef.current) {
-      pendingGlassesFrameRef.current(dataUrl);
-      pendingGlassesFrameRef.current = null;
-    }
+    latestGlassesFrameRef.current = dataUrl;
   }, []);
 
   // Registry for screen-local voice commands — avoids multiple recognition sessions
@@ -185,7 +182,7 @@ export function AppProvider({ children }) {
       voicePaused, setVoicePaused,
       screenVoiceRef, registerScreenVoice, unregisterScreenVoice,
       isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
-      captureMode, setCaptureMode, pendingGlassesFrameRef, injectGlassesFrame
+      captureMode, setCaptureMode, latestGlassesFrameRef, injectGlassesFrame
     }}>
       {children}
     </AppContext.Provider>
