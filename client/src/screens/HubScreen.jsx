@@ -460,7 +460,9 @@ export default function HubScreen() {
           </button>
         </div>
 
-        <span className="text-white font-bold text-xl tracking-wide text-center">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>
+        <span className="text-white font-bold text-xl tracking-wide text-center leading-tight">
+          {isCorporate ? <><div>CrowdView</div><div>Corporate</div></> : 'CrowdView'}
+        </span>
 
         <div className="flex-1 flex justify-end">
           <button
