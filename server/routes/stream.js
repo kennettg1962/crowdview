@@ -1,12 +1,29 @@
 'use strict';
 
-const express = require('express');
-const router  = express.Router();
-const crypto  = require('crypto');
-const fs      = require('fs');
-const path    = require('path');
-const pool    = require('../db/connection');
-const auth    = require('../middleware/auth');
+const express    = require('express');
+const router     = express.Router();
+const crypto     = require('crypto');
+const fs         = require('fs');
+const path       = require('path');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+const execFileAsync = promisify(execFile);
+const pool       = require('../db/connection');
+const auth       = require('../middleware/auth');
+
+// Move moov atom to start of MP4 so browsers can stream without downloading the whole file.
+// Silently skips if ffmpeg is not installed.
+async function applyFaststart(filePath) {
+  const tmp = filePath + '.fs.mp4';
+  try {
+    await execFileAsync('ffmpeg', ['-i', filePath, '-c', 'copy', '-movflags', 'faststart', '-y', tmp]);
+    fs.renameSync(tmp, filePath);
+    console.log(`[stream] faststart applied: ${path.basename(filePath)}`);
+  } catch (err) {
+    console.warn('[stream] ffmpeg faststart skipped:', err.message);
+    try { fs.unlinkSync(tmp); } catch (_) {}
+  }
+}
 
 const RECORDINGS_ROOT = process.env.RECORDINGS_ROOT || '/var/www/crowdview-streams';
 
@@ -128,6 +145,10 @@ router.post('/on-unpublish', async (req, res) => {
         .sort((a, b) => b.mtime - a.mtime);
       if (files.length) recFile = path.join(recDir, files[0].name);
     }
+
+    // Rewrite the file with moov atom at the front so browsers can stream it
+    // progressively without downloading the entire file first.
+    if (recFile) await applyFaststart(recFile);
 
     await pool.execute(
       `UPDATE Stream
