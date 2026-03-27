@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../api/api';
 import { UploadIcon, XIcon, DeleteIcon } from './Icons';
 import AuthImage from './AuthImage';
+import { useApp } from '../context/AppContext';
 
 const GROUPS = ['Friend', 'Family', 'Friend of Friend', 'Friend of Family', 'Business'];
 
@@ -10,9 +11,13 @@ const GROUPS = ['Friend', 'Family', 'Friend of Friend', 'Friend of Family', 'Bus
  * Used directly by HubScreen panel and wrapped in FriendFormPopup for modal use.
  */
 export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, onDelete }) {
+  const { isCorporate } = useApp();
+  const noun = isCorporate ? 'customer' : 'friend';
+  const Noun = isCorporate ? 'Customer' : 'Friend';
+  const defaultGroup = isCorporate ? 'Business' : 'Friend';
   const [name, setName] = useState(friend?.Name_Txt || '');
   const [note, setNote] = useState(friend?.Note_Multi_Line_Txt || '');
-  const [group, setGroup] = useState(friend?.Friend_Group || 'Friend');
+  const [group, setGroup] = useState(friend?.Friend_Group || defaultGroup);
   const [photos, setPhotos] = useState([]);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -123,7 +128,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
   }
 
   function handleCloseRequest() {
-    if (isDirty.current && (name !== (friend?.Name_Txt || '') || note !== (friend?.Note_Multi_Line_Txt || '') || group !== (friend?.Friend_Group || 'Friend'))) {
+    if (isDirty.current && (name !== (friend?.Name_Txt || '') || note !== (friend?.Note_Multi_Line_Txt || '') || group !== (friend?.Friend_Group || defaultGroup))) {
       setConfirmClose(true);
     } else {
       onClose();
@@ -206,7 +211,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
         <h2 className="text-white font-semibold text-lg">
-          {friend?.Friend_Id ? 'Edit Friend' : 'Add Friend'}
+          {friend?.Friend_Id ? `Edit ${Noun}` : `Add ${Noun}`}
         </h2>
         <button onClick={handleCloseRequest} className="text-gray-400 hover:text-white">
           <XIcon className="w-5 h-5" />
@@ -259,7 +264,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
           <label className="text-gray-300 text-sm block mb-1">Name <span className="text-red-400">*</span></label>
           <input type="text" value={name} onChange={e => setName(e.target.value)} maxLength={50}
             className="w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-            placeholder="Friend's name (max 50 chars)" />
+            placeholder={`${Noun}'s name (max 50 chars)`} />
           {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
         </div>
 
@@ -268,18 +273,20 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
           <label className="text-gray-300 text-sm block mb-1">Note</label>
           <textarea value={note} onChange={e => setNote(e.target.value)} rows={3}
             className="w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none"
-            placeholder="Optional notes about this friend" />
+            placeholder={`Optional notes about this ${noun}`} />
         </div>
 
-        {/* Group */}
-        <div>
-          <label className="text-gray-300 text-sm block mb-1">Group <span className="text-red-400">*</span></label>
-          <select value={group} onChange={e => setGroup(e.target.value)}
-            className="w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
-            {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-          {errors.group && <p className="text-red-400 text-xs mt-1">{errors.group}</p>}
-        </div>
+        {/* Group — hidden in corporate mode (always 'Business') */}
+        {!isCorporate && (
+          <div>
+            <label className="text-gray-300 text-sm block mb-1">Group <span className="text-red-400">*</span></label>
+            <select value={group} onChange={e => setGroup(e.target.value)}
+              className="w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+              {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+            {errors.group && <p className="text-red-400 text-xs mt-1">{errors.group}</p>}
+          </div>
+        )}
 
         {/* CrowdView Account Link */}
         {friend?.Friend_Id && (
@@ -316,7 +323,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
       <div className="flex gap-2 px-5 py-4 border-t border-gray-700">
         {friend?.Friend_Id && (
           <button onClick={() => setConfirmDelete(true)}
-            className="p-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition-colors" title="Delete friend">
+            className="p-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition-colors" title={`Delete ${noun}`}>
             <DeleteIcon className="w-5 h-5" />
           </button>
         )}
@@ -331,7 +338,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-60">
           <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
             <p className="text-white font-medium mb-1">Delete {friend?.Name_Txt}?</p>
-            <p className="text-gray-400 text-sm mb-4">This will permanently remove the friend and all their photos.</p>
+            <p className="text-gray-400 text-sm mb-4">This will permanently remove the {noun} and all their photos.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">Cancel</button>
               <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm disabled:opacity-40">
