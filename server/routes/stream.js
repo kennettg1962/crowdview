@@ -295,28 +295,8 @@ router.get('/recording/:streamKey/:filename', async (req, res) => {
     return res.status(404).json({ error: 'Recording not found' });
   }
 
-  const stat = fs.statSync(filePath);
-  const range = req.headers.range;
-
-  if (range) {
-    const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
-    const start = parseInt(startStr, 10);
-    const end = endStr ? parseInt(endStr, 10) : stat.size - 1;
-    res.writeHead(206, {
-      'Content-Range': `bytes ${start}-${end}/${stat.size}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': end - start + 1,
-      'Content-Type': 'video/mp4',
-    });
-    fs.createReadStream(filePath, { start, end }).pipe(res);
-  } else {
-    res.writeHead(200, {
-      'Content-Length': stat.size,
-      'Content-Type': 'video/mp4',
-      'Accept-Ranges': 'bytes',
-    });
-    fs.createReadStream(filePath).pipe(res);
-  }
+  // res.sendFile handles range requests, ETags, and Content-Type correctly
+  res.sendFile(filePath);
 });
 
 // ---------------------------------------------------------------------------
