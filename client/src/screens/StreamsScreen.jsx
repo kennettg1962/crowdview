@@ -10,6 +10,7 @@ import {
 } from '../components/Icons';
 import { useApp } from '../context/AppContext';
 import api from '../api/api';
+import FriendFormPopup from '../components/FriendFormPopup';
 
 const SERVER_ORIGIN = window.location.protocol === 'capacitor:'
   ? 'https://crowdview.tv'
@@ -128,17 +129,19 @@ function EmptyTile() {
 
 // ── Full-screen popup when a tile is tapped ──────────────────────────────────
 function TilePopup({ stream, onClose }) {
-  const videoRef         = useRef(null);
-  const canvasRef        = useRef(null);
-  const hlsRef           = useRef(null);
+  const videoRef          = useRef(null);
+  const canvasRef         = useRef(null);
+  const hlsRef            = useRef(null);
   const liveScanActiveRef = useRef(false);
-  const scanInFlightRef  = useRef(false);
+  const scanInFlightRef   = useRef(false);
 
-  const [popupError, setPopupError]               = useState(false);
-  const [liveScan, setLiveScan]                   = useState(false);
+  const [popupError, setPopupError]                     = useState(false);
+  const [liveScan, setLiveScan]                         = useState(false);
   const [liveScanInitializing, setLiveScanInitializing] = useState(false);
+  const [liveFaces, setLiveFaces]                       = useState([]);
+  const [liveFacePopup, setLiveFacePopup]               = useState(null);
 
-  // HLS setup for popup
+  // HLS setup
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !stream) return;
@@ -164,13 +167,14 @@ function TilePopup({ stream, onClose }) {
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [stream]);
 
-  // Live scan interval
+  // Live scan interval — captures frame, calls rekognition, draws boxes + stores crops
   useEffect(() => {
     liveScanActiveRef.current = liveScan;
     if (!liveScan) {
       const canvas = canvasRef.current;
       if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
       setLiveScanInitializing(false);
+      setLiveFaces([]);
       return;
     }
 
@@ -196,9 +200,28 @@ function TilePopup({ stream, onClose }) {
         const res = await api.post('/api/rekognition/identify', { imageData: dataUrl });
         if (!liveScanActiveRef.current) return;
         const { faces } = res.data;
+
+        // Generate face crops for FriendFormPopup
+        const facesWithCrops = faces.map(face => {
+          const bb = face.boundingBox;
+          const cx = Math.round(bb.left * capture.width);
+          const cy = Math.round(bb.top  * capture.height);
+          const cw = Math.round(bb.width  * capture.width);
+          const ch = Math.round(bb.height * capture.height);
+          if (cw > 0 && ch > 0) {
+            const crop = document.createElement('canvas');
+            crop.width = cw; crop.height = ch;
+            crop.getContext('2d').drawImage(capture, cx, cy, cw, ch, 0, 0, cw, ch);
+            return { ...face, cropDataUrl: crop.toDataURL('image/jpeg', 0.9) };
+          }
+          return face;
+        });
+        setLiveFaces(facesWithCrops);
+
+        // Draw bounding boxes on canvas overlay
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        faces.forEach(face => {
+        facesWithCrops.forEach(face => {
           const { boundingBox, status, friendName } = face;
           const x = boundingBox.left   * canvas.width;
           const y = boundingBox.top    * canvas.height;
@@ -231,6 +254,25 @@ function TilePopup({ stream, onClose }) {
     };
   }, [liveScan]);
 
+  // Hit-test canvas click against bounding boxes → open FriendFormPopup
+  function handleCanvasClick(e) {
+    if (!liveScan || !canvasRef.current || liveFaces.length === 0) return;
+    const canvas = canvasRef.current;
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clickX = (e.clientX - rect.left) * scaleX;
+    const clickY = (e.clientY - rect.top)  * scaleY;
+    const hit = liveFaces.find(face => {
+      const x = face.boundingBox.left  * canvas.width;
+      const y = face.boundingBox.top   * canvas.height;
+      const w = face.boundingBox.width * canvas.width;
+      const h = face.boundingBox.height * canvas.height;
+      return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
+    });
+    if (hit) setLiveFacePopup(hit);
+  }
+
   function toggleLiveScan() {
     if (!liveScan) setLiveScanInitializing(true);
     setLiveScan(v => !v);
@@ -238,47 +280,57 @@ function TilePopup({ stream, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      {/* Popup header */}
-      <div className="flex items-center gap-3 px-3 py-2 bg-gray-900 flex-shrink-0">
-        <button
-          onClick={onClose}
-          className="text-gray-300 hover:text-white p-1.5 rounded-lg hover:bg-gray-700"
-        >
-          <BackIcon className="w-6 h-6" />
-        </button>
 
-        <div className="flex-1 min-w-0">
-          <p className="text-white font-medium text-sm truncate">{stream.Streamer_Name}</p>
-          {stream.Title_Txt && (
-            <p className="text-gray-400 text-xs truncate">{stream.Title_Txt}</p>
-          )}
+      {/* Header — 3-column: back+name | Detect (centered) | LIVE badge */}
+      <div className="grid grid-cols-3 items-center px-3 py-2 bg-gray-900 flex-shrink-0">
+
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            onClick={onClose}
+            className="text-gray-300 hover:text-white p-1.5 rounded-lg hover:bg-gray-700 flex-shrink-0"
+          >
+            <BackIcon className="w-6 h-6" />
+          </button>
+          <div className="min-w-0">
+            <p className="text-white font-medium text-sm truncate">{stream.Streamer_Name}</p>
+            {stream.Title_Txt && (
+              <p className="text-gray-400 text-xs truncate">{stream.Title_Txt}</p>
+            )}
+          </div>
         </div>
 
-        <LiveBadge />
+        <div className="flex justify-center">
+          <button
+            onClick={toggleLiveScan}
+            title="Detect faces"
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors text-white
+              ${liveScan ? 'bg-green-700 hover:bg-green-600 animate-pulse' : 'hover:bg-gray-700'}`}
+          >
+            <LiveScanIcon className="w-7 h-7" />
+            <span className="text-xs">Detect</span>
+          </button>
+        </div>
 
-        <button
-          onClick={toggleLiveScan}
-          title="Detect faces"
-          className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg transition-colors text-white text-xs
-            ${liveScan ? 'bg-green-700 hover:bg-green-600 animate-pulse' : 'hover:bg-gray-700'}`}
-        >
-          <LiveScanIcon className="w-6 h-6" />
-          <span className="text-[10px]">Detect</span>
-        </button>
+        <div className="flex justify-end">
+          <LiveBadge />
+        </div>
       </div>
 
-      {/* Video area */}
+      {/* Video + canvas overlay */}
       <div className="flex-1 relative bg-black min-h-0">
         <video ref={videoRef} playsInline className="w-full h-full object-contain" />
 
         <canvas
           ref={canvasRef}
-          className="absolute inset-0 w-full h-full pointer-events-none"
+          onClick={handleCanvasClick}
+          onTouchEnd={e => { e.preventDefault(); handleCanvasClick(e.changedTouches[0]); }}
+          className={`absolute inset-0 w-full h-full
+            ${liveScan && liveFaces.length > 0 ? 'cursor-pointer' : 'pointer-events-none'}`}
         />
 
         {liveScanInitializing && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50 pointer-events-none">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400" />
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-400" />
             <p className="text-white text-sm">Initializing face detection...</p>
           </div>
         )}
@@ -290,6 +342,26 @@ function TilePopup({ stream, onClose }) {
           </div>
         )}
       </div>
+
+      {/* Friend/Customer form popup on face tap */}
+      {liveFacePopup && (
+        <FriendFormPopup
+          friend={liveFacePopup.friendId
+            ? { Friend_Id: liveFacePopup.friendId, Name_Txt: liveFacePopup.friendName }
+            : null}
+          capturedPhotoUrl={liveFacePopup.cropDataUrl || null}
+          onClose={() => setLiveFacePopup(null)}
+          onSave={saved => {
+            if (!saved) return;
+            setLiveFaces(prev => prev.map(f =>
+              f.faceId === liveFacePopup.faceId
+                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId }
+                : f
+            ));
+            setLiveFacePopup(null);
+          }}
+        />
+      )}
     </div>
   );
 }
