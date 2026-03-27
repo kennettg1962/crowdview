@@ -81,9 +81,17 @@ export default function StreamWatchScreen() {
         calcVideoRendered();
       });
       video.addEventListener('error', () => {
-        // Ignore errors after metadata loaded — video is playable; these are
-        // transient range-request cancellations from the browser's media engine.
-        if (metadataLoaded) return;
+        const code = video.error?.code;
+        const msg  = video.error?.message;
+        console.warn('[VOD] video error', { code, msg, metadataLoaded });
+        // Ignore aborted-request errors (code 1) — these are normal range-request
+        // cancellations from the browser's media engine, not actual failures.
+        if (metadataLoaded && code === 1 /* MEDIA_ERR_ABORTED */) return;
+        if (metadataLoaded) {
+          // Real error during playback — log but don't hide the video; user can retry.
+          console.error('[VOD] playback error after metadata loaded, code:', code);
+          return;
+        }
         setError('Recording unavailable or could not be loaded.');
         setLoading(false);
       });
@@ -299,6 +307,7 @@ export default function StreamWatchScreen() {
                 ref={videoRef}
                 controls={!hasFaces && !liveScan}
                 playsInline
+                preload={isLive ? 'none' : 'auto'}
                 className="block w-full h-full object-contain"
               />
 
