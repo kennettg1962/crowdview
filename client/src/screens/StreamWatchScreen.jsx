@@ -76,9 +76,10 @@ export default function StreamWatchScreen() {
       let metadataLoaded = false;
       video.addEventListener('loadedmetadata', () => {
         metadataLoaded = true;
-        setError(null); // clear any transient error that fired before metadata arrived
+        setError(null);
         setLoading(false);
         calcVideoRendered();
+        video.play().catch(() => {});
       });
       video.addEventListener('error', () => {
         const code = video.error?.code;
