@@ -73,13 +73,17 @@ export default function StreamWatchScreen() {
       const rec = stream.recordings?.[0];
       if (!rec) { setError('No recording available for this stream.'); setLoading(false); return; }
       video.src = rec.url;
+      let metadataLoaded = false;
       video.addEventListener('loadedmetadata', () => {
+        metadataLoaded = true;
+        setError(null); // clear any transient error that fired before metadata arrived
         setLoading(false);
         calcVideoRendered();
-        // Don't force autoplay for VOD — browser autoplay policies block it.
-        // Native controls are visible; user clicks play.
       });
       video.addEventListener('error', () => {
+        // Ignore errors after metadata loaded — video is playable; these are
+        // transient range-request cancellations from the browser's media engine.
+        if (metadataLoaded) return;
         setError('Recording unavailable or could not be loaded.');
         setLoading(false);
       });
