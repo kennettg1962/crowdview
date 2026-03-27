@@ -74,7 +74,7 @@ export default function CorporateUsersScreen() {
             <HomeIcon className="w-[30px] h-[30px]" />
           </button>
         }
-        center={<span className="text-white font-bold text-xl tracking-wide">CrowdView Corporate</span>}
+        center={<span className="text-white font-bold text-xl tracking-wide text-center leading-tight"><div>CrowdView</div><div>Corporate</div></span>}
         right={
           <button onClick={handleAddNew} title="Add User" className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
             <PlusIcon className="w-[30px] h-[30px]" />

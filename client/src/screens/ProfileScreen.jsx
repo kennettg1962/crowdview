@@ -90,7 +90,7 @@ export default function ProfileScreen() {
             <MovieCameraIcon className="w-5 h-5" />
           </button>
         }
-        center={<span className="text-white font-bold text-xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>}
+        center={<span className="text-white font-bold text-xl tracking-wide text-center leading-tight">{isCorporate ? <><div>CrowdView</div><div>Corporate</div></> : 'CrowdView'}</span>}
         right={
           <button onClick={() => navigate('/friends')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
             <FriendsIcon className="w-5 h-5" />

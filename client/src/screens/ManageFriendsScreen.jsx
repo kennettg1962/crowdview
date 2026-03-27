@@ -131,7 +131,7 @@ export default function ManageFriendsScreen() {
             <MovieCameraIcon className="w-[30px] h-[30px]" />
           </button>
         }
-        center={<span className="text-white font-bold text-xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>}
+        center={<span className="text-white font-bold text-xl tracking-wide text-center leading-tight">{isCorporate ? <><div>CrowdView</div><div>Corporate</div></> : 'CrowdView'}</span>}
         right={
           <button onClick={handleAddNew} title={`Add ${Noun}`} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
             <PlusIcon className="w-[30px] h-[30px]" />
