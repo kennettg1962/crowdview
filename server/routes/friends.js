@@ -68,8 +68,8 @@ router.put('/:id', auth, async (req, res) => {
   const scope = friendsScope(req.user);
   try {
     const [result] = await pool.execute(
-      `UPDATE Friend SET Name_Txt = ?, Note_Multi_Line_Txt = ?, Friend_Group = ?
-        WHERE Friend_Id = ? AND ${scope.clause}`,
+      `UPDATE Friend f SET f.Name_Txt = ?, f.Note_Multi_Line_Txt = ?, f.Friend_Group = ?
+        WHERE f.Friend_Id = ? AND ${scope.clause}`,
       [name, note || '', group || 'Friend', req.params.id, ...scope.params]
     );
     if (!result.affectedRows) return res.status(404).json({ error: 'Friend not found' });
@@ -97,7 +97,7 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     const [result] = await pool.execute(
-      `DELETE FROM Friend WHERE Friend_Id = ? AND ${scope.clause}`,
+      `DELETE f FROM Friend f WHERE f.Friend_Id = ? AND ${scope.clause}`,
       [req.params.id, ...scope.params]
     );
     if (!result.affectedRows) return res.status(404).json({ error: 'Friend not found' });
@@ -170,7 +170,7 @@ router.post('/:id/photos', auth, upload.single('photo'), async (req, res) => {
   const scope = friendsScope(req.user);
   try {
     const [friend] = await pool.execute(
-      `SELECT Friend_Id FROM Friend WHERE Friend_Id = ? AND ${scope.clause}`,
+      `SELECT f.Friend_Id FROM Friend f WHERE f.Friend_Id = ? AND ${scope.clause}`,
       [req.params.id, ...scope.params]
     );
     if (!friend.length) return res.status(404).json({ error: 'Friend not found' });
@@ -236,7 +236,7 @@ router.patch('/:id/link', auth, async (req, res) => {
   try {
     // Verify this friend is accessible to the caller
     const [friends] = await pool.execute(
-      `SELECT Friend_Id FROM Friend WHERE Friend_Id = ? AND ${scope.clause}`,
+      `SELECT f.Friend_Id FROM Friend f WHERE f.Friend_Id = ? AND ${scope.clause}`,
       [req.params.id, ...scope.params]
     );
     if (!friends.length) return res.status(404).json({ error: 'Friend not found' });
@@ -270,7 +270,7 @@ router.patch('/:id/unlink', auth, async (req, res) => {
   const scope = friendsScope(req.user);
   try {
     const [result] = await pool.execute(
-      `UPDATE Friend SET Friend_User_Id = NULL WHERE Friend_Id = ? AND ${scope.clause}`,
+      `UPDATE Friend f SET f.Friend_User_Id = NULL WHERE f.Friend_Id = ? AND ${scope.clause}`,
       [req.params.id, ...scope.params]
     );
     if (!result.affectedRows) return res.status(404).json({ error: 'Friend not found' });
