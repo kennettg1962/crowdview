@@ -106,8 +106,24 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
       const canvas = canvasRef.current;
       if (!video.videoWidth || video.readyState < 3) return;
 
-      if (canvas.width  !== video.videoWidth)  canvas.width  = video.videoWidth;
-      if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
+      // Size canvas to CSS pixels so coordinates map 1:1 to the displayed area
+      const containerW = video.clientWidth;
+      const containerH = video.clientHeight;
+      if (canvas.width  !== containerW) canvas.width  = containerW;
+      if (canvas.height !== containerH) canvas.height = containerH;
+
+      // Calculate where the video content actually sits inside the container
+      // (object-contain letterboxes with black bars on two sides)
+      const vAR = video.videoWidth / video.videoHeight;
+      const cAR = containerW / containerH;
+      let displayW, displayH, offsetX = 0, offsetY = 0;
+      if (vAR > cAR) {
+        displayW = containerW; displayH = containerW / vAR;
+        offsetY = (containerH - displayH) / 2;
+      } else {
+        displayH = containerH; displayW = containerH * vAR;
+        offsetX = (containerW - displayW) / 2;
+      }
 
       const maxW    = 640;
       const scale   = Math.min(1, maxW / video.videoWidth);
@@ -143,10 +159,10 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         facesWithCrops.forEach(face => {
           const { boundingBox, status, friendName } = face;
-          const x = boundingBox.left   * canvas.width;
-          const y = boundingBox.top    * canvas.height;
-          const w = boundingBox.width  * canvas.width;
-          const h = boundingBox.height * canvas.height;
+          const x = offsetX + boundingBox.left   * displayW;
+          const y = offsetY + boundingBox.top    * displayH;
+          const w =           boundingBox.width  * displayW;
+          const h =           boundingBox.height * displayH;
           const color = STATUS_COLORS[status] || '#ffffff';
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
@@ -175,18 +191,32 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
   }, [scanActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleCanvasClick(e) {
-    if (!scanActive || !canvasRef.current || liveFaces.length === 0) return;
+    if (!scanActive || !canvasRef.current || !videoRef.current || liveFaces.length === 0) return;
     const canvas = canvasRef.current;
+    const video  = videoRef.current;
     const rect   = canvas.getBoundingClientRect();
     const scaleX = canvas.width  / rect.width;
     const scaleY = canvas.height / rect.height;
     const clickX = (e.clientX - rect.left) * scaleX;
     const clickY = (e.clientY - rect.top)  * scaleY;
+
+    // Same letterbox geometry as the draw pass
+    const vAR = video.videoWidth / video.videoHeight;
+    const cAR = canvas.width / canvas.height;
+    let displayW, displayH, offsetX = 0, offsetY = 0;
+    if (vAR > cAR) {
+      displayW = canvas.width; displayH = canvas.width / vAR;
+      offsetY = (canvas.height - displayH) / 2;
+    } else {
+      displayH = canvas.height; displayW = canvas.height * vAR;
+      offsetX = (canvas.width - displayW) / 2;
+    }
+
     const hit = liveFaces.find(face => {
-      const x = face.boundingBox.left  * canvas.width;
-      const y = face.boundingBox.top   * canvas.height;
-      const w = face.boundingBox.width * canvas.width;
-      const h = face.boundingBox.height * canvas.height;
+      const x = offsetX + face.boundingBox.left  * displayW;
+      const y = offsetY + face.boundingBox.top   * displayH;
+      const w =           face.boundingBox.width * displayW;
+      const h =           face.boundingBox.height * displayH;
       return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
     });
     if (hit) setSelectedFace(hit);
