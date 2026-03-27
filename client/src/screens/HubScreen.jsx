@@ -447,26 +447,30 @@ export default function HubScreen() {
 
       {/* ── Mobile header — fixed overlay at top ── */}
       <header className="flex md:hidden fixed top-0 left-0 right-0 z-50
-        items-center justify-between px-4 pb-3
+        items-center px-4 pb-3
         bg-black/70"
         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>
-        <button
-          onClick={() => navigate('/friends')}
-          className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
-        >
-          <FriendsIcon className="w-9 h-9" />
-          <span className="text-xs font-medium">{isCorporate ? 'Customers' : 'Friends'}</span>
-        </button>
+        <div className="flex-1 flex justify-start">
+          <button
+            onClick={() => navigate('/friends')}
+            className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
+          >
+            <FriendsIcon className="w-9 h-9" />
+            <span className="text-xs font-medium">{isCorporate ? 'Customers' : 'Friends'}</span>
+          </button>
+        </div>
 
-        <span className="text-white font-bold text-2xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>
+        <span className="text-white font-bold text-xl tracking-wide text-center">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>
 
-        <button
-          onClick={() => navigate('/library')}
-          className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
-        >
-          <LibraryIcon className="w-9 h-9" />
-          <span className="text-xs font-medium">Library</span>
-        </button>
+        <div className="flex-1 flex justify-end">
+          <button
+            onClick={() => navigate('/library')}
+            className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors"
+          >
+            <LibraryIcon className="w-9 h-9" />
+            <span className="text-xs font-medium">Library</span>
+          </button>
+        </div>
       </header>
 
       {/* ── Desktop header — normal flow ── */}
