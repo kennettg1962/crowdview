@@ -142,11 +142,11 @@ router.post('/on-unpublish', async (req, res) => {
     console.log(`[stream] ${streamKey} ended — recording: ${recFile || 'none'}`);
 
     // Enforce 200 past-stream cap per organisation (corporate orgs only)
-    const [orgRows] = await pool.execute(
-      'SELECT Parent_Organization_Id FROM User WHERE User_Id = ?',
-      [users[0].User_Id]
+    const [userRows] = await pool.execute(
+      'SELECT User_Id, Parent_Organization_Id FROM User WHERE Stream_Key_Txt = ?',
+      [streamKey]
     );
-    const orgId = orgRows[0]?.Parent_Organization_Id;
+    const orgId = userRows[0]?.Parent_Organization_Id;
     if (orgId) {
       const [excess] = await pool.execute(
         `SELECT s.Stream_Id, s.Recording_File_Txt
@@ -257,7 +257,7 @@ router.get('/past', auth, async (req, res) => {
     }
     const [rows] = await pool.execute(query, params);
 
-    // Build recording URL from the stored file path for each past stream
+    // Build recording URL — served via Express API to avoid nginx static file config issues
     const base = process.env.CLIENT_URL || 'https://crowdview.tv';
     const result = rows.map(row => {
       let recordings = [];
@@ -265,7 +265,7 @@ router.get('/past', auth, async (req, res) => {
         const filename = path.basename(row.Recording_File_Txt);
         recordings = [{
           filename,
-          url: `${base}/recordings/live/${row.Stream_Key_Txt}/${filename}`,
+          url: `${base}/api/stream/recording/${row.Stream_Key_Txt}/${encodeURIComponent(filename)}`,
         }];
       }
       return { ...row, recordings };
@@ -274,6 +274,47 @@ router.get('/past', auth, async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/stream/recording/:streamKey/:filename  — serve recording file
+// Bypasses nginx static file serving; works regardless of nginx /recordings/ config.
+// ---------------------------------------------------------------------------
+router.get('/recording/:streamKey/:filename', async (req, res) => {
+  const { streamKey, filename } = req.params;
+  const safeFilename = path.basename(decodeURIComponent(filename));
+  // Only allow alphanumeric, hyphens, underscores, dots — prevent path traversal
+  if (!/^[\w\-. ]+\.mp4$/i.test(safeFilename)) {
+    return res.status(400).json({ error: 'Invalid filename' });
+  }
+  const filePath = path.join(RECORDINGS_ROOT, 'live', streamKey, safeFilename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Recording not found' });
+  }
+
+  const stat = fs.statSync(filePath);
+  const range = req.headers.range;
+
+  if (range) {
+    const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(startStr, 10);
+    const end = endStr ? parseInt(endStr, 10) : stat.size - 1;
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': end - start + 1,
+      'Content-Type': 'video/mp4',
+    });
+    fs.createReadStream(filePath, { start, end }).pipe(res);
+  } else {
+    res.writeHead(200, {
+      'Content-Length': stat.size,
+      'Content-Type': 'video/mp4',
+      'Accept-Ranges': 'bytes',
+    });
+    fs.createReadStream(filePath).pipe(res);
   }
 });
 
