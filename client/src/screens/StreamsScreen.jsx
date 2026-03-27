@@ -136,8 +136,8 @@ function TilePopup({ stream, onClose }) {
   const scanInFlightRef   = useRef(false);
 
   const [popupError, setPopupError]                     = useState(false);
-  const [liveScan, setLiveScan]                         = useState(false);
-  const [liveScanInitializing, setLiveScanInitializing] = useState(false);
+  const [liveScan, setLiveScan]                         = useState(true);
+  const [liveScanInitializing, setLiveScanInitializing] = useState(true);
   const [liveFaces, setLiveFaces]                       = useState([]);
   const [selectedFace, setSelectedFace]                 = useState(null);
 
