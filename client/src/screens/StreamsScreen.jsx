@@ -26,8 +26,9 @@ function duration(start, end) {
   return h > 0 ? `${h}h ${m % 60}m` : `${m}m`;
 }
 
-// ── Single live-stream tile ───────────────────────────────────────────────────
-function VideoTile({ stream, onClose, scanActive, onToggleScan, onSelectFace }) {
+// ── Self-contained live-stream tile ──────────────────────────────────────────
+// Each tile manages its own HLS stream, detect scan, and friend form panel.
+function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
   const videoRef          = useRef(null);
   const canvasRef         = useRef(null);
   const hlsRef            = useRef(null);
@@ -38,6 +39,19 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan, onSelectFace }) 
   const [tileLoading, setTileLoading]           = useState(true);
   const [liveFaces, setLiveFaces]               = useState([]);
   const [scanInitializing, setScanInitializing] = useState(false);
+  const [selectedFace, setSelectedFace]         = useState(null);
+
+  const selectedFriendProp = useMemo(() => {
+    if (!selectedFace?.friendId) return null;
+    return {
+      Friend_Id:           selectedFace.friendId,
+      Name_Txt:            selectedFace.friendName  || '',
+      Note_Multi_Line_Txt: selectedFace.note        || '',
+      Friend_Group:        selectedFace.friendGroup || 'Friend',
+      Linked_User_Name:    null,
+      Linked_User_Email:   null,
+    };
+  }, [selectedFace]);
 
   // HLS setup
   useEffect(() => {
@@ -68,6 +82,11 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan, onSelectFace }) 
 
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [stream]);
+
+  // Clear selected face when scan is turned off
+  useEffect(() => {
+    if (!scanActive) setSelectedFace(null);
+  }, [scanActive]);
 
   // Scan interval
   useEffect(() => {
@@ -170,26 +189,27 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan, onSelectFace }) 
       const h = face.boundingBox.height * canvas.height;
       return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
     });
-    if (hit) onSelectFace(hit);
+    if (hit) setSelectedFace(hit);
   }
 
   return (
     <div className="relative bg-black rounded-lg overflow-hidden flex w-full h-full group">
 
-      {/* Left detect strip */}
-      <button
-        onClick={e => { e.stopPropagation(); onToggleScan(); }}
-        title={scanActive ? 'Stop detect' : 'Detect faces'}
-        className={`w-10 flex-shrink-0 flex flex-col items-center justify-center gap-1 transition-colors
-          ${scanActive ? 'bg-green-700 hover:bg-green-600 animate-pulse' : 'bg-slate-700 hover:bg-slate-600'}`}
-      >
-        <LiveScanIcon className="w-5 h-5 text-white" />
-        <span className="text-white text-[9px] font-medium">Detect</span>
-      </button>
-
-      {/* Video + canvas */}
-      <div className="relative flex-1 min-w-0">
+      {/* Video side — shrinks when friend form is open */}
+      <div className={`relative min-h-0 transition-all duration-300 ${selectedFace ? 'w-[55%]' : 'flex-1'}`}>
         <video ref={videoRef} playsInline muted className="w-full h-full object-contain" />
+
+        {/* Floating detect button — overlaid on left of video */}
+        <button
+          onClick={e => { e.stopPropagation(); onToggleScan(); }}
+          title={scanActive ? 'Stop detect' : 'Detect faces'}
+          className={`absolute left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-0.5
+            px-2 py-2 rounded-lg transition-colors backdrop-blur-sm
+            ${scanActive ? 'bg-green-700/90 hover:bg-green-600/90 animate-pulse' : 'bg-black/50 hover:bg-black/70'}`}
+        >
+          <LiveScanIcon className="w-5 h-5 text-white" />
+          <span className="text-white text-[9px] font-medium">Detect</span>
+        </button>
 
         <canvas
           ref={canvasRef}
@@ -199,7 +219,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan, onSelectFace }) 
             ${scanActive && liveFaces.length > 0 ? 'cursor-pointer' : 'pointer-events-none'}`}
         />
 
-        {/* Spinner — scan initializing takes priority over tile loading */}
+        {/* Spinner */}
         {(scanInitializing || (tileLoading && !tileError)) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70 pointer-events-none">
             <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${scanInitializing ? 'border-green-400' : 'border-blue-400'}`} />
@@ -207,7 +227,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan, onSelectFace }) 
           </div>
         )}
 
-        {/* Close button */}
+        {/* Close tile button */}
         <button
           onClick={e => { e.stopPropagation(); onClose(); }}
           title="Remove stream"
@@ -233,6 +253,19 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan, onSelectFace }) 
           </div>
         )}
       </div>
+
+      {/* Friend form panel — inside this tile */}
+      {selectedFace && (
+        <div className="w-[45%] flex-shrink-0 overflow-hidden flex flex-col border-l border-gray-700">
+          <FriendForm
+            friend={selectedFriendProp}
+            capturedPhotoUrl={!selectedFace.friendId ? selectedFace.cropDataUrl : null}
+            onClose={() => setSelectedFace(null)}
+            onSave={() => setSelectedFace(null)}
+            onDelete={() => setSelectedFace(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -251,27 +284,14 @@ function EmptyTile() {
 export default function StreamsScreen() {
   const navigate = useNavigate();
   const { user, isCorporate } = useApp();
-  const [liveStreams, setLiveStreams]         = useState([]);
-  const [pastStreams, setPastStreams]         = useState([]);
-  const [loading, setLoading]                = useState(true);
-  const [tab, setTab]                        = useState('live');
-  const [deletingStream, setDeletingStream]  = useState(null);
+  const [liveStreams, setLiveStreams]            = useState([]);
+  const [pastStreams, setPastStreams]            = useState([]);
+  const [loading, setLoading]                   = useState(true);
+  const [tab, setTab]                           = useState('live');
+  const [deletingStream, setDeletingStream]     = useState(null);
   const [showDeletedToast, setShowDeletedToast] = useState(false);
-  const [tiles, setTiles]                    = useState([null, null, null, null]);
-  const [activeScanIdx, setActiveScanIdx]    = useState(null);
-  const [selectedFace, setSelectedFace]      = useState(null);
-
-  const selectedFriendProp = useMemo(() => {
-    if (!selectedFace?.friendId) return null;
-    return {
-      Friend_Id:           selectedFace.friendId,
-      Name_Txt:            selectedFace.friendName  || '',
-      Note_Multi_Line_Txt: selectedFace.note        || '',
-      Friend_Group:        selectedFace.friendGroup || 'Friend',
-      Linked_User_Name:    null,
-      Linked_User_Email:   null,
-    };
-  }, [selectedFace]);
+  const [tiles, setTiles]                       = useState([null, null, null, null]);
+  const [activeScanIdx, setActiveScanIdx]       = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -291,7 +311,6 @@ export default function StreamsScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Refresh live list every 30 s
   useEffect(() => {
     const id = setInterval(() => {
       api.get('/api/stream/live').then(r => setLiveStreams(r.data)).catch(() => {});
@@ -299,33 +318,31 @@ export default function StreamsScreen() {
     return () => clearInterval(id);
   }, []);
 
-  // Remove any tile whose stream is no longer live
+  // Remove tiles whose streams went offline
   useEffect(() => {
     setTiles(prev => prev.map(t =>
       t && !liveStreams.find(s => s.Stream_Id === t.Stream_Id) ? null : t
     ));
   }, [liveStreams]);
 
+  // Only one detect active at a time
   function handleToggleScan(idx) {
     setActiveScanIdx(prev => prev === idx ? null : idx);
-    setSelectedFace(null);
   }
 
   function toggleStream(stream) {
     const existingIdx = tiles.findIndex(t => t?.Stream_Id === stream.Stream_Id);
     if (existingIdx !== -1) {
+      if (activeScanIdx === existingIdx) setActiveScanIdx(null);
       setTiles(prev => prev.map((t, i) => i === existingIdx ? null : t));
-      if (activeScanIdx === existingIdx) { setActiveScanIdx(null); setSelectedFace(null); }
     } else {
       const emptyIdx = tiles.findIndex(t => t === null);
-      if (emptyIdx !== -1) {
-        setTiles(prev => prev.map((t, i) => i === emptyIdx ? stream : t));
-      }
+      if (emptyIdx !== -1) setTiles(prev => prev.map((t, i) => i === emptyIdx ? stream : t));
     }
   }
 
   function clearTile(idx) {
-    if (activeScanIdx === idx) { setActiveScanIdx(null); setSelectedFace(null); }
+    if (activeScanIdx === idx) setActiveScanIdx(null);
     setTiles(prev => prev.map((t, i) => i === idx ? null : t));
   }
 
@@ -367,9 +384,7 @@ export default function StreamsScreen() {
             key={t}
             onClick={() => setTab(t)}
             className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors ${
-              tab === t
-                ? 'text-blue-400 border-b-2 border-blue-400'
-                : 'text-gray-500 hover:text-gray-300'
+              tab === t ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
             {t === 'live' ? '🔴 Live Now' : '📼 Past Streams'}
@@ -400,7 +415,7 @@ export default function StreamsScreen() {
               {/* Left sidebar — stream list */}
               <div className="w-28 md:w-36 flex-shrink-0 bg-gray-800/40 border-r border-gray-700 overflow-y-auto p-2 space-y-2">
                 {liveStreams.map(stream => {
-                  const inTile = tiles.some(t => t?.Stream_Id === stream.Stream_Id);
+                  const inTile   = tiles.some(t => t?.Stream_Id === stream.Stream_Id);
                   const disabled = !inTile && tilesFull;
                   return (
                     <button
@@ -424,9 +439,7 @@ export default function StreamsScreen() {
                         <p className="text-gray-500 text-[10px] truncate pl-3">{stream.Title_Txt}</p>
                       )}
                       <p className="text-gray-600 text-[10px] pl-3">{duration(stream.Started_At, null)} ago</p>
-                      {inTile && (
-                        <p className="text-blue-400 text-[10px] pl-3 mt-0.5">● Showing</p>
-                      )}
+                      {inTile && <p className="text-blue-400 text-[10px] pl-3 mt-0.5">● Showing</p>}
                     </button>
                   );
                 })}
@@ -442,26 +455,12 @@ export default function StreamsScreen() {
                       onClose={() => clearTile(i)}
                       scanActive={activeScanIdx === i}
                       onToggleScan={() => handleToggleScan(i)}
-                      onSelectFace={face => setSelectedFace(face)}
                     />
                   ) : (
                     <EmptyTile key={i} />
                   )
                 )}
               </div>
-
-              {/* Friend form panel — slides in when a face is selected */}
-              {selectedFace && (
-                <div className="w-80 flex-shrink-0 overflow-hidden flex flex-col border-l border-gray-700">
-                  <FriendForm
-                    friend={selectedFriendProp}
-                    capturedPhotoUrl={!selectedFace.friendId ? selectedFace.cropDataUrl : null}
-                    onClose={() => setSelectedFace(null)}
-                    onSave={() => setSelectedFace(null)}
-                    onDelete={() => setSelectedFace(null)}
-                  />
-                </div>
-              )}
             </div>
           )}
         </main>
@@ -522,14 +521,12 @@ export default function StreamsScreen() {
       <TrueFooter />
       <NavBar />
 
-      {/* Toast */}
       {showDeletedToast && (
         <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-700 text-white text-sm px-4 py-2 rounded-full shadow-lg z-50 pointer-events-none">
           Stream Deleted
         </div>
       )}
 
-      {/* Delete confirmation modal */}
       {deletingStream && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
@@ -537,18 +534,8 @@ export default function StreamsScreen() {
             <p className="text-gray-400 text-sm mb-1">{deletingStream.Title_Txt}</p>
             <p className="text-gray-400 text-sm mb-4">This will permanently remove the stream record and all recording files. This cannot be undone.</p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setDeletingStream(null)}
-                className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteStream}
-                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm"
-              >
-                Delete
-              </button>
+              <button onClick={() => setDeletingStream(null)} className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">Cancel</button>
+              <button onClick={confirmDeleteStream} className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm">Delete</button>
             </div>
           </div>
         </div>
