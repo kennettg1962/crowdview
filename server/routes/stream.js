@@ -295,8 +295,9 @@ router.get('/recording/:streamKey/:filename', async (req, res) => {
     return res.status(404).json({ error: 'Recording not found' });
   }
 
-  // res.sendFile handles range requests, ETags, and Content-Type correctly
-  res.sendFile(filePath);
+  // Disable ETags and last-modified to prevent 304 responses — video elements
+  // need a full 200/206 response with bytes, not an empty 304.
+  res.sendFile(filePath, { etag: false, lastModified: false });
 });
 
 // ---------------------------------------------------------------------------
