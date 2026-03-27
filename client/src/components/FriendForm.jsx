@@ -43,8 +43,21 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
   useEffect(() => { isDirty.current = true; }, [name, note, group]);
 
   useEffect(() => {
-    if (friend?.Friend_Id) loadPhotos(friend.Friend_Id);
-  }, [friend]);
+    if (!friend?.Friend_Id) return;
+    loadPhotos(friend.Friend_Id);
+    // When only partial data was passed (e.g. from a bounding-box tap that only
+    // has Friend_Id + Name_Txt), fetch the full record to populate note/group/link.
+    if (friend.Note_Multi_Line_Txt === undefined) {
+      api.get(`/api/friends/${friend.Friend_Id}`)
+        .then(res => {
+          setNote(res.data.Note_Multi_Line_Txt || '');
+          setGroup(res.data.Friend_Group || defaultGroup);
+          setLinkedUserName(res.data.Linked_User_Name || null);
+          setLinkedUserEmail(res.data.Linked_User_Email || null);
+        })
+        .catch(() => {});
+    }
+  }, [friend]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadPhotos(friendId) {
     setLoading(true);

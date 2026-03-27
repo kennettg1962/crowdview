@@ -46,6 +46,27 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// GET /api/friends/:id
+router.get('/:id', auth, async (req, res) => {
+  const scope = friendsScope(req.user);
+  try {
+    const [rows] = await pool.execute(
+      `SELECT f.*,
+        u2.Name_Txt AS Linked_User_Name,
+        u2.Email    AS Linked_User_Email
+         FROM Friend f
+         LEFT JOIN User u2 ON u2.User_Id = f.Friend_User_Id
+        WHERE f.Friend_Id = ? AND ${scope.clause}`,
+      [req.params.id, ...scope.params]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Friend not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // POST /api/friends
 router.post('/', auth, async (req, res) => {
   const { name, note, group } = req.body;
