@@ -123,12 +123,14 @@ export default function CorporateUsersScreen() {
                           onClick={() => handleUserClick(u)}
                           className="flex-1 flex items-center gap-3 p-3 text-left"
                         >
-                          {/* Avatar initial */}
-                          <div className="w-[48px] h-[48px] rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center">
-                            <span className="text-gray-300 text-lg font-bold">
-                              {(u.Name_Txt || u.Email)?.[0]?.toUpperCase() || '?'}
-                            </span>
-                          </div>
+                          {/* Avatar initial — hidden for admin users */}
+                          {u.Corporate_Admin_Fl !== 'Y' && (
+                            <div className="w-[48px] h-[48px] rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center">
+                              <span className="text-gray-300 text-lg font-bold">
+                                {(u.Name_Txt || u.Email)?.[0]?.toUpperCase() || '?'}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="text-white text-sm font-medium truncate">{u.Name_Txt || '—'}</p>
