@@ -106,14 +106,16 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
       const canvas = canvasRef.current;
       if (!video.videoWidth || video.readyState < 3) return;
 
-      // Size canvas to CSS pixels so coordinates map 1:1 to the displayed area
-      const containerW = video.clientWidth;
-      const containerH = video.clientHeight;
+      // Use getBoundingClientRect for reliable CSS pixel dimensions
+      const bcr = canvas.getBoundingClientRect();
+      const containerW = bcr.width;
+      const containerH = bcr.height;
+      if (!containerW || !containerH) return;
       if (canvas.width  !== containerW) canvas.width  = containerW;
       if (canvas.height !== containerH) canvas.height = containerH;
 
-      // Calculate where the video content actually sits inside the container
-      // (object-contain letterboxes with black bars on two sides)
+      // Calculate where the video content sits inside the container
+      // (object-contain letterboxes with black bars on the narrow axis)
       const vAR = video.videoWidth / video.videoHeight;
       const cAR = containerW / containerH;
       let displayW, displayH, offsetX = 0, offsetY = 0;
@@ -194,22 +196,20 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
     if (!scanActive || !canvasRef.current || !videoRef.current || liveFaces.length === 0) return;
     const canvas = canvasRef.current;
     const video  = videoRef.current;
+    // Work in CSS pixels — canvas.width == BRC.width so no scale needed
     const rect   = canvas.getBoundingClientRect();
-    const scaleX = canvas.width  / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const clickX = (e.clientX - rect.left) * scaleX;
-    const clickY = (e.clientY - rect.top)  * scaleY;
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
 
-    // Same letterbox geometry as the draw pass
     const vAR = video.videoWidth / video.videoHeight;
-    const cAR = canvas.width / canvas.height;
+    const cAR = rect.width / rect.height;
     let displayW, displayH, offsetX = 0, offsetY = 0;
     if (vAR > cAR) {
-      displayW = canvas.width; displayH = canvas.width / vAR;
-      offsetY = (canvas.height - displayH) / 2;
+      displayW = rect.width;  displayH = rect.width / vAR;
+      offsetY = (rect.height - displayH) / 2;
     } else {
-      displayH = canvas.height; displayW = canvas.height * vAR;
-      offsetX = (canvas.width - displayW) / 2;
+      displayH = rect.height; displayW = rect.height * vAR;
+      offsetX = (rect.width - displayW) / 2;
     }
 
     const hit = liveFaces.find(face => {
