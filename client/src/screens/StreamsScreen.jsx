@@ -332,7 +332,7 @@ function TilePopup({ stream, onClose }) {
       <div className="flex-1 min-h-0 flex">
 
         {/* Video + canvas overlay */}
-        <div className={`relative bg-black min-h-0 transition-all duration-300 ${selectedFace ? 'w-[55%]' : 'flex-1'}`}>
+        <div className={`relative bg-black min-h-0 transition-all duration-300 ${selectedFace ? 'w-[60%]' : 'flex-1'}`}>
           <video ref={videoRef} playsInline className="w-full h-full object-contain" />
 
           <canvas
@@ -360,7 +360,7 @@ function TilePopup({ stream, onClose }) {
 
         {/* Friend form side panel */}
         {selectedFace && (
-          <div className="w-[45%] flex-shrink-0 overflow-hidden flex flex-col">
+          <div className="w-[40%] flex-shrink-0 overflow-hidden flex flex-col">
             <FriendForm
               friend={selectedFriendProp}
               capturedPhotoUrl={!selectedFace.friendId ? selectedFace.cropDataUrl : null}
