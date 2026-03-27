@@ -11,16 +11,25 @@ const execFileAsync = promisify(execFile);
 const pool       = require('../db/connection');
 const auth       = require('../middleware/auth');
 
-// Move moov atom to start of MP4 so browsers can stream without downloading the whole file.
-// Silently skips if ffmpeg is not installed.
+// Re-encode recording with H.264 + faststart so browsers can decode and stream it.
+// MediaMTX recordings often start before the first keyframe (recording starts mid-GOP),
+// which produces a MEDIA_ERR_DECODE in Chrome. Re-encoding forces a clean I-frame at the
+// start and moves the moov atom to the front for progressive download.
+// Silently skips if ffmpeg / libx264 is not installed.
 async function applyFaststart(filePath) {
   const tmp = filePath + '.fs.mp4';
   try {
-    await execFileAsync('ffmpeg', ['-i', filePath, '-c', 'copy', '-movflags', 'faststart', '-y', tmp]);
+    await execFileAsync('ffmpeg', [
+      '-i', filePath,
+      '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23',
+      '-c:a', 'aac',
+      '-movflags', 'faststart',
+      '-y', tmp,
+    ]);
     fs.renameSync(tmp, filePath);
-    console.log(`[stream] faststart applied: ${path.basename(filePath)}`);
+    console.log(`[stream] re-encoded with faststart: ${path.basename(filePath)}`);
   } catch (err) {
-    console.warn('[stream] ffmpeg faststart skipped:', err.message);
+    console.warn('[stream] ffmpeg re-encode skipped:', err.message);
     try { fs.unlinkSync(tmp); } catch (_) {}
   }
 }
