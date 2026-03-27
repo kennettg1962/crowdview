@@ -531,7 +531,7 @@ export default function StreamsScreen() {
                     >
                       Watch
                     </button>
-                    {s.Streamer_User_Id === user?.userId && (
+                    {(s.Streamer_User_Id === user?.userId || (isCorporate && user?.corporateAdminFl === 'Y')) && (
                       <button
                         onClick={() => setDeletingStream(s)}
                         className="p-2 text-red-400/50 hover:text-red-400 transition-colors"

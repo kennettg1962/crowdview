@@ -344,7 +344,19 @@ router.delete('/:id', auth, async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'Stream not found' });
 
     const stream = rows[0];
-    if (stream.User_Id !== req.user.userId) {
+    const isOwnStream = stream.User_Id === req.user.userId;
+
+    // Corporate admins may delete any stream belonging to their organisation
+    let isCorporateAdminOfStream = false;
+    if (!isOwnStream && req.user.parentOrganizationId && req.user.corporateAdminFl === 'Y') {
+      const [ownerRows] = await pool.execute(
+        'SELECT Parent_Organization_Id FROM User WHERE User_Id = ?',
+        [stream.User_Id]
+      );
+      isCorporateAdminOfStream = ownerRows[0]?.Parent_Organization_Id === req.user.parentOrganizationId;
+    }
+
+    if (!isOwnStream && !isCorporateAdminOfStream) {
       return res.status(403).json({ error: 'Cannot delete another user\'s stream' });
     }
 
