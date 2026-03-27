@@ -284,13 +284,14 @@ router.get('/past', auth, async (req, res) => {
 router.get('/recording/:streamKey/:filename', async (req, res) => {
   const { streamKey, filename } = req.params;
   const safeFilename = path.basename(decodeURIComponent(filename));
-  // Only allow alphanumeric, hyphens, underscores, dots — prevent path traversal
-  if (!/^[\w\-. ]+\.mp4$/i.test(safeFilename)) {
+  // Reject anything that isn't an mp4 or contains path separators (path.basename already strips these)
+  if (!safeFilename.toLowerCase().endsWith('.mp4') || safeFilename.includes('/') || safeFilename.includes('\\') || safeFilename.includes('\0')) {
     return res.status(400).json({ error: 'Invalid filename' });
   }
   const filePath = path.join(RECORDINGS_ROOT, 'live', streamKey, safeFilename);
 
   if (!fs.existsSync(filePath)) {
+    console.error(`[recording] file not found: ${filePath}`);
     return res.status(404).json({ error: 'Recording not found' });
   }
 
