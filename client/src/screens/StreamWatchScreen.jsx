@@ -76,7 +76,8 @@ export default function StreamWatchScreen() {
       video.addEventListener('loadedmetadata', () => {
         setLoading(false);
         calcVideoRendered();
-        video.play().catch(() => {});
+        // Don't force autoplay for VOD — browser autoplay policies block it.
+        // Native controls are visible; user clicks play.
       });
       video.addEventListener('error', () => {
         setError('Recording unavailable or could not be loaded.');
