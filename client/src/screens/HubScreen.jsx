@@ -245,11 +245,12 @@ export default function HubScreen() {
     const interval = setInterval(async () => {
       if (scanInFlightRef.current || !overlayCanvasRef.current || !liveScanActiveRef.current) return;
 
+      const canvas = overlayCanvasRef.current;
+
       // Phone: sync overlay canvas to native video resolution before capturing
       if (captureMode === 'phone') {
         const video = videoRef.current;
         if (!video || !video.videoWidth || video.readyState < 3) return;
-        const canvas = overlayCanvasRef.current;
         if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
         if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
       }
