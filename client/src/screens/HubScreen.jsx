@@ -426,7 +426,8 @@ export default function HubScreen() {
       return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
     });
     setSelectedFace(hit || null);
-    if (hit) setLiveFacePopup(hit);
+    // Popup only on mobile — desktop uses the right-panel FriendForm
+    if (hit && window.innerWidth < 768) setLiveFacePopup(hit);
   }
 
   // Permission error message

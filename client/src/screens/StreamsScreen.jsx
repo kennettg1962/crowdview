@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Hls from 'hls.js';
 import AppHeader from '../components/AppHeader';
@@ -10,7 +10,7 @@ import {
 } from '../components/Icons';
 import { useApp } from '../context/AppContext';
 import api from '../api/api';
-import FriendFormPopup from '../components/FriendFormPopup';
+import FriendForm from '../components/FriendForm';
 
 const SERVER_ORIGIN = window.location.protocol === 'capacitor:'
   ? 'https://crowdview.tv'
@@ -139,7 +139,19 @@ function TilePopup({ stream, onClose }) {
   const [liveScan, setLiveScan]                         = useState(false);
   const [liveScanInitializing, setLiveScanInitializing] = useState(false);
   const [liveFaces, setLiveFaces]                       = useState([]);
-  const [liveFacePopup, setLiveFacePopup]               = useState(null);
+  const [selectedFace, setSelectedFace]                 = useState(null);
+
+  const selectedFriendProp = useMemo(() => {
+    if (!selectedFace?.friendId) return null;
+    return {
+      Friend_Id:           selectedFace.friendId,
+      Name_Txt:            selectedFace.friendName  || '',
+      Note_Multi_Line_Txt: selectedFace.note        || '',
+      Friend_Group:        selectedFace.friendGroup || 'Friend',
+      Linked_User_Name:    null,
+      Linked_User_Email:   null,
+    };
+  }, [selectedFace]);
 
   // HLS setup
   useEffect(() => {
@@ -270,7 +282,7 @@ function TilePopup({ stream, onClose }) {
       const h = face.boundingBox.height * canvas.height;
       return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
     });
-    if (hit) setLiveFacePopup(hit);
+    if (hit) setSelectedFace(hit);
   }
 
   function toggleLiveScan() {
@@ -316,52 +328,49 @@ function TilePopup({ stream, onClose }) {
         </div>
       </div>
 
-      {/* Video + canvas overlay */}
-      <div className="flex-1 relative bg-black min-h-0">
-        <video ref={videoRef} playsInline className="w-full h-full object-contain" />
+      {/* Content — video + optional side panel */}
+      <div className="flex-1 min-h-0 flex">
 
-        <canvas
-          ref={canvasRef}
-          onClick={handleCanvasClick}
-          onTouchEnd={e => { e.preventDefault(); handleCanvasClick(e.changedTouches[0]); }}
-          className={`absolute inset-0 w-full h-full
-            ${liveScan && liveFaces.length > 0 ? 'cursor-pointer' : 'pointer-events-none'}`}
-        />
+        {/* Video + canvas overlay */}
+        <div className={`relative bg-black min-h-0 transition-all duration-300 ${selectedFace ? 'w-[55%]' : 'flex-1'}`}>
+          <video ref={videoRef} playsInline className="w-full h-full object-contain" />
 
-        {liveScanInitializing && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50 pointer-events-none">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-400" />
-            <p className="text-white text-sm">Initializing face detection...</p>
-          </div>
-        )}
+          <canvas
+            ref={canvasRef}
+            onClick={handleCanvasClick}
+            onTouchEnd={e => { e.preventDefault(); handleCanvasClick(e.changedTouches[0]); }}
+            className={`absolute inset-0 w-full h-full
+              ${liveScan && liveFaces.length > 0 ? 'cursor-pointer' : 'pointer-events-none'}`}
+          />
 
-        {popupError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400">
-            <BroadcastIcon className="w-12 h-12 opacity-30" />
-            <p className="text-sm">Stream unavailable</p>
+          {liveScanInitializing && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50 pointer-events-none">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-400" />
+              <p className="text-white text-sm">Initializing face detection...</p>
+            </div>
+          )}
+
+          {popupError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400">
+              <BroadcastIcon className="w-12 h-12 opacity-30" />
+              <p className="text-sm">Stream unavailable</p>
+            </div>
+          )}
+        </div>
+
+        {/* Friend form side panel */}
+        {selectedFace && (
+          <div className="w-[45%] flex-shrink-0 overflow-hidden flex flex-col">
+            <FriendForm
+              friend={selectedFriendProp}
+              capturedPhotoUrl={!selectedFace.friendId ? selectedFace.cropDataUrl : null}
+              onClose={() => setSelectedFace(null)}
+              onSave={() => setSelectedFace(null)}
+              onDelete={() => setSelectedFace(null)}
+            />
           </div>
         )}
       </div>
-
-      {/* Friend/Customer form popup on face tap */}
-      {liveFacePopup && (
-        <FriendFormPopup
-          friend={liveFacePopup.friendId
-            ? { Friend_Id: liveFacePopup.friendId, Name_Txt: liveFacePopup.friendName }
-            : null}
-          capturedPhotoUrl={liveFacePopup.cropDataUrl || null}
-          onClose={() => setLiveFacePopup(null)}
-          onSave={saved => {
-            if (!saved) return;
-            setLiveFaces(prev => prev.map(f =>
-              f.faceId === liveFacePopup.faceId
-                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId }
-                : f
-            ));
-            setLiveFacePopup(null);
-          }}
-        />
-      )}
     </div>
   );
 }
