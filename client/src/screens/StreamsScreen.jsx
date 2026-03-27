@@ -520,9 +520,10 @@ export default function StreamsScreen() {
                       <span className="text-white font-medium truncate">{s.Streamer_Name || 'Unknown'}</span>
                     </div>
                     <p className="text-gray-400 text-sm truncate">{s.Title_Txt}</p>
-                    <p className="text-gray-600 text-xs mt-0.5">
-                      {new Date(s.Started_At).toLocaleDateString()} · {duration(s.Started_At, s.Ended_At)}
+                    <p className="text-gray-500 text-xs mt-0.5">
+                      {new Date(s.Started_At).toLocaleString()} – {s.Ended_At ? new Date(s.Ended_At).toLocaleTimeString() : '?'}
                     </p>
+                    <p className="text-gray-600 text-xs">{duration(s.Started_At, s.Ended_At)}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
