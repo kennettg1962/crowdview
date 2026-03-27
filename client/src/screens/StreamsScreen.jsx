@@ -38,12 +38,14 @@ function duration(start, end) {
 function VideoTile({ stream, onClose, onExpand }) {
   const videoRef = useRef(null);
   const hlsRef   = useRef(null);
-  const [tileError, setTileError] = useState(false);
+  const [tileError, setTileError]     = useState(false);
+  const [tileLoading, setTileLoading] = useState(true);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !stream) return;
     setTileError(false);
+    setTileLoading(true);
 
     const src = `${HLS_BASE}/live/${stream.Stream_Key_Txt}/index.m3u8`;
 
@@ -53,14 +55,17 @@ function VideoTile({ stream, onClose, onExpand }) {
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-      hls.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) setTileError(true); });
+      hls.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) { setTileError(true); setTileLoading(false); } });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
       video.play().catch(() => {});
-      video.addEventListener('error', () => setTileError(true));
+      video.addEventListener('error', () => { setTileError(true); setTileLoading(false); });
     } else {
       setTileError(true);
+      setTileLoading(false);
     }
+
+    video.addEventListener('playing', () => setTileLoading(false));
 
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [stream]);
@@ -71,6 +76,14 @@ function VideoTile({ stream, onClose, onExpand }) {
       onClick={onExpand}
     >
       <video ref={videoRef} playsInline muted className="w-full h-full object-contain" />
+
+      {/* Initializing spinner */}
+      {tileLoading && !tileError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70 pointer-events-none">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400" />
+          <p className="text-gray-300 text-xs">Initializing…</p>
+        </div>
+      )}
 
       {/* Close button */}
       <button
