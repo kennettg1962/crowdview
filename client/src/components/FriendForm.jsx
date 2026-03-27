@@ -288,8 +288,8 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
           </div>
         )}
 
-        {/* CrowdView Account Link */}
-        {friend?.Friend_Id && (
+        {/* CrowdView Account Link — hidden in corporate mode (links are via org) */}
+        {friend?.Friend_Id && !isCorporate && (
           <div>
             <label className="text-gray-300 text-sm block mb-1">CrowdView Account</label>
             {linkedUserName ? (
