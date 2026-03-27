@@ -252,7 +252,8 @@ router.get('/live', auth, async (req, res) => {
 router.get('/past', auth, async (req, res) => {
   try {
     let query, params;
-    if (req.user.parentOrganizationId) {
+    if (req.user.parentOrganizationId && req.user.corporateAdminFl === 'Y') {
+      // Corporate admin — see all org streams
       query = `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt,
                       s.Started_At, s.Ended_At,
                       s.Recording_File_Txt,
