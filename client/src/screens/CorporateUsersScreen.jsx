@@ -129,6 +129,9 @@ export default function CorporateUsersScreen() {
                               {u.Corporate_Admin_Fl === 'Y' && (
                                 <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded bg-amber-600/30 text-amber-400 border border-amber-600/40">admin</span>
                               )}
+                              {u.Corporate_Admin_Fl === 'B' && (
+                                <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded bg-purple-600/30 text-purple-400 border border-purple-600/40">back office</span>
+                              )}
                             </div>
                             <p className="text-gray-500 text-xs truncate">{u.Email}</p>
                           </div>

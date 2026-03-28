@@ -159,15 +159,17 @@ export default function CorporateUserForm({ user, onClose, onSave }) {
             </button>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-gray-400 text-sm">Organisation admin</span>
-            <button
-              type="button"
-              onClick={() => setAdminFl(v => v === 'Y' ? 'N' : 'Y')}
-              className={`w-11 h-6 rounded-full transition-colors ${adminFl === 'Y' ? 'bg-blue-600' : 'bg-gray-600'}`}
+          <div>
+            <label className="block text-gray-400 text-xs mb-1">Role</label>
+            <select
+              value={adminFl}
+              onChange={e => setAdminFl(e.target.value)}
+              className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
-              <span className={`block w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${adminFl === 'Y' ? 'translate-x-5' : 'translate-x-0'}`} />
-            </button>
+              <option value="N">Regular User</option>
+              <option value="Y">Admin</option>
+              <option value="B">Back Office</option>
+            </select>
           </div>
 
           {error && <p className="text-red-400 text-sm">{error}</p>}

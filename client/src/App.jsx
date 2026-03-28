@@ -28,6 +28,14 @@ function OAUGuard({ children }) {
   return children;
 }
 
+// Back office users may only access /streams and /friends
+function NoBackOfficeGuard({ children }) {
+  const { isAuthenticated, isBackOffice } = useApp();
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (isBackOffice) return <Navigate to="/streams" replace />;
+  return children;
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
@@ -42,12 +50,12 @@ function AppRoutes() {
     <GlobalVoiceCommands />
     <Routes>
       <Route path="/" element={<SplashScreen />} />
-      <Route path="/hub" element={<AuthGuard><HubScreen /></AuthGuard>} />
+      <Route path="/hub" element={<NoBackOfficeGuard><HubScreen /></NoBackOfficeGuard>} />
       <Route path="/friends" element={<AuthGuard><ManageFriendsScreen /></AuthGuard>} />
-      <Route path="/profile" element={<AuthGuard><ProfileScreen /></AuthGuard>} />
-      <Route path="/id" element={<AuthGuard><IdScreen /></AuthGuard>} />
-      <Route path="/library" element={<AuthGuard><LibraryScreen /></AuthGuard>} />
-      <Route path="/post" element={<AuthGuard><PostScreen /></AuthGuard>} />
+      <Route path="/profile" element={<NoBackOfficeGuard><ProfileScreen /></NoBackOfficeGuard>} />
+      <Route path="/id" element={<NoBackOfficeGuard><IdScreen /></NoBackOfficeGuard>} />
+      <Route path="/library" element={<NoBackOfficeGuard><LibraryScreen /></NoBackOfficeGuard>} />
+      <Route path="/post" element={<NoBackOfficeGuard><PostScreen /></NoBackOfficeGuard>} />
       <Route path="/streams" element={<AuthGuard><StreamsScreen /></AuthGuard>} />
       <Route path="/streams/watch" element={<AuthGuard><StreamWatchScreen /></AuthGuard>} />
       <Route path="/reset-password" element={<ResetPasswordScreen />} />

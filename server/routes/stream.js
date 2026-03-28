@@ -252,7 +252,7 @@ router.get('/live', auth, async (req, res) => {
 router.get('/past', auth, async (req, res) => {
   try {
     let query, params;
-    if (req.user.parentOrganizationId && req.user.corporateAdminFl === 'Y') {
+    if (req.user.parentOrganizationId && (req.user.corporateAdminFl === 'Y' || req.user.corporateAdminFl === 'B')) {
       // Corporate admin — see all org streams
       query = `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt,
                       s.Started_At, s.Ended_At,
@@ -348,7 +348,7 @@ router.delete('/:id', auth, async (req, res) => {
 
     // Corporate admins may delete any stream belonging to their organisation
     let isCorporateAdminOfStream = false;
-    if (!isOwnStream && req.user.parentOrganizationId && req.user.corporateAdminFl === 'Y') {
+    if (!isOwnStream && req.user.parentOrganizationId && (req.user.corporateAdminFl === 'Y' || req.user.corporateAdminFl === 'B')) {
       const [ownerRows] = await pool.execute(
         'SELECT Parent_Organization_Id FROM User WHERE User_Id = ?',
         [stream.User_Id]

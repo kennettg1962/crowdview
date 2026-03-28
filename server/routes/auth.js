@@ -7,7 +7,8 @@ const pool = require('../db/connection');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'crowdview_secret';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_INDIVIDUAL = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_CORPORATE  = process.env.JWT_EXPIRES_IN_CORPORATE || '1d';
 
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
@@ -20,7 +21,7 @@ router.post('/signup', async (req, res) => {
       'INSERT INTO User (Email, Password_Hash, Name_Txt) VALUES (?, ?, ?)',
       [email.toLowerCase(), hash, name || '']
     );
-    const token = jwt.sign({ userId: result.insertId, email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const token = jwt.sign({ userId: result.insertId, email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_INDIVIDUAL });
     res.status(201).json({ token, userId: result.insertId, email, name: name || '' });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Email already registered' });
@@ -45,7 +46,8 @@ router.post('/login', async (req, res) => {
       parentOrganizationId: user.Parent_Organization_Id || null,
       corporateAdminFl: user.Corporate_Admin_Fl || 'N',
     };
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const expiresIn = payload.parentOrganizationId ? JWT_EXPIRES_CORPORATE : JWT_EXPIRES_INDIVIDUAL;
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn });
     res.json({
       token,
       userId: user.User_Id,

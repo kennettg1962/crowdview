@@ -56,7 +56,7 @@ router.post('/users', async (req, res) => {
         hash,
         name || '',
         connectLastDevice === 'Y' ? 'Y' : 'Y', // default Y per spec
-        corporateAdminFl === 'Y' ? 'Y' : 'N',
+        ['Y', 'B'].includes(corporateAdminFl) ? corporateAdminFl : 'N',
         req.user.parentOrganizationId,
       ]
     );
@@ -93,7 +93,7 @@ router.put('/users/:id', async (req, res) => {
       [
         name || '',
         connectLastDevice === 'Y' ? 'Y' : 'N',
-        corporateAdminFl === 'Y' ? 'Y' : 'N',
+        ['Y', 'B'].includes(corporateAdminFl) ? corporateAdminFl : 'N',
         targetId,
         req.user.parentOrganizationId,
       ]

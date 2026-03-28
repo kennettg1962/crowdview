@@ -19,12 +19,15 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
+const auth          = require("./middleware/auth");
+const notBackOffice = require("./middleware/notBackOffice");
+
 // Routes
 app.use("/api/auth", require("./routes/auth"));
-app.use("/api/users", require("./routes/users"));
+app.use("/api/users",       auth, notBackOffice, require("./routes/users"));
 app.use("/api/friends", require("./routes/friends"));
-app.use("/api/media", require("./routes/media"));
-app.use("/api/devices", require("./routes/devices"));
+app.use("/api/media",        auth, notBackOffice, require("./routes/media"));
+app.use("/api/devices",      auth, notBackOffice, require("./routes/devices"));
 app.use("/api/rekognition", require("./routes/rekognition"));
 app.use("/api/stream",     require("./routes/stream"));
 app.use("/api/corporate",  require("./routes/corporate"));
