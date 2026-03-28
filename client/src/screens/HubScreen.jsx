@@ -105,7 +105,7 @@ export default function HubScreen() {
           videoConstraint = { deviceId: { ideal: profile.data.Last_Source_Device_Id } };
         }
       } catch { /* non-fatal */ }
-      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: { deviceId: { ideal: 'default' } } });
       startStream(stream);
       const devices = await navigator.mediaDevices.enumerateDevices();
       const [vTrack] = stream.getVideoTracks();
@@ -182,8 +182,7 @@ export default function HubScreen() {
   }
 
   async function switchMic(device) {
-    try {
-      const constraint = device?.deviceId ? { deviceId: { ideal: device.deviceId } } : true;
+    async function applyAudioTrack(constraint) {
       const newAudioStream = await navigator.mediaDevices.getUserMedia({ audio: constraint });
       const [newTrack] = newAudioStream.getAudioTracks();
       if (!newTrack) return;
@@ -195,8 +194,17 @@ export default function HubScreen() {
       const connected = allDevices.find(d => d.kind === 'audioinput' && d.label === newTrack.label)
         ?? device;
       setCurrentAudioIn(connected);
+    }
+    try {
+      const constraint = device?.deviceId ? { deviceId: { ideal: device.deviceId } } : { deviceId: { ideal: 'default' } };
+      await applyAudioTrack(constraint);
     } catch (err) {
-      console.error('Mic switch failed:', err);
+      console.error('Mic switch failed, falling back to default:', err);
+      try {
+        await applyAudioTrack({ deviceId: { ideal: 'default' } });
+      } catch (fallbackErr) {
+        console.error('Default mic fallback also failed:', fallbackErr);
+      }
     }
   }
 
