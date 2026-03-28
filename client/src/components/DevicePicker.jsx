@@ -15,7 +15,16 @@ export default function DevicePicker({ icon: Icon, kind, current, placeholder, o
     if (disabled) return;
     if (!open) {
       const all = await navigator.mediaDevices.enumerateDevices();
-      setDevices(all.filter(d => d.kind === kind && d.deviceId && d.label));
+      setDevices(all.filter(d => {
+        if (d.kind !== kind || !d.deviceId || !d.label) return false;
+        // 'default' is a virtual alias Chrome creates for the system default — the real
+        // device already appears in the list under its own deviceId, so skip the alias.
+        if (d.deviceId === 'default') return false;
+        // Filter out known virtual/routing devices that aren't real physical inputs.
+        const lowerLabel = d.label.toLowerCase();
+        if (lowerLabel.includes('microsoft teams')) return false;
+        return true;
+      }));
     }
     setOpen(v => !v);
   }
