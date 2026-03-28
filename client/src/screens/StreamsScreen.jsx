@@ -313,7 +313,7 @@ function EmptyTile() {
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function StreamsScreen() {
   const navigate = useNavigate();
-  const { user, isCorporate } = useApp();
+  const { user, isCorporate, isBackOffice } = useApp();
   const [liveStreams, setLiveStreams]            = useState([]);
   const [pastStreams, setPastStreams]            = useState([]);
   const [loading, setLoading]                   = useState(true);
@@ -395,9 +395,11 @@ export default function StreamsScreen() {
     <div className="h-screen bg-slate-700 flex flex-col overflow-hidden">
       <AppHeader
         left={
-          <button onClick={() => navigate('/hub')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
-            <MovieCameraIcon className="w-[30px] h-[30px]" />
-          </button>
+          !isBackOffice && (
+            <button onClick={() => navigate('/hub')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
+              <MovieCameraIcon className="w-[30px] h-[30px]" />
+            </button>
+          )
         }
         center={<span className="text-white font-bold text-xl tracking-wide text-center leading-tight">{isCorporate ? <><div>CrowdView</div><div>Corporate</div></> : 'CrowdView'}</span>}
         right={
