@@ -14,7 +14,7 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 export default function ManageFriendsScreen() {
   const navigate = useNavigate();
-  const { isCorporate } = useApp();
+  const { isCorporate, isBackOffice } = useApp();
   const noun = isCorporate ? 'customer' : 'friend';
   const Noun = isCorporate ? 'Customer' : 'Friend';
   const [friends, setFriends] = useState([]);
@@ -127,9 +127,11 @@ export default function ManageFriendsScreen() {
       {/* Header */}
       <AppHeader
         left={
-          <button onClick={() => navigate('/hub')} title="Camera" className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
-            <MovieCameraIcon className="w-[30px] h-[30px]" />
-          </button>
+          !isBackOffice && (
+            <button onClick={() => navigate('/hub')} title="Camera" className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
+              <MovieCameraIcon className="w-[30px] h-[30px]" />
+            </button>
+          )
         }
         center={<span className="text-white font-bold text-xl tracking-wide text-center leading-tight">{isCorporate ? <><div>CrowdView</div><div>Corporate</div></> : 'CrowdView'}</span>}
         right={
