@@ -341,12 +341,14 @@ export default function StreamsScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Poll live streams every 5s when the live tab is active, 30s otherwise
   useEffect(() => {
+    const interval = tab === 'live' ? 5000 : 30000;
     const id = setInterval(() => {
       api.get('/api/stream/live').then(r => setLiveStreams(r.data)).catch(() => {});
-    }, 30000);
+    }, interval);
     return () => clearInterval(id);
-  }, []);
+  }, [tab]);
 
   // Remove tiles whose streams went offline
   useEffect(() => {
