@@ -454,7 +454,44 @@ In glasses mode, `showResult` sends to `GlassesSDK.sendResult()` **and** navigat
 
 ---
 
-## 14. Known Stubs / Not-Yet-Implemented
+## 14. Future Enhancements — Scalability
+
+### Dedicated Streaming Server
+
+As the user base grows, MediaMTX should be migrated off the main VPS onto a dedicated streaming server to isolate streaming I/O from the API and web serving workloads.
+
+**Proposed architecture:**
+
+```
+Browser/App
+  ├── crowdview.tv (main VPS)
+  │     ├── /api/      → Express :5000
+  │     ├── /          → Vite preview :4173
+  │     └── /hls/, /whip/  ──proxy──► streaming server
+  │
+  └── streaming server (dedicated)
+        ├── MediaMTX :8888 (HLS)
+        └── MediaMTX :8889 (WHIP)
+```
+
+**What changes:**
+- nginx on main VPS: `proxy_pass` for `/hls/` and `/whip/` points to streaming server IP instead of localhost
+- MediaMTX config: webhook URLs change from `http://localhost:5000/api/stream/...` to `https://crowdview.tv/api/stream/...`
+- No client code changes required if the nginx proxy approach is used
+
+**Recording storage options (in order of preference):**
+
+| Option | Complexity | Notes |
+|--------|-----------|-------|
+| rsync after stream ends | Low | `on-unpublish` webhook triggers sync to main VPS; short delay before recording is available |
+| Express proxies recording requests to streaming server | Medium | No disk duplication; streaming server needs authenticated file endpoint |
+| Object storage (S3/R2) | Higher | Best long-term; no disk management; recordings survive server replacement |
+
+**Estimated effort:** 4–10 hours depending on recording strategy chosen.
+
+---
+
+## 15. Known Stubs / Not-Yet-Implemented
 
 | Feature | Status | Notes |
 |---------|--------|-------|
