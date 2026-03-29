@@ -21,7 +21,7 @@ async function applyFaststart(filePath) {
   try {
     await execFileAsync('ffmpeg', [
       '-i', filePath,
-      '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23',
+      '-c:v', 'libx264', '-preset', 'medium', '-crf', '23',
       '-c:a', 'aac',
       '-movflags', 'faststart',
       '-y', tmp,
