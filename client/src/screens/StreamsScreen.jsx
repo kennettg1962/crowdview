@@ -229,11 +229,11 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
       <div className={`relative min-h-0 transition-all duration-300 ${selectedFace ? 'w-[55%]' : 'flex-1'}`}>
         <video ref={videoRef} playsInline muted className="w-full h-full object-contain" />
 
-        {/* Floating detect button — overlaid on left of video */}
+        {/* Floating detect button — overlaid on left of video; hidden on mobile */}
         <button
           onClick={e => { e.stopPropagation(); onToggleScan(); }}
           title={scanActive ? 'Stop detect' : 'Detect faces'}
-          className={`absolute left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-0.5
+          className={`hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-20 flex-col items-center gap-0.5
             px-2 py-2 rounded-lg transition-colors backdrop-blur-sm
             ${scanActive ? 'bg-green-700/90 hover:bg-green-600/90 animate-pulse' : 'bg-black/50 hover:bg-black/70'}`}
         >
@@ -462,10 +462,10 @@ export default function StreamsScreen() {
               <p>Nobody is streaming right now</p>
             </div>
           ) : (
-            <div className="flex flex-1 min-h-0">
+            <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
 
-              {/* Left sidebar — stream list */}
-              <div className="w-28 md:w-36 flex-shrink-0 bg-gray-800/40 border-r border-gray-700 overflow-y-auto p-2 space-y-2">
+              {/* Stream selector — horizontal strip on mobile, vertical sidebar on desktop */}
+              <div className="flex md:flex-col flex-shrink-0 bg-gray-800/40 border-b md:border-b-0 md:border-r border-gray-700 overflow-x-auto md:overflow-y-auto md:w-36 p-2 gap-2">
                 {liveStreams.map(stream => {
                   const inTile   = tiles.some(t => t?.Stream_Id === stream.Stream_Id);
                   const disabled = !inTile && tilesFull;
@@ -475,7 +475,7 @@ export default function StreamsScreen() {
                       onClick={() => toggleStream(stream)}
                       disabled={disabled}
                       title={disabled ? 'Remove a stream to add another' : undefined}
-                      className={`w-full text-left p-2 rounded-lg transition-colors border
+                      className={`flex-shrink-0 text-left p-2 rounded-lg transition-colors border
                         ${inTile
                           ? 'bg-blue-600/20 border-blue-500/60 hover:bg-blue-600/30'
                           : disabled
@@ -497,19 +497,22 @@ export default function StreamsScreen() {
                 })}
               </div>
 
-              {/* 2×2 tile grid */}
-              <div className="flex-1 min-w-0 min-h-0 grid grid-cols-2 grid-rows-2 gap-2 p-2">
+              {/* Tiles — single scrollable column on mobile, 2×2 grid on desktop */}
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 md:grid-rows-2 gap-2 p-2 md:min-h-0 md:overflow-hidden">
                 {tiles.map((tile, i) =>
                   tile ? (
-                    <VideoTile
-                      key={tile.Stream_Id}
-                      stream={tile}
-                      onClose={() => clearTile(i)}
-                      scanActive={activeScanIdx === i}
-                      onToggleScan={() => handleToggleScan(i)}
-                    />
+                    <div key={tile.Stream_Id} className="h-64 md:h-auto">
+                      <VideoTile
+                        stream={tile}
+                        onClose={() => clearTile(i)}
+                        scanActive={activeScanIdx === i}
+                        onToggleScan={() => handleToggleScan(i)}
+                      />
+                    </div>
                   ) : (
-                    <EmptyTile key={i} />
+                    <div key={i} className="h-64 md:h-auto">
+                      <EmptyTile />
+                    </div>
                   )
                 )}
               </div>
