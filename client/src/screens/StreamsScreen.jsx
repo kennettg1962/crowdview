@@ -37,6 +37,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
 
   const [tileError, setTileError]               = useState(false);
   const [tileLoading, setTileLoading]           = useState(true);
+  const [retryKey, setRetryKey]                 = useState(0);
   const [liveFaces, setLiveFaces]               = useState([]);
   const [scanInitializing, setScanInitializing] = useState(false);
   const [selectedFace, setSelectedFace]         = useState(null);
@@ -63,15 +64,33 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
     const src = `${HLS_BASE}/live/${stream.Stream_Key_Txt}/index.m3u8`;
 
     if (Hls.isSupported()) {
-      const hls = new Hls({ lowLatencyMode: true, backBufferLength: 0 });
+      const hls = new Hls({
+        backBufferLength: 30,
+        manifestLoadingMaxRetry: 5,
+        manifestLoadingRetryDelay: 2000,
+        levelLoadingMaxRetry: 5,
+        levelLoadingRetryDelay: 2000,
+        fragLoadingMaxRetry: 5,
+      });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-      hls.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) { setTileError(true); setTileLoading(false); } });
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (!data.fatal) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          // Try to recover from network errors before giving up
+          hls.startLoad();
+        } else {
+          setTileError(true);
+          setTileLoading(false);
+        }
+      });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
-      video.play().catch(() => {});
+      video.load();
+      const onCanPlay = () => video.play().catch(() => {});
+      video.addEventListener('canplay', onCanPlay, { once: true });
       video.addEventListener('error', () => { setTileError(true); setTileLoading(false); });
     } else {
       setTileError(true);
@@ -81,7 +100,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
     video.addEventListener('playing', () => setTileLoading(false));
 
     return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
-  }, [stream]);
+  }, [stream, retryKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clear selected face when scan is turned off
   useEffect(() => {
@@ -278,8 +297,14 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         </div>
 
         {tileError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-gray-400 text-xs text-center px-2">
-            Stream unavailable
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 text-gray-400 text-xs text-center px-2">
+            <p>Stream unavailable</p>
+            <button
+              onClick={e => { e.stopPropagation(); setTileError(false); setTileLoading(true); setRetryKey(k => k + 1); }}
+              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs"
+            >
+              Retry
+            </button>
           </div>
         )}
       </div>
