@@ -71,18 +71,15 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
     function fail() { if (!destroyed) { setTileError(true); setTileLoading(false); } }
 
     const clearLoading = () => { if (!destroyed) setTileLoading(false); };
-    video.addEventListener('playing', clearLoading, { once: true });
-    // timeupdate fallback — iOS sometimes plays without firing 'playing'
-    const onTimeUpdate = () => {
-      if (!video.paused && !destroyed) {
-        setTileLoading(false);
-        video.removeEventListener('timeupdate', onTimeUpdate);
-      }
-    };
-    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('playing',   clearLoading, { once: true });
+    video.addEventListener('loadeddata', clearLoading, { once: true });
+
+    // Auto-resume if iOS pauses after the first frame (autoplay policy quirk)
+    const onPause = () => { if (!destroyed && !video.ended) video.play().catch(() => {}); };
+    video.addEventListener('pause', onPause);
 
     if (Hls.isSupported()) {
-      const hls = new Hls({ lowLatencyMode: true, backBufferLength: 0 });
+      const hls = new Hls({ backBufferLength: 30 });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
@@ -103,8 +100,9 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
 
     return () => {
       destroyed = true;
-      video.removeEventListener('playing', clearLoading);
-      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('playing',    clearLoading);
+      video.removeEventListener('loadeddata', clearLoading);
+      video.removeEventListener('pause', onPause);
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
