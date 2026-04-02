@@ -341,6 +341,13 @@ export default function StreamsScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Refresh past streams whenever the user switches to the Past tab
+  useEffect(() => {
+    if (tab === 'past') {
+      api.get('/api/stream/past').then(r => setPastStreams(r.data)).catch(() => {});
+    }
+  }, [tab]);
+
   // Poll live streams every 5s when the live tab is active, 30s otherwise
   useEffect(() => {
     const interval = tab === 'live' ? 5000 : 30000;

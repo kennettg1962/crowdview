@@ -155,10 +155,8 @@ router.post('/on-unpublish', async (req, res) => {
       if (files.length) recFile = path.join(recDir, files[0].name);
     }
 
-    // Rewrite the file with moov atom at the front so browsers can stream it
-    // progressively without downloading the entire file first.
-    if (recFile) await applyFaststart(recFile);
-
+    // Mark stream ended immediately so the live tile disappears within the next poll cycle.
+    // Recording path is set now if we have a file; updated again after re-encode completes.
     await pool.execute(
       `UPDATE Stream
           SET Status_Fl = 'ended',
@@ -170,6 +168,17 @@ router.post('/on-unpublish', async (req, res) => {
     );
 
     console.log(`[stream] ${streamKey} ended — recording: ${recFile || 'none'}`);
+
+    // Re-encode in the background so the webhook returns immediately.
+    // Updates Recording_File_Txt again after faststart is applied.
+    if (recFile) {
+      applyFaststart(recFile).then(() => {
+        pool.execute(
+          `UPDATE Stream SET Recording_File_Txt = ? WHERE Stream_Key_Txt = ?`,
+          [recFile, streamKey]
+        ).catch(err => console.error('[stream] recording path update error:', err));
+      }).catch(() => {});
+    }
 
     // Enforce 200 past-stream cap per organisation (corporate orgs only)
     const [userRows] = await pool.execute(
