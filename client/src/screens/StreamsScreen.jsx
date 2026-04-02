@@ -80,8 +80,14 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (window.location.protocol === 'capacitor:') {
+          // iOS WKWebView silently blocks MSE autoplay (play() resolves but
+          // immediately pauses after the first frame). Skip the attempt and
+          // show a tap-to-play overlay so the user gesture triggers play().
+          if (!destroyed) { setTileLoading(false); setTapToPlay(true); }
+          return;
+        }
         video.play().catch(() => {
-          // iOS WKWebView blocks MSE autoplay — show tap-to-play overlay instead.
           if (!destroyed) { setTileLoading(false); setTapToPlay(true); }
         });
       });
