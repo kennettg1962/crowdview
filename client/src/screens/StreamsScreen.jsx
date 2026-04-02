@@ -66,37 +66,51 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
 
     function fail() { if (!destroyed) { setTileError(true); setTileLoading(false); } }
 
-    if (Hls.isSupported()) {
+    // On iOS Capacitor, HLS.js XHR is blocked by CORS (capacitor:// origin).
+    // Native HLS uses WebKit's media engine which bypasses JS CORS entirely.
+    const useNativeHLS = window.location.protocol === 'capacitor:' &&
+                         !!video.canPlayType('application/vnd.apple.mpegurl');
+
+    const clearLoading = () => { if (!destroyed) setTileLoading(false); };
+    video.addEventListener('playing', clearLoading, { once: true });
+    // timeupdate fallback — iOS sometimes plays without firing 'playing'
+    const onTimeUpdate = () => {
+      if (!video.paused && !destroyed) {
+        setTileLoading(false);
+        video.removeEventListener('timeupdate', onTimeUpdate);
+      }
+    };
+    video.addEventListener('timeupdate', onTimeUpdate);
+
+    if (useNativeHLS) {
+      video.src = src;
+      video.load();
+      video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
+      video.addEventListener('error', () => { if (!destroyed) { setTileError(true); setTileLoading(false); } });
+    } else if (Hls.isSupported()) {
       const hls = new Hls({ lowLatencyMode: true, backBufferLength: 0 });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-      let mediaErrorRecovered = false;
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (!data.fatal) return;
-        console.warn('[HLS] fatal error type:', data.type, 'details:', data.details);
-        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && !mediaErrorRecovered) {
-          // iOS WKWebView MSE pipeline sometimes needs a one-shot recovery
-          mediaErrorRecovered = true;
-          hls.recoverMediaError();
-        } else {
-          if (!destroyed) { setTileError(true); setTileLoading(false); }
-        }
+        if (!destroyed) { setTileError(true); setTileLoading(false); }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
-      video.play().catch(() => {});
+      video.load();
+      video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
       video.addEventListener('error', () => { if (!destroyed) { setTileError(true); setTileLoading(false); } });
     } else {
       setTileError(true);
       setTileLoading(false);
     }
 
-    video.addEventListener('playing', () => { if (!destroyed) setTileLoading(false); });
-
     return () => {
       destroyed = true;
+      video.removeEventListener('playing', clearLoading);
+      video.removeEventListener('timeupdate', onTimeUpdate);
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
