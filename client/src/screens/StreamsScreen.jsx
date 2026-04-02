@@ -74,7 +74,16 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
     video.addEventListener('playing',    clearLoading, { once: true });
     video.addEventListener('loadeddata', clearLoading, { once: true });
 
-    if (Hls.isSupported()) {
+    const isCapacitor = window.location.protocol === 'capacitor:';
+
+    if (isCapacitor && video.canPlayType('application/vnd.apple.mpegurl')) {
+      // iOS Capacitor: native HLS via proxy URL — avoids MSE autoplay restrictions.
+      // WebKit's media engine handles playback without requiring a user gesture.
+      video.src = src;
+      video.load();
+      video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
+      video.addEventListener('error', () => { if (!destroyed) { setTileError(true); setTileLoading(false); } });
+    } else if (Hls.isSupported()) {
       const hls = new Hls({ lowLatencyMode: true, backBufferLength: 0 });
       hlsRef.current = hls;
       hls.loadSource(src);
