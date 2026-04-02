@@ -15,7 +15,11 @@ import api from '../api/api';
 const SERVER_ORIGIN = window.location.protocol === 'capacitor:'
   ? 'https://crowdview.tv'
   : `${window.location.protocol}//${window.location.hostname}`;
-const HLS_BASE = `${SERVER_ORIGIN}/hls`;
+// Capacitor apps use the Express proxy so CORS is handled (capacitor://localhost
+// is in Express allowedOrigins). Desktop uses the direct nginx /hls/ route.
+const HLS_BASE = window.location.protocol === 'capacitor:'
+  ? `${SERVER_ORIGIN}/api/stream/hls`
+  : `${SERVER_ORIGIN}/hls`;
 
 const STATUS_COLORS = { known: '#22c55e', identified: '#f97316', unknown: '#ef4444' };
 
@@ -66,11 +70,6 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
 
     function fail() { if (!destroyed) { setTileError(true); setTileLoading(false); } }
 
-    // On iOS Capacitor, HLS.js XHR is blocked by CORS (capacitor:// origin).
-    // Native HLS uses WebKit's media engine which bypasses JS CORS entirely.
-    const useNativeHLS = window.location.protocol === 'capacitor:' &&
-                         !!video.canPlayType('application/vnd.apple.mpegurl');
-
     const clearLoading = () => { if (!destroyed) setTileLoading(false); };
     video.addEventListener('playing', clearLoading, { once: true });
     // timeupdate fallback — iOS sometimes plays without firing 'playing'
@@ -82,12 +81,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
     };
     video.addEventListener('timeupdate', onTimeUpdate);
 
-    if (useNativeHLS) {
-      video.src = src;
-      video.load();
-      video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
-      video.addEventListener('error', () => { if (!destroyed) { setTileError(true); setTileLoading(false); } });
-    } else if (Hls.isSupported()) {
+    if (Hls.isSupported()) {
       const hls = new Hls({ lowLatencyMode: true, backBufferLength: 0 });
       hlsRef.current = hls;
       hls.loadSource(src);

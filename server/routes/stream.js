@@ -5,6 +5,7 @@ const router     = express.Router();
 const crypto     = require('crypto');
 const fs         = require('fs');
 const path       = require('path');
+const http       = require('http');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
@@ -398,6 +399,29 @@ router.delete('/:id', auth, async (req, res) => {
     console.error('stream delete error:', err);
     res.status(500).json({ error: 'Server error' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/stream/hls/*  — proxy MediaMTX HLS through Express so Capacitor
+// apps (capacitor://localhost origin) get proper CORS headers from Express
+// rather than the nginx /hls/ proxy which doesn't handle that origin.
+// ---------------------------------------------------------------------------
+router.get('/hls/*', (req, res) => {
+  const hlsPath = req.params[0]; // e.g. "live/<key>/index.m3u8" or a segment
+  const proxyReq = http.get(
+    `http://127.0.0.1:8888/${hlsPath}`,
+    (proxyRes) => {
+      if (!res.headersSent) {
+        res.writeHead(proxyRes.statusCode, {
+          'Content-Type': proxyRes.headers['content-type'] || 'application/vnd.apple.mpegurl',
+          'Cache-Control': 'no-cache',
+        });
+      }
+      proxyRes.pipe(res);
+    }
+  );
+  proxyReq.on('error', () => { if (!res.headersSent) res.status(502).end(); });
+  req.on('close', () => proxyReq.destroy());
 });
 
 module.exports = router;
