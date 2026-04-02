@@ -462,10 +462,10 @@ export default function StreamsScreen() {
               <p>Nobody is streaming right now</p>
             </div>
           ) : (
-            <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
+            <div className="flex flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
 
-              {/* Stream selector — horizontal strip on mobile, vertical sidebar on desktop */}
-              <div className="flex md:flex-col flex-shrink-0 bg-gray-800/40 border-b md:border-b-0 md:border-r border-gray-700 overflow-x-auto md:overflow-y-auto md:w-36 p-2 gap-2">
+              {/* Left sidebar — stream list */}
+              <div className="w-28 md:w-36 flex-shrink-0 bg-gray-800/40 border-r border-gray-700 overflow-y-auto p-2 space-y-2">
                 {liveStreams.map(stream => {
                   const inTile   = tiles.some(t => t?.Stream_Id === stream.Stream_Id);
                   const disabled = !inTile && tilesFull;
@@ -475,7 +475,7 @@ export default function StreamsScreen() {
                       onClick={() => toggleStream(stream)}
                       disabled={disabled}
                       title={disabled ? 'Remove a stream to add another' : undefined}
-                      className={`flex-shrink-0 text-left p-2 rounded-lg transition-colors border
+                      className={`w-full text-left p-2 rounded-lg transition-colors border
                         ${inTile
                           ? 'bg-blue-600/20 border-blue-500/60 hover:bg-blue-600/30'
                           : disabled
