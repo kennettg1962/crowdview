@@ -417,6 +417,14 @@ export default function HubScreen() {
 
   const canId = isStreaming;
 
+  // On native Capacitor the viewport width can exceed 768px in landscape,
+  // which would trigger Tailwind's md: breakpoint and show the desktop layout.
+  // Lock to mobile layout on all native builds regardless of orientation.
+  const isNative = window.location.protocol === 'capacitor:';
+  const showMob   = isNative ? 'flex'   : 'flex md:hidden';
+  const showDesk  = isNative ? 'hidden' : 'hidden md:flex';
+  const showDeskB = isNative ? 'hidden' : 'hidden md:block';
+
   // ── Canvas click — hit-test bounding boxes ────────────────────────────────
   function handleCanvasClick(e) {
     if (!liveScan || !overlayCanvasRef.current || liveFaces.length === 0) return;
@@ -451,12 +459,10 @@ export default function HubScreen() {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-black md:bg-slate-700 md:flex md:flex-col">
+    <div className={`relative h-screen overflow-hidden bg-black ${isNative ? '' : 'md:bg-slate-700 md:flex md:flex-col'}`}>
 
       {/* ── Mobile header — fixed overlay at top ── */}
-      <header className="flex md:hidden fixed top-0 left-0 right-0 z-50
-        items-center px-4 pb-3
-        bg-black/70"
+      <header className={`${showMob} fixed top-0 left-0 right-0 z-50 items-center px-4 pb-3 bg-black/70`}
         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)' }}>
         <div className="flex-1 flex justify-start">
           <button
@@ -484,7 +490,7 @@ export default function HubScreen() {
       </header>
 
       {/* ── Desktop header — normal flow ── */}
-      <header className="hidden md:flex bg-slate-700 px-6 py-3 items-center justify-between">
+      <header className={`${showDesk} bg-slate-700 px-6 py-3 items-center justify-between`}>
         <button onClick={() => navigate('/friends')} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
           <FriendsIcon className="w-9 h-9" />
           <span className="text-xs font-medium">{isCorporate ? 'Customers' : 'Friends'}</span>
@@ -497,7 +503,7 @@ export default function HubScreen() {
       </header>
 
       {/* Device pickers — desktop only */}
-      <div className="hidden md:flex bg-slate-700 px-4 pb-3 items-center justify-center gap-2 flex-wrap">
+      <div className={`${showDesk} bg-slate-700 px-4 pb-3 items-center justify-center gap-2 flex-wrap`}>
         <DevicePicker
           icon={MovieCameraIcon}
           kind="videoinput"
@@ -517,10 +523,10 @@ export default function HubScreen() {
       </div>
 
       {/* Main layout — mobile: full-screen absolute; desktop: 3-column flex */}
-      <main className="absolute inset-0 z-0 flex md:relative md:inset-auto md:z-auto md:flex-1 md:items-stretch md:p-0 md:px-2 md:pb-2 md:gap-0">
+      <main className={`absolute inset-0 z-0 flex ${isNative ? '' : 'md:relative md:inset-auto md:z-auto md:flex-1 md:items-stretch md:p-0 md:px-2 md:pb-2 md:gap-0'}`}>
 
         {/* Desktop left sidebar (hidden on mobile) */}
-        <div className="hidden md:flex w-[15%] bg-slate-700 rounded-l-xl flex-col">
+        <div className={`${showDesk} w-[15%] bg-slate-700 rounded-l-xl flex-col`}>
           {liveScan ? (
             <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-xl animate-pulse" />
           ) : (
@@ -543,12 +549,12 @@ export default function HubScreen() {
         {/* Video column — full width on mobile, percentage on desktop */}
         <div
           className={`flex-1 min-w-0 overflow-hidden relative bg-black
-            md:flex-none md:bg-white md:flex md:flex-col md:items-center md:justify-center md:p-3
+            ${isNative ? '' : `md:flex-none md:bg-white md:flex md:flex-col md:items-center md:justify-center md:p-3
             md:border-t md:border-b md:border-gray-200
             md:[transition:width_0.3s_ease]
-            ${selectedFace ? 'md:w-[42%]' : 'md:w-[70%]'}`}
+            ${selectedFace ? 'md:w-[42%]' : 'md:w-[70%]'}`}`}
         >
-          <div className="w-full video-container bg-black border-0 md:border-2 md:border-white md:rounded-sm overflow-hidden relative">
+          <div className={`w-full video-container bg-black overflow-hidden relative ${isNative ? '' : 'border-0 md:border-2 md:border-white md:rounded-sm'}`}>
             {(captureMode === 'glasses' || mediaStream) ? (
               <>
                 {captureMode === 'glasses'
@@ -593,7 +599,7 @@ export default function HubScreen() {
           </div>
 
           {/* Mobile — top-left: Id + Live (horizontal) */}
-          <div className="flex md:hidden absolute left-3 z-20 bg-black/35 rounded-xl p-1.5 gap-0.5"
+          <div className={`${showMob} absolute left-3 z-20 bg-black/35 rounded-xl p-1.5 gap-0.5`}
                style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}>
             <FloatButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-white/20" />
             <div className="border-l border-white/20 my-1" />
@@ -605,7 +611,7 @@ export default function HubScreen() {
           </div>
 
           {/* Mobile — top-right: Action/Cut + Stream (horizontal), friend bubbles below */}
-          <div className="flex md:hidden absolute right-3 z-20 flex-col items-end"
+          <div className={`${showMob} absolute right-3 z-20 flex-col items-end`}
                style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}>
             <div className="flex bg-black/35 rounded-xl p-1.5 gap-0.5">
               {!isCorporate && (
@@ -645,7 +651,7 @@ export default function HubScreen() {
           </div>
 
           {/* Mobile — bottom-left: Flip */}
-          <div className="flex md:hidden absolute left-3 z-20 bg-black/35 rounded-xl p-1.5"
+          <div className={`${showMob} absolute left-3 z-20 bg-black/35 rounded-xl p-1.5`}
                style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
             <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
           </div>
@@ -653,7 +659,7 @@ export default function HubScreen() {
 
         {/* Face detail panel — desktop only, slides in when a bounding box is clicked */}
         {selectedFace && (
-          <div className="hidden md:flex w-[28%] flex-col overflow-hidden" style={{ transition: 'width 0.3s ease' }}>
+          <div className={`${showDesk} w-[28%] flex-col overflow-hidden`} style={{ transition: 'width 0.3s ease' }}>
             <FriendForm
               friend={selectedFriendProp}
               capturedPhotoUrl={!selectedFace.friendId ? selectedFace.cropDataUrl : null}
@@ -665,7 +671,7 @@ export default function HubScreen() {
         )}
 
         {/* Desktop right sidebar (hidden on mobile) */}
-        <div className="hidden md:flex w-[15%] bg-slate-700 rounded-r-xl flex-col items-center">
+        <div className={`${showDesk} w-[15%] bg-slate-700 rounded-r-xl flex-col items-center`}>
           {!(isStreamingOut || isStreamingConnecting) ? (
             <SideButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
           ) : (
@@ -701,8 +707,7 @@ export default function HubScreen() {
       </main>
 
       {/* ── Mobile nav — fixed overlay at bottom ── */}
-      <nav className="flex md:hidden fixed bottom-0 left-0 right-0 z-50
-        bg-black/70"
+      <nav className={`${showMob} fixed bottom-0 left-0 right-0 z-50 bg-black/70`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex w-full px-2 pt-4 pb-2">
@@ -749,7 +754,7 @@ export default function HubScreen() {
       </nav>
 
       {/* ── Desktop nav — normal flow ── */}
-      <div className="hidden md:block">
+      <div className={showDeskB}>
         <TrueFooter />
         <NavBar />
       </div>
