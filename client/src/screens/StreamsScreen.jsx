@@ -72,7 +72,18 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-      hls.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) { if (!destroyed) { setTileError(true); setTileLoading(false); } } });
+      let mediaErrorRecovered = false;
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (!data.fatal) return;
+        console.warn('[HLS] fatal error type:', data.type, 'details:', data.details);
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && !mediaErrorRecovered) {
+          // iOS WKWebView MSE pipeline sometimes needs a one-shot recovery
+          mediaErrorRecovered = true;
+          hls.recoverMediaError();
+        } else {
+          if (!destroyed) { setTileError(true); setTileLoading(false); }
+        }
+      });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
       video.play().catch(() => {});
