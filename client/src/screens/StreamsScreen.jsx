@@ -64,60 +64,44 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
     const src = `${HLS_BASE}/live/${stream.Stream_Key_Txt}/index.m3u8`;
     let destroyed = false;
 
-    const abort = new AbortController();
-
     function fail() { if (!destroyed) { setTileError(true); setTileLoading(false); } }
 
     const onPlaying = () => { if (!destroyed) setTileLoading(false); };
     video.addEventListener('playing', onPlaying);
 
-    (async () => {
-      // Probe the manifest first — fails immediately if nothing is streaming
-      try {
-        const probeTimeout = setTimeout(() => abort.abort(), 8000);
-        const r = await fetch(src, { method: 'HEAD', signal: abort.signal });
-        clearTimeout(probeTimeout);
-        if (!r.ok) { fail(); return; }
-      } catch {
-        fail(); return;
-      }
-      if (destroyed) return;
-
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          backBufferLength: 30,
-          manifestLoadingMaxRetry: 3,
-          manifestLoadingRetryDelay: 2000,
-          levelLoadingMaxRetry: 3,
-          levelLoadingRetryDelay: 2000,
-          fragLoadingMaxRetry: 3,
-        });
-        hlsRef.current = hls;
-        hls.loadSource(src);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-        hls.on(Hls.Events.ERROR, (_, data) => {
-          if (!data.fatal) return;
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            hls.startLoad();
-          } else {
-            fail();
-          }
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native HLS fallback (Safari browser without MSE)
-        video.src = src;
-        video.load();
-        video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
-        video.addEventListener('error', fail);
-      } else {
-        fail();
-      }
-    })();
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        backBufferLength: 30,
+        manifestLoadingMaxRetry: 3,
+        manifestLoadingRetryDelay: 2000,
+        levelLoadingMaxRetry: 3,
+        levelLoadingRetryDelay: 2000,
+        fragLoadingMaxRetry: 3,
+      });
+      hlsRef.current = hls;
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (!data.fatal) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          hls.startLoad();
+        } else {
+          fail();
+        }
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS fallback (Safari browser without MSE)
+      video.src = src;
+      video.load();
+      video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
+      video.addEventListener('error', fail);
+    } else {
+      fail();
+    }
 
     return () => {
       destroyed = true;
-      abort.abort();
       video.removeEventListener('playing', onPlaying);
       hlsRef.current?.destroy();
       hlsRef.current = null;
