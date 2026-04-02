@@ -63,7 +63,22 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
 
     const src = `${HLS_BASE}/live/${stream.Stream_Key_Txt}/index.m3u8`;
 
-    if (Hls.isSupported()) {
+    // Safety timeout — if playing never fires within 20s, show error
+    const loadingTimeout = setTimeout(() => {
+      setTileError(true);
+      setTileLoading(false);
+    }, 20000);
+
+    const onPlaying = () => { clearTimeout(loadingTimeout); setTileLoading(false); };
+    video.addEventListener('playing', onPlaying);
+
+    // Prefer native HLS on iOS/Safari (WKWebView MSE is unreliable with HLS.js)
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src;
+      video.load();
+      video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
+      video.addEventListener('error', () => { clearTimeout(loadingTimeout); setTileError(true); setTileLoading(false); });
+    } else if (Hls.isSupported()) {
       const hls = new Hls({
         backBufferLength: 30,
         manifestLoadingMaxRetry: 5,
@@ -79,27 +94,25 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (!data.fatal) return;
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          // Try to recover from network errors before giving up
           hls.startLoad();
         } else {
+          clearTimeout(loadingTimeout);
           setTileError(true);
           setTileLoading(false);
         }
       });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = src;
-      video.load();
-      const onCanPlay = () => video.play().catch(() => {});
-      video.addEventListener('canplay', onCanPlay, { once: true });
-      video.addEventListener('error', () => { setTileError(true); setTileLoading(false); });
     } else {
+      clearTimeout(loadingTimeout);
       setTileError(true);
       setTileLoading(false);
     }
 
-    video.addEventListener('playing', () => setTileLoading(false));
-
-    return () => { hlsRef.current?.destroy(); hlsRef.current = null; };
+    return () => {
+      clearTimeout(loadingTimeout);
+      video.removeEventListener('playing', onPlaying);
+      hlsRef.current?.destroy();
+      hlsRef.current = null;
+    };
   }, [stream, retryKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clear selected face when scan is turned off
