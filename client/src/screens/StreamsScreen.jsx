@@ -66,53 +66,26 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
 
     function fail() { if (!destroyed) { setTileError(true); setTileLoading(false); } }
 
-    // Clear loading on either playing or timeupdate (iOS sometimes skips playing)
-    const clearLoading = () => { if (!destroyed) setTileLoading(false); };
-    video.addEventListener('playing', clearLoading, { once: true });
-    const onTimeUpdate = () => { if (!video.paused && !destroyed) { setTileLoading(false); video.removeEventListener('timeupdate', onTimeUpdate); } };
-    video.addEventListener('timeupdate', onTimeUpdate);
-
     if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: false,        // Web workers unreliable in WKWebView
-        backBufferLength: 30,
-        manifestLoadingMaxRetry: 3,
-        manifestLoadingRetryDelay: 2000,
-        levelLoadingMaxRetry: 3,
-        levelLoadingRetryDelay: 2000,
-        fragLoadingMaxRetry: 3,
-      });
+      const hls = new Hls({ lowLatencyMode: true, backBufferLength: 0 });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => {
-          // play() rejected — retry once on canplay
-          video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
-        });
-      });
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (!data.fatal) return;
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          hls.startLoad();
-        } else {
-          fail();
-        }
-      });
+      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      hls.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) { if (!destroyed) { setTileError(true); setTileLoading(false); } } });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native HLS fallback (Safari browser without MSE)
       video.src = src;
-      video.load();
-      video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
-      video.addEventListener('error', fail);
+      video.play().catch(() => {});
+      video.addEventListener('error', () => { if (!destroyed) { setTileError(true); setTileLoading(false); } });
     } else {
-      fail();
+      setTileError(true);
+      setTileLoading(false);
     }
+
+    video.addEventListener('playing', () => { if (!destroyed) setTileLoading(false); });
 
     return () => {
       destroyed = true;
-      video.removeEventListener('playing', clearLoading);
-      video.removeEventListener('timeupdate', onTimeUpdate);
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
@@ -262,7 +235,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
 
       {/* Video side — shrinks when friend form is open */}
       <div className={`relative min-h-0 transition-all duration-300 ${selectedFace ? 'w-[55%]' : 'flex-1'}`}>
-        <video ref={videoRef} playsInline muted autoPlay className="w-full h-full object-contain" />
+        <video ref={videoRef} playsInline muted className="w-full h-full object-contain" />
 
         {/* Floating detect button — overlaid on left of video; hidden on mobile */}
         <button
