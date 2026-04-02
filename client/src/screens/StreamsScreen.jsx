@@ -7,7 +7,7 @@ import TrueFooter from '../components/TrueFooter';
 import FriendForm from '../components/FriendForm';
 import {
   MovieCameraIcon, FriendsIcon, BroadcastIcon, DeleteIcon,
-  XIcon, LiveScanIcon,
+  XIcon, LiveScanIcon, DownloadIcon,
 } from '../components/Icons';
 import { useApp } from '../context/AppContext';
 import api from '../api/api';
@@ -530,6 +530,16 @@ export default function StreamsScreen() {
                     <p className="text-gray-600 text-xs">{duration(s.Started_At, s.Ended_At)}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {s.recordings?.length > 0 && (
+                      <a
+                        href={`${s.recordings[0].url}?download=1`}
+                        download={s.recordings[0].filename}
+                        className="p-2 text-gray-400 hover:text-white transition-colors"
+                        title="Export MP4"
+                      >
+                        <DownloadIcon className="w-5 h-5" />
+                      </a>
+                    )}
                     <button
                       onClick={() => navigate('/streams/watch', { state: { stream: s, isLive: false } })}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium"

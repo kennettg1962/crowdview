@@ -346,6 +346,15 @@ export function GlassesIcon({ className = iconClass }) {
   );
 }
 
+export function DownloadIcon({ className = iconClass }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+    </svg>
+  );
+}
+
 // Icon button wrapper
 export function IconButton({ icon: Icon, label, onClick, disabled, className = '', variant = 'default', title }) {
   const base = 'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors text-xs font-medium';

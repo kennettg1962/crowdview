@@ -328,7 +328,11 @@ router.get('/recording/:streamKey/:filename', async (req, res) => {
 
   // Disable ETags and last-modified to prevent 304 responses — video elements
   // need a full 200/206 response with bytes, not an empty 304.
-  res.sendFile(filePath, { etag: false, lastModified: false });
+  const options = { etag: false, lastModified: false };
+  if (req.query.download === '1') {
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+  }
+  res.sendFile(filePath, options);
 });
 
 // ---------------------------------------------------------------------------
