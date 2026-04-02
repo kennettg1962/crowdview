@@ -41,6 +41,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
 
   const [tileError, setTileError]               = useState(false);
   const [tileLoading, setTileLoading]           = useState(true);
+  const [tapToPlay, setTapToPlay]               = useState(false);
   const [retryKey, setRetryKey]                 = useState(0);
   const [liveFaces, setLiveFaces]               = useState([]);
   const [scanInitializing, setScanInitializing] = useState(false);
@@ -64,35 +65,26 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
     if (!video || !stream) return;
     setTileError(false);
     setTileLoading(true);
+    setTapToPlay(false);
 
     const src = `${HLS_BASE}/live/${stream.Stream_Key_Txt}/index.m3u8`;
     let destroyed = false;
-
-    function fail() { if (!destroyed) { setTileError(true); setTileLoading(false); } }
 
     const clearLoading = () => { if (!destroyed) setTileLoading(false); };
     video.addEventListener('playing',    clearLoading, { once: true });
     video.addEventListener('loadeddata', clearLoading, { once: true });
 
-    const isCapacitor = window.location.protocol === 'capacitor:';
-
-    if (isCapacitor && video.canPlayType('application/vnd.apple.mpegurl')) {
-      // iOS Capacitor: native HLS via proxy URL — avoids MSE autoplay restrictions.
-      // WebKit's media engine handles playback without requiring a user gesture.
-      video.src = src;
-      video.load();
-      video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
-      video.addEventListener('error', () => {
-        const e = video.error;
-        console.error('[VideoTile] native HLS error', e?.code, e?.message);
-        if (!destroyed) { setTileError(true); setTileLoading(false); }
-      });
-    } else if (Hls.isSupported()) {
+    if (Hls.isSupported()) {
       const hls = new Hls({ lowLatencyMode: true, backBufferLength: 0 });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(() => {
+          // iOS WKWebView blocks MSE autoplay — show tap-to-play overlay instead.
+          if (!destroyed) { setTileLoading(false); setTapToPlay(true); }
+        });
+      });
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (!data.fatal) return;
         if (!destroyed) { setTileError(true); setTileLoading(false); }
@@ -287,6 +279,20 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70 pointer-events-none">
             <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${scanInitializing ? 'border-green-400' : 'border-blue-400'}`} />
             <p className="text-gray-300 text-xs">{scanInitializing ? 'Initializing detect…' : 'Initializing…'}</p>
+          </div>
+        )}
+
+        {/* Tap-to-play overlay — iOS MSE autoplay is blocked until user gesture */}
+        {tapToPlay && !tileError && (
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer z-10"
+            onClick={e => { e.stopPropagation(); videoRef.current?.play().then(() => setTapToPlay(false)).catch(() => {}); }}
+          >
+            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+              <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
           </div>
         )}
 
