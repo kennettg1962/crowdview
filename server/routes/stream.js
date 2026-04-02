@@ -412,8 +412,17 @@ router.get('/hls/*', (req, res) => {
     `http://127.0.0.1:8888/${hlsPath}`,
     (proxyRes) => {
       if (!res.headersSent) {
+        // Pass ALL upstream headers through so native iOS video gets the full metadata
+        // (Content-Length, Accept-Ranges, Transfer-Encoding, etc.) it needs.
+        // Strip only the upstream CORS headers — Express handles those via the cors() middleware.
+        const {
+          'access-control-allow-origin': _a,
+          'access-control-allow-methods': _b,
+          'access-control-allow-headers': _c,
+          ...upstreamHeaders
+        } = proxyRes.headers;
         res.writeHead(proxyRes.statusCode, {
-          'Content-Type': proxyRes.headers['content-type'] || 'application/vnd.apple.mpegurl',
+          ...upstreamHeaders,
           'Cache-Control': 'no-cache',
         });
       }

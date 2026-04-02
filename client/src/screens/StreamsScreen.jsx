@@ -82,7 +82,11 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
       video.src = src;
       video.load();
       video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
-      video.addEventListener('error', () => { if (!destroyed) { setTileError(true); setTileLoading(false); } });
+      video.addEventListener('error', () => {
+        const e = video.error;
+        console.error('[VideoTile] native HLS error', e?.code, e?.message);
+        if (!destroyed) { setTileError(true); setTileLoading(false); }
+      });
     } else if (Hls.isSupported()) {
       const hls = new Hls({ lowLatencyMode: true, backBufferLength: 0 });
       hlsRef.current = hls;
