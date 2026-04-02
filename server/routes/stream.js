@@ -156,28 +156,35 @@ router.post('/on-unpublish', async (req, res) => {
     }
 
     // Mark stream ended immediately so the live tile disappears within the next poll cycle.
-    // Recording path is set now if we have a file; updated again after re-encode completes.
+    // Encoding_Fl = 'Y' signals the client to show "encoding..." until ffmpeg finishes.
     await pool.execute(
       `UPDATE Stream
           SET Status_Fl = 'ended',
               Ended_At  = NOW(),
+              Encoding_Fl = ?,
               Recording_Dir_Txt = ?,
               Recording_File_Txt = ?
         WHERE Stream_Key_Txt = ? AND Status_Fl = 'live'`,
-      [recFile ? path.dirname(recFile) : null, recFile, streamKey]
+      [recFile ? 'Y' : 'N', recFile ? path.dirname(recFile) : null, recFile, streamKey]
     );
 
     console.log(`[stream] ${streamKey} ended — recording: ${recFile || 'none'}`);
 
     // Re-encode in the background so the webhook returns immediately.
-    // Updates Recording_File_Txt again after faststart is applied.
+    // Clears Encoding_Fl once faststart is applied.
     if (recFile) {
       applyFaststart(recFile).then(() => {
         pool.execute(
-          `UPDATE Stream SET Recording_File_Txt = ? WHERE Stream_Key_Txt = ?`,
+          `UPDATE Stream SET Recording_File_Txt = ?, Encoding_Fl = 'N' WHERE Stream_Key_Txt = ?`,
           [recFile, streamKey]
         ).catch(err => console.error('[stream] recording path update error:', err));
-      }).catch(() => {});
+      }).catch(() => {
+        // Encoding failed — clear the flag so the client stops waiting
+        pool.execute(
+          `UPDATE Stream SET Encoding_Fl = 'N' WHERE Stream_Key_Txt = ?`,
+          [streamKey]
+        ).catch(() => {});
+      });
     }
 
     // Enforce 200 past-stream cap per organisation (corporate orgs only)
@@ -265,7 +272,7 @@ router.get('/past', auth, async (req, res) => {
       // Corporate admin — see all org streams
       query = `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt,
                       s.Started_At, s.Ended_At,
-                      s.Recording_File_Txt,
+                      s.Recording_File_Txt, s.Encoding_Fl,
                       s.User_Id AS Streamer_User_Id,
                       u.Name_Txt AS Streamer_Name
                  FROM Stream s
@@ -278,7 +285,7 @@ router.get('/past', auth, async (req, res) => {
     } else {
       query = `SELECT s.Stream_Id, s.Stream_Key_Txt, s.Title_Txt,
                       s.Started_At, s.Ended_At,
-                      s.Recording_File_Txt,
+                      s.Recording_File_Txt, s.Encoding_Fl,
                       s.User_Id AS Streamer_User_Id,
                       u.Name_Txt AS Streamer_Name
                  FROM Stream s

@@ -348,6 +348,17 @@ export default function StreamsScreen() {
     }
   }, [tab]);
 
+  // While any past stream is still encoding, poll every 5s to pick up when it finishes
+  useEffect(() => {
+    if (tab !== 'past') return;
+    const anyEncoding = pastStreams.some(s => s.Encoding_Fl === 'Y');
+    if (!anyEncoding) return;
+    const id = setInterval(() => {
+      api.get('/api/stream/past').then(r => setPastStreams(r.data)).catch(() => {});
+    }, 5000);
+    return () => clearInterval(id);
+  }, [tab, pastStreams]);
+
   // Poll live streams every 5s when the live tab is active, 30s otherwise
   useEffect(() => {
     const interval = tab === 'live' ? 5000 : 30000;
@@ -524,11 +535,17 @@ export default function StreamsScreen() {
               {pastStreams.map(s => (
                 <div key={s.Stream_Id} className="bg-gray-800 rounded-xl p-4 flex items-center gap-4">
                   <div className="w-20 h-14 rounded-lg bg-gray-700 flex items-center justify-center flex-shrink-0">
-                    <BroadcastIcon className="w-7 h-7 text-gray-500" />
+                    {s.Encoding_Fl === 'Y'
+                      ? <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-amber-400" />
+                      : <BroadcastIcon className="w-7 h-7 text-gray-500" />
+                    }
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-white font-medium truncate">{s.Streamer_Name || 'Unknown'}</span>
+                      {s.Encoding_Fl === 'Y' && (
+                        <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded bg-amber-600/30 text-amber-400 border border-amber-600/40">encoding…</span>
+                      )}
                     </div>
                     <p className="text-gray-400 text-sm truncate">{s.Title_Txt}</p>
                     <p className="text-gray-500 text-xs mt-0.5">
@@ -537,7 +554,7 @@ export default function StreamsScreen() {
                     <p className="text-gray-600 text-xs">{duration(s.Started_At, s.Ended_At)}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {s.recordings?.length > 0 && (
+                    {s.Encoding_Fl !== 'Y' && s.recordings?.length > 0 && (
                       <a
                         href={`${s.recordings[0].url}?download=1`}
                         download={s.recordings[0].filename}
@@ -549,7 +566,8 @@ export default function StreamsScreen() {
                     )}
                     <button
                       onClick={() => navigate('/streams/watch', { state: { stream: s, isLive: false } })}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium"
+                      disabled={s.Encoding_Fl === 'Y'}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium"
                     >
                       Watch
                     </button>
