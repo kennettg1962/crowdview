@@ -121,36 +121,41 @@ export default function CorporateDashboardScreen() {
                           )}
                         </div>
 
-                        {/* Detection counts */}
-                        <div className="flex flex-col items-end flex-shrink-0 gap-0.5">
-                          <span className="text-[9px] text-gray-500 uppercase tracking-wide">Face Detect Usage</span>
-                          <div className="flex gap-2">
-                            <div className="flex flex-col items-center">
-                              <span className="text-xs font-semibold text-white">{device.sessionCount.toLocaleString()}</span>
-                              <span className="text-[9px] text-gray-500 uppercase tracking-wide">Session</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                              <span className="text-xs font-semibold text-white">{device.monthCount.toLocaleString()}</span>
-                              <span className="text-[9px] text-gray-500 uppercase tracking-wide">Month</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                              <span className="text-xs font-semibold text-white">{device.yearCount.toLocaleString()}</span>
-                              <span className="text-[9px] text-gray-500 uppercase tracking-wide">Year</span>
+                        {/* Right panel — fixed width so every row aligns */}
+                        <div className="flex items-center gap-3 flex-shrink-0 w-72">
+                          {/* Detection counts */}
+                          <div className="flex flex-col items-center flex-1 gap-0.5">
+                            <span className="text-[9px] text-gray-500 uppercase tracking-wide whitespace-nowrap">Face Detect Usage</span>
+                            <div className="flex gap-3">
+                              <div className="flex flex-col items-center w-10">
+                                <span className="text-xs font-semibold text-white">{device.sessionCount.toLocaleString()}</span>
+                                <span className="text-[9px] text-gray-500 uppercase tracking-wide">Session</span>
+                              </div>
+                              <div className="flex flex-col items-center w-10">
+                                <span className="text-xs font-semibold text-white">{device.monthCount.toLocaleString()}</span>
+                                <span className="text-[9px] text-gray-500 uppercase tracking-wide">Month</span>
+                              </div>
+                              <div className="flex flex-col items-center w-10">
+                                <span className="text-xs font-semibold text-white">{device.yearCount.toLocaleString()}</span>
+                                <span className="text-[9px] text-gray-500 uppercase tracking-wide">Year</span>
+                              </div>
                             </div>
                           </div>
+
+                          {/* Role badge — fixed width so status always lines up */}
+                          <div className="w-12 flex justify-center">
+                            {device.role === 'Y' && (
+                              <span className="text-[10px] bg-purple-800 text-purple-300 px-1.5 py-0.5 rounded font-medium">
+                                Admin
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Status */}
+                          <div className="w-16 text-right">
+                            <span className={`text-xs font-medium ${s.text}`}>{s.label}</span>
+                          </div>
                         </div>
-
-                        {/* Role badge */}
-                        {device.role === 'Y' && (
-                          <span className="text-[10px] bg-purple-800 text-purple-300 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
-                            Admin
-                          </span>
-                        )}
-
-                        {/* Status badge */}
-                        <span className={`text-xs font-medium flex-shrink-0 ${s.text}`}>
-                          {s.label}
-                        </span>
                       </div>
                     );
                   })}
