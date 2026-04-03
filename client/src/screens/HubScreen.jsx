@@ -221,6 +221,15 @@ export default function HubScreen() {
     }
   }
 
+  // ── Heartbeat while camera active — feeds the corporate dashboard ─────────
+  useEffect(() => {
+    if (!isStreaming) return;
+    const beat = () => api.post('/api/users/heartbeat').catch(() => {});
+    beat();
+    const id = setInterval(beat, 15000);
+    return () => clearInterval(id);
+  }, [isStreaming]);
+
   // ── Fetch live friend streams ──────────────────────────────────────────────
   useEffect(() => {
     const fetchLive = () => {

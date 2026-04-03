@@ -84,9 +84,10 @@ export function AppProvider({ children }) {
   }, []);
 
   // Derived corporate flags — true only when parentOrganizationId is set
-  const isCorporate = !!(user?.parentOrganizationId);
-  const isOAU = isCorporate && user?.corporateAdminFl === 'Y';
-  const isBackOffice = isCorporate && user?.corporateAdminFl === 'B';
+  const isCorporate   = !!(user?.parentOrganizationId);
+  const isOAU         = isCorporate && user?.corporateAdminFl === 'Y';
+  const isBackOffice  = isCorporate && user?.corporateAdminFl === 'B';
+  const isOperations  = user?.corporateAdminFl === 'O'; // CrowdView ops — not tied to one org
 
   const login = (userData, token) => {
     sessionStorage.setItem('cv_token', token);
@@ -217,7 +218,7 @@ export function AppProvider({ children }) {
       isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
       captureMode, glassesConnected, connectGlasses, disconnectGlasses,
       latestGlassesFrameRef, injectGlassesFrame, cameraReconnectKey,
-      isCorporate, isOAU, isBackOffice
+      isCorporate, isOAU, isBackOffice, isOperations
     }}>
       {children}
     </AppContext.Provider>

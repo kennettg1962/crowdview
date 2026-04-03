@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const pool = require('../db/connection');
 const auth = require('../middleware/auth');
+const { deviceHeartbeat } = require('../activity');
 
 // GET /api/users/profile
 router.get('/profile', auth, async (req, res) => {
@@ -43,6 +44,15 @@ router.put('/profile', auth, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/users/heartbeat  — called every 15 s from HubScreen while camera
+// is active; feeds the corporate real-time dashboard
+// ---------------------------------------------------------------------------
+router.post('/heartbeat', auth, (req, res) => {
+  deviceHeartbeat.set(req.user.userId, Date.now());
+  res.json({ ok: true });
 });
 
 module.exports = router;

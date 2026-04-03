@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../db/connection');
 const auth = require('../middleware/auth');
 const corporateAdmin = require('../middleware/corporateAdmin');
+const { detectActivity, deviceHeartbeat, DETECT_TTL, HEARTBEAT_TTL } = require('../activity');
 
 // All routes require auth + OAU role
 router.use(auth, corporateAdmin);
@@ -144,6 +145,64 @@ router.post('/users/:id/reset-password', async (req, res) => {
     res.json({ message: 'Password reset' });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/corporate/dashboard  — real-time activity dashboard for OAU
+// ---------------------------------------------------------------------------
+router.get('/dashboard', async (req, res) => {
+  try {
+    const orgId = req.user.parentOrganizationId;
+    const now = Date.now();
+
+    // All users in the org
+    const [users] = await pool.execute(
+      `SELECT User_Id, Name_Txt, Email, Corporate_Admin_Fl
+         FROM User WHERE Parent_Organization_Id = ? ORDER BY Name_Txt`,
+      [orgId]
+    );
+
+    // Live streams for the org
+    const [streams] = await pool.execute(
+      `SELECT s.User_Id FROM Stream s
+         JOIN User u ON u.User_Id = s.User_Id
+        WHERE s.Status_Fl = 'live' AND u.Parent_Organization_Id = ?`,
+      [orgId]
+    );
+    const liveUserIds = new Set(streams.map(s => s.User_Id));
+
+    // Build device list with status derived from activity maps + DB
+    const devices = users.map(u => {
+      const detecting  = detectActivity.has(u.User_Id)  && (now - detectActivity.get(u.User_Id))  < DETECT_TTL;
+      const active     = deviceHeartbeat.has(u.User_Id) && (now - deviceHeartbeat.get(u.User_Id)) < HEARTBEAT_TTL;
+      const streaming  = liveUserIds.has(u.User_Id);
+
+      let status = 'offline';
+      if (detecting)       status = 'detecting';
+      else if (streaming)  status = 'streaming';
+      else if (active)     status = 'active';
+
+      return {
+        userId:   u.User_Id,
+        name:     u.Name_Txt,
+        email:    u.Email,
+        role:     u.Corporate_Admin_Fl,
+        status,
+        lastSeen: deviceHeartbeat.get(u.User_Id) || null,
+      };
+    });
+
+    res.json({
+      activeDetects:  devices.filter(d => d.status === 'detecting').length,
+      liveStreams:    liveUserIds.size,
+      activeDevices:  devices.filter(d => d.status !== 'offline').length,
+      totalUsers:     users.length,
+      devices,
+    });
+  } catch (err) {
+    console.error('dashboard error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

@@ -82,6 +82,25 @@ export default function CorporateUsersScreen() {
         }
       />
 
+      {/* Tab bar */}
+      <div className="flex border-b border-gray-700 bg-gray-800">
+        {[
+          { label: 'Dashboard', path: '/corporate/dashboard' },
+          { label: 'Users',     path: '/corporate/users'     },
+        ].map(t => (
+          <button
+            key={t.path}
+            onClick={() => navigate(t.path)}
+            className={`flex-1 py-2.5 text-sm font-medium transition-colors
+              ${t.path === '/corporate/users'
+                ? 'text-blue-400 border-b-2 border-blue-400'
+                : 'text-gray-400 hover:text-gray-200'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       <main className="flex-1 flex flex-col items-center px-4 py-4">
         <div className="w-full max-w-2xl flex flex-col gap-3 bg-gray-900 rounded-lg p-3">
 

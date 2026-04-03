@@ -6,11 +6,15 @@ const sharp = require('sharp');
 const pool = require('../db/connection');
 const auth = require('../middleware/auth');
 const { detectFaces, searchFace } = require('../rekognition');
+const { detectActivity } = require('../activity');
 
 // POST /api/rekognition/identify
 router.post('/identify', auth, async (req, res) => {
   const { imageData } = req.body;
   if (!imageData) return res.status(400).json({ error: 'imageData required' });
+
+  // Record live-scan activity for the corporate dashboard
+  detectActivity.set(req.user.userId, Date.now());
 
   try {
     // Decode base64 → Buffer (strip optional data URI prefix)

@@ -14,6 +14,7 @@ import StreamsScreen from './screens/StreamsScreen';
 import StreamWatchScreen from './screens/StreamWatchScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import CorporateUsersScreen from './screens/CorporateUsersScreen';
+import CorporateDashboardScreen from './screens/CorporateDashboardScreen';
 
 function AuthGuard({ children }) {
   const { isAuthenticated } = useApp();
@@ -59,7 +60,8 @@ function AppRoutes() {
       <Route path="/streams" element={<AuthGuard><StreamsScreen /></AuthGuard>} />
       <Route path="/streams/watch" element={<AuthGuard><StreamWatchScreen /></AuthGuard>} />
       <Route path="/reset-password" element={<ResetPasswordScreen />} />
-      <Route path="/corporate/users" element={<OAUGuard><CorporateUsersScreen /></OAUGuard>} />
+      <Route path="/corporate/users"     element={<OAUGuard><CorporateUsersScreen /></OAUGuard>} />
+      <Route path="/corporate/dashboard" element={<OAUGuard><CorporateDashboardScreen /></OAUGuard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </>
