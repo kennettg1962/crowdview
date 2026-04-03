@@ -15,6 +15,9 @@ import StreamWatchScreen from './screens/StreamWatchScreen';
 import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import CorporateUsersScreen from './screens/CorporateUsersScreen';
 import CorporateDashboardScreen from './screens/CorporateDashboardScreen';
+import OperationsDashboardScreen from './screens/OperationsDashboardScreen';
+import OperationsOrgDetailScreen from './screens/OperationsOrgDetailScreen';
+import OperationsOrgsScreen from './screens/OperationsOrgsScreen';
 
 function AuthGuard({ children }) {
   const { isAuthenticated } = useApp();
@@ -26,6 +29,13 @@ function OAUGuard({ children }) {
   const { isAuthenticated, isOAU } = useApp();
   if (!isAuthenticated) return <Navigate to="/" replace />;
   if (!isOAU) return <Navigate to="/hub" replace />;
+  return children;
+}
+
+function OpsGuard({ children }) {
+  const { isAuthenticated, isOperations } = useApp();
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (!isOperations) return <Navigate to="/hub" replace />;
   return children;
 }
 
@@ -62,6 +72,9 @@ function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordScreen />} />
       <Route path="/corporate/users"     element={<OAUGuard><CorporateUsersScreen /></OAUGuard>} />
       <Route path="/corporate/dashboard" element={<OAUGuard><CorporateDashboardScreen /></OAUGuard>} />
+      <Route path="/operations/dashboard" element={<OpsGuard><OperationsDashboardScreen /></OpsGuard>} />
+      <Route path="/operations/org/:orgId" element={<OpsGuard><OperationsOrgDetailScreen /></OpsGuard>} />
+      <Route path="/operations/orgs"       element={<OpsGuard><OperationsOrgsScreen /></OpsGuard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </>

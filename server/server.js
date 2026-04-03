@@ -31,6 +31,7 @@ app.use("/api/devices",      auth, notBackOffice, require("./routes/devices"));
 app.use("/api/rekognition", require("./routes/rekognition"));
 app.use("/api/stream",     require("./routes/stream"));
 app.use("/api/corporate",  require("./routes/corporate"));
+app.use("/api/operations", require("./routes/operations"));
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
