@@ -9,4 +9,13 @@ const deviceHeartbeat = new Map(); // userId -> timestamp ms (updated by HubScre
 const DETECT_TTL    = 10_000;  // 10 s  — live scan fires every 300 ms
 const HEARTBEAT_TTL = 30_000;  // 30 s  — heartbeat fires every 15 s
 
-module.exports = { detectActivity, deviceHeartbeat, DETECT_TTL, HEARTBEAT_TTL };
+// ── Detection call counters ────────────────────────────────────────────────
+// sessionDetectCount: resets when user logs in (in-memory only)
+// pendingDetectFlush: accumulated since last DB flush (cleared every 30 s)
+const sessionDetectCount = new Map(); // userId -> count
+const pendingDetectFlush = new Map(); // userId -> count
+
+module.exports = {
+  detectActivity, deviceHeartbeat, DETECT_TTL, HEARTBEAT_TTL,
+  sessionDetectCount, pendingDetectFlush,
+};

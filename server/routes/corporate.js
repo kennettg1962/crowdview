@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../db/connection');
 const auth = require('../middleware/auth');
 const corporateAdmin = require('../middleware/corporateAdmin');
-const { detectActivity, deviceHeartbeat, DETECT_TTL, HEARTBEAT_TTL } = require('../activity');
+const { detectActivity, deviceHeartbeat, DETECT_TTL, HEARTBEAT_TTL, sessionDetectCount } = require('../activity');
 
 // All routes require auth + OAU role
 router.use(auth, corporateAdmin);
@@ -155,11 +155,12 @@ router.post('/users/:id/reset-password', async (req, res) => {
 router.get('/dashboard', async (req, res) => {
   try {
     const orgId = req.user.parentOrganizationId;
-    const now = Date.now();
 
-    // All users in the org
+    // All users in the org (include detect counters)
     const [users] = await pool.execute(
-      `SELECT User_Id, Name_Txt, Email, Corporate_Admin_Fl
+      `SELECT User_Id, Name_Txt, Email, Corporate_Admin_Fl,
+              Detect_Month_Count, Detect_Month_Ref,
+              Detect_Year_Count,  Detect_Year_Ref
          FROM User WHERE Parent_Organization_Id = ? ORDER BY Name_Txt`,
       [orgId]
     );
@@ -173,10 +174,14 @@ router.get('/dashboard', async (req, res) => {
     );
     const liveUserIds = new Set(streams.map(s => s.User_Id));
 
-    // Build device list with status derived from activity maps + DB
+    const now      = new Date();
+    const monthRef = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const yearRef  = String(now.getFullYear());
+
+    // Build device list with status + detection counts
     const devices = users.map(u => {
-      const detecting  = detectActivity.has(u.User_Id)  && (now - detectActivity.get(u.User_Id))  < DETECT_TTL;
-      const active     = deviceHeartbeat.has(u.User_Id) && (now - deviceHeartbeat.get(u.User_Id)) < HEARTBEAT_TTL;
+      const detecting  = detectActivity.has(u.User_Id)  && (Date.now() - detectActivity.get(u.User_Id))  < DETECT_TTL;
+      const active     = deviceHeartbeat.has(u.User_Id) && (Date.now() - deviceHeartbeat.get(u.User_Id)) < HEARTBEAT_TTL;
       const streaming  = liveUserIds.has(u.User_Id);
 
       let status = 'offline';
@@ -184,13 +189,20 @@ router.get('/dashboard', async (req, res) => {
       else if (streaming)  status = 'streaming';
       else if (active)     status = 'active';
 
+      // Month/year counts reset automatically if the ref doesn't match current period
+      const monthCount = u.Detect_Month_Ref === monthRef ? (u.Detect_Month_Count || 0) : 0;
+      const yearCount  = u.Detect_Year_Ref  === yearRef  ? (u.Detect_Year_Count  || 0) : 0;
+
       return {
-        userId:   u.User_Id,
-        name:     u.Name_Txt,
-        email:    u.Email,
-        role:     u.Corporate_Admin_Fl,
+        userId:       u.User_Id,
+        name:         u.Name_Txt,
+        email:        u.Email,
+        role:         u.Corporate_Admin_Fl,
         status,
-        lastSeen: deviceHeartbeat.get(u.User_Id) || null,
+        lastSeen:     deviceHeartbeat.get(u.User_Id) || null,
+        sessionCount: sessionDetectCount.get(u.User_Id) || 0,
+        monthCount,
+        yearCount,
       };
     });
 

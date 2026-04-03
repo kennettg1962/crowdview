@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const pool = require('../db/connection');
 require('dotenv').config();
 
+const { sessionDetectCount } = require('../activity');
 const JWT_SECRET = process.env.JWT_SECRET || 'crowdview_secret';
 const JWT_EXPIRES_INDIVIDUAL = process.env.JWT_EXPIRES_IN || '7d';
 const JWT_EXPIRES_CORPORATE  = process.env.JWT_EXPIRES_IN_CORPORATE || '1d';
@@ -48,6 +49,8 @@ router.post('/login', async (req, res) => {
     };
     const expiresIn = payload.parentOrganizationId ? JWT_EXPIRES_CORPORATE : JWT_EXPIRES_INDIVIDUAL;
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn });
+    // Reset session detect count on every login
+    sessionDetectCount.set(user.User_Id, 0);
     res.json({
       token,
       userId: user.User_Id,

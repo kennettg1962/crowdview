@@ -37,5 +37,41 @@ app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 // Ensure Rekognition collection exists at startup (non-fatal if AWS not configured)
 require("./rekognition").ensureCollection().catch(console.error);
 
+// ── Detection-count flush — batch-write accumulated counts to DB every 30 s ──
+// Avoids a DB write on every 300 ms rekognition call.
+// Month/year counts auto-reset when the calendar rolls over.
+(function startDetectFlush() {
+  const pool = require('./db/connection');
+  const { pendingDetectFlush } = require('./activity');
+
+  setInterval(async () => {
+    if (pendingDetectFlush.size === 0) return;
+    const batch = new Map(pendingDetectFlush);
+    pendingDetectFlush.clear();
+
+    const now      = new Date();
+    const monthRef = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const yearRef  = String(now.getFullYear());
+
+    for (const [userId, count] of batch) {
+      try {
+        await pool.execute(
+          `UPDATE User SET
+             Detect_Month_Count = IF(Detect_Month_Ref = ?, Detect_Month_Count + ?, ?),
+             Detect_Month_Ref   = ?,
+             Detect_Year_Count  = IF(Detect_Year_Ref  = ?, Detect_Year_Count  + ?, ?),
+             Detect_Year_Ref    = ?
+           WHERE User_Id = ?`,
+          [monthRef, count, count, monthRef,
+           yearRef,  count, count, yearRef,
+           userId]
+        );
+      } catch (err) {
+        console.error('[detect flush] DB error for user', userId, err.message);
+      }
+    }
+  }, 30_000);
+})();
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`CrowdView API running on port ${PORT}`));
