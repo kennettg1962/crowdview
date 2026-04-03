@@ -373,6 +373,7 @@ export default function StreamsScreen() {
   const [showDeletedToast, setShowDeletedToast] = useState(false);
   const [tiles, setTiles]                       = useState([null, null, null, null]);
   const [activeScanIdx, setActiveScanIdx]       = useState(null);
+  const scanTimerRef                            = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -426,15 +427,32 @@ export default function StreamsScreen() {
     ));
   }, [liveStreams]);
 
-  // Only one detect active at a time
+  // Only one detect active at a time; auto-off after 15 s
+  function stopScan() {
+    clearTimeout(scanTimerRef.current);
+    scanTimerRef.current = null;
+    setActiveScanIdx(null);
+  }
+
   function handleToggleScan(idx) {
-    setActiveScanIdx(prev => prev === idx ? null : idx);
+    setActiveScanIdx(prev => {
+      if (prev === idx) {
+        // manual off
+        clearTimeout(scanTimerRef.current);
+        scanTimerRef.current = null;
+        return null;
+      }
+      // turning on — start 15 s auto-off timer
+      clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = setTimeout(stopScan, 15000);
+      return idx;
+    });
   }
 
   function toggleStream(stream) {
     const existingIdx = tiles.findIndex(t => t?.Stream_Id === stream.Stream_Id);
     if (existingIdx !== -1) {
-      if (activeScanIdx === existingIdx) setActiveScanIdx(null);
+      if (activeScanIdx === existingIdx) stopScan();
       setTiles(prev => prev.map((t, i) => i === existingIdx ? null : t));
     } else {
       const emptyIdx = tiles.findIndex(t => t === null);
@@ -443,7 +461,7 @@ export default function StreamsScreen() {
   }
 
   function clearTile(idx) {
-    if (activeScanIdx === idx) setActiveScanIdx(null);
+    if (activeScanIdx === idx) stopScan();
     setTiles(prev => prev.map((t, i) => i === idx ? null : t));
   }
 
