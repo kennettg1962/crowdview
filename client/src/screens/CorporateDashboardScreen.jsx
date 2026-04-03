@@ -84,10 +84,10 @@ export default function CorporateDashboardScreen() {
           <>
             {/* Summary counters */}
             <div className="flex gap-3">
-              <StatCard label="Detecting"     value={data.activeDetects}  accent="border-green-500" />
-              <StatCard label="Streaming"     value={data.liveStreams}     accent="border-red-500"   />
-              <StatCard label="Active"        value={data.activeDevices}  accent="border-blue-500"  />
-              <StatCard label="Total Users"   value={data.totalUsers}     accent="border-gray-600"  />
+              <StatCard label="Live"        value={data.activeDetects}  accent="border-green-500" />
+              <StatCard label="Streaming"  value={data.liveStreams}     accent="border-red-500"   />
+              <StatCard label="Active"     value={data.activeDevices}  accent="border-blue-500"  />
+              <StatCard label="Users"      value={data.totalUsers}     accent="border-gray-600"  />
             </div>
 
             {/* Last refresh */}
