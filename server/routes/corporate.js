@@ -118,6 +118,17 @@ router.delete('/users/:id', async (req, res) => {
     const target = await getOrgUser(targetId, req.user.parentOrganizationId);
     if (!target) return res.status(404).json({ error: 'User not found' });
 
+    // Prevent deleting the last admin in the org
+    if (target.Corporate_Admin_Fl === 'Y') {
+      const [[{ adminCount }]] = await pool.execute(
+        'SELECT COUNT(*) AS adminCount FROM User WHERE Parent_Organization_Id = ? AND Corporate_Admin_Fl = ?',
+        [req.user.parentOrganizationId, 'Y']
+      );
+      if (adminCount <= 1) {
+        return res.status(400).json({ error: 'Cannot delete the only admin user for this organization' });
+      }
+    }
+
     await pool.execute('DELETE FROM User WHERE User_Id = ? AND Parent_Organization_Id = ?', [targetId, req.user.parentOrganizationId]);
     res.json({ message: 'User deleted' });
   } catch (err) {
