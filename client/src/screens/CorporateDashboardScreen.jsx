@@ -6,7 +6,7 @@ import TrueFooter from '../components/TrueFooter';
 import api from '../api/api';
 
 const STATUS = {
-  detecting: { label: 'Detecting',  color: 'bg-green-500',  text: 'text-green-400' },
+  detecting: { label: 'Live',       color: 'bg-green-500',  text: 'text-green-400' },
   streaming: { label: 'Streaming',  color: 'bg-red-500',    text: 'text-red-400'   },
   active:    { label: 'Active',     color: 'bg-blue-500',   text: 'text-blue-400'  },
   offline:   { label: 'Offline',    color: 'bg-gray-600',   text: 'text-gray-500'  },
