@@ -89,6 +89,12 @@ export function AppProvider({ children }) {
   const isBackOffice  = isCorporate && user?.corporateAdminFl === 'B';
   const isOperations  = user?.corporateAdminFl === 'O'; // CrowdView ops — not tied to one org
 
+  // Spelling: UK/NZ/AU orgs use British 'organisation', everyone else 'organization'
+  const ORG_BRITISH = ['UK', 'NZ', 'AU'];
+  const orgSpelling = ORG_BRITISH.includes((user?.orgCountry || '').toUpperCase())
+    ? 'organisation'
+    : 'organization';
+
   const login = (userData, token) => {
     sessionStorage.setItem('cv_token', token);
     sessionStorage.setItem('cv_user', JSON.stringify(userData));
@@ -218,7 +224,7 @@ export function AppProvider({ children }) {
       isStreamingOut, isStreamingConnecting, startWhipStream, stopWhipStream, streamError, setStreamError,
       captureMode, glassesConnected, connectGlasses, disconnectGlasses,
       latestGlassesFrameRef, injectGlassesFrame, cameraReconnectKey,
-      isCorporate, isOAU, isBackOffice, isOperations
+      isCorporate, isOAU, isBackOffice, isOperations, orgSpelling
     }}>
       {children}
     </AppContext.Provider>

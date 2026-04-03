@@ -4,6 +4,7 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import { BackIcon } from '../components/Icons';
+import { useApp } from '../context/AppContext';
 import api from '../api/api';
 
 const STATUS = {
@@ -26,7 +27,9 @@ export default function OperationsOrgDetailScreen() {
   const navigate = useNavigate();
   const { orgId } = useParams();
   const location  = useLocation();
-  const orgName   = location.state?.orgName || `Organisation ${orgId}`;
+  const { orgSpelling } = useApp();
+  const Org     = orgSpelling.charAt(0).toUpperCase() + orgSpelling.slice(1);
+  const orgName = location.state?.orgName || `${Org} ${orgId}`;
 
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
@@ -92,7 +95,7 @@ export default function OperationsOrgDetailScreen() {
                 <h2 className="text-sm font-semibold text-gray-300">Devices</h2>
               </div>
               {data.devices.length === 0 ? (
-                <p className="text-center text-gray-500 py-8 text-sm">No users in organisation</p>
+                <p className="text-center text-gray-500 py-8 text-sm">No users in {orgSpelling}</p>
               ) : (
                 <div className="divide-y divide-gray-700">
                   {data.devices.map(device => {

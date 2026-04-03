@@ -71,7 +71,7 @@ async function buildOrgDashboard(orgId) {
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/operations/dashboard  — summary across all organisations
+// GET /api/operations/dashboard  — summary across all organizations
 // ---------------------------------------------------------------------------
 router.get('/dashboard', async (req, res) => {
   try {
@@ -141,7 +141,7 @@ router.get('/dashboard/:orgId', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/operations/orgs  — list all organisations with user counts
+// GET /api/operations/orgs  — list all organizations with user counts
 // ---------------------------------------------------------------------------
 router.get('/orgs', async (req, res) => {
   try {
@@ -170,7 +170,7 @@ router.get('/orgs', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/operations/orgs  — create a new organisation + admin user
+// POST /api/operations/orgs  — create a new organization + admin user
 // ---------------------------------------------------------------------------
 router.post('/orgs', async (req, res) => {
   const {
@@ -189,7 +189,7 @@ router.post('/orgs', async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // Insert organisation
+    // Insert organization
     let orgResult;
     try {
       [orgResult] = await conn.execute(
@@ -216,7 +216,7 @@ router.post('/orgs', async (req, res) => {
       if (err.code === 'ER_DUP_ENTRY') {
         await conn.rollback();
         conn.release();
-        return res.status(409).json({ error: 'Organisation name already exists' });
+        return res.status(409).json({ error: 'Organization name already exists' });
       }
       throw err;
     }
@@ -256,7 +256,7 @@ router.post('/orgs', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/operations/orgs/:id  — update organisation details
+// PUT /api/operations/orgs/:id  — update organization details
 // ---------------------------------------------------------------------------
 router.put('/orgs/:id', async (req, res) => {
   const orgId = Number(req.params.id);
@@ -299,10 +299,10 @@ router.put('/orgs/:id', async (req, res) => {
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Organisation not found' });
+      return res.status(404).json({ error: 'Organization not found' });
     }
 
-    res.json({ message: 'Organisation updated' });
+    res.json({ message: 'Organization updated' });
   } catch (err) {
     console.error('ops update org error:', err);
     res.status(500).json({ error: 'Server error' });

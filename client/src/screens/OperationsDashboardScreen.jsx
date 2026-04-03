@@ -4,6 +4,7 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import { HomeIcon, UsersIcon } from '../components/Icons';
+import { useApp } from '../context/AppContext';
 import api from '../api/api';
 
 const STATUS = {
@@ -24,6 +25,9 @@ function StatCard({ label, value, accent }) {
 
 export default function OperationsDashboardScreen() {
   const navigate = useNavigate();
+  const { orgSpelling } = useApp();
+  const Org  = orgSpelling.charAt(0).toUpperCase() + orgSpelling.slice(1); // "Organization" | "Organisation"
+  const Orgs = Org + 's';
   const [orgs, setOrgs]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
@@ -62,7 +66,7 @@ export default function OperationsDashboardScreen() {
 
   const tabs = [
     { label: 'Dashboard',     path: '/operations/dashboard' },
-    { label: 'Organisations', path: '/operations/orgs'      },
+    { label: Orgs,            path: '/operations/orgs'      },
   ];
 
   return (
@@ -124,10 +128,10 @@ export default function OperationsDashboardScreen() {
             {/* Org list */}
             <div className="bg-gray-800 rounded-xl overflow-hidden">
               <div className="px-4 py-2.5 border-b border-gray-700">
-                <h2 className="text-sm font-semibold text-gray-300">Organisations</h2>
+                <h2 className="text-sm font-semibold text-gray-300">{Orgs}</h2>
               </div>
               {orgs.length === 0 ? (
-                <p className="text-center text-gray-500 py-8 text-sm">No organisations found</p>
+                <p className="text-center text-gray-500 py-8 text-sm">No {orgSpelling}s found</p>
               ) : (
                 <div className="divide-y divide-gray-700">
                   {orgs.map(org => (

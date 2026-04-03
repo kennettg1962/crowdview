@@ -4,6 +4,7 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import { HomeIcon } from '../components/Icons';
+import { useApp } from '../context/AppContext';
 import api from '../api/api';
 
 const EMPTY_FORM = {
@@ -15,6 +16,9 @@ const EMPTY_FORM = {
 
 export default function OperationsOrgsScreen() {
   const navigate = useNavigate();
+  const { orgSpelling } = useApp();
+  const Org  = orgSpelling.charAt(0).toUpperCase() + orgSpelling.slice(1);
+  const Orgs = Org + 's';
   const [orgs, setOrgs]         = useState([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
@@ -33,11 +37,11 @@ export default function OperationsOrgsScreen() {
       setError(null);
     } catch (err) {
       console.error('ops orgs fetch error:', err);
-      setError('Unable to load organisations');
+      setError(`Unable to load ${orgSpelling}s`);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [orgSpelling]);
 
   useEffect(() => { fetchOrgs(); }, [fetchOrgs]);
 
@@ -99,7 +103,7 @@ export default function OperationsOrgsScreen() {
 
   const tabs = [
     { label: 'Dashboard',     path: '/operations/dashboard' },
-    { label: 'Organisations', path: '/operations/orgs'      },
+    { label: Orgs,            path: '/operations/orgs'      },
   ];
 
   return (
@@ -110,7 +114,7 @@ export default function OperationsOrgsScreen() {
             <HomeIcon className="w-[30px] h-[30px]" />
           </button>
         }
-        center={<span className="font-bold text-lg">Organisations</span>}
+        center={<span className="font-bold text-lg">{Orgs}</span>}
         right={null}
       />
 
@@ -137,7 +141,7 @@ export default function OperationsOrgsScreen() {
             onClick={openCreate}
             className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
           >
-            + Add Organisation
+            + Add {Org}
           </button>
         </div>
 
@@ -148,7 +152,7 @@ export default function OperationsOrgsScreen() {
         ) : error ? (
           <p className="text-center text-gray-500 mt-12">{error}</p>
         ) : orgs.length === 0 ? (
-          <p className="text-center text-gray-500 mt-12 text-sm">No organisations yet</p>
+          <p className="text-center text-gray-500 mt-12 text-sm">No {orgSpelling}s yet</p>
         ) : (
           <div className="bg-gray-800 rounded-xl overflow-hidden">
             <div className="divide-y divide-gray-700">
@@ -186,7 +190,7 @@ export default function OperationsOrgsScreen() {
             {/* Modal header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
               <h2 className="text-base font-semibold text-white">
-                {editOrg ? 'Edit Organisation' : 'Add Organisation'}
+                {editOrg ? `Edit ${Org}` : `Add ${Org}`}
               </h2>
               <button
                 onClick={closeForm}
@@ -199,9 +203,9 @@ export default function OperationsOrgsScreen() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              {/* Organisation details */}
+              {/* Organization details */}
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Organisation Name <span className="text-red-400">*</span></label>
+                <label className="block text-xs text-gray-400 mb-1">{Org} Name <span className="text-red-400">*</span></label>
                 <input
                   name="orgName"
                   value={form.orgName}
@@ -312,7 +316,7 @@ export default function OperationsOrgsScreen() {
                   onChange={handleChange}
                   rows={3}
                   className="w-full bg-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="Brief description of the organisation…"
+                  placeholder={`Brief description of the ${orgSpelling}…`}
                 />
               </div>
 
@@ -377,7 +381,7 @@ export default function OperationsOrgsScreen() {
                   disabled={saving}
                   className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
                 >
-                  {saving ? 'Saving…' : editOrg ? 'Save Changes' : 'Create Organisation'}
+                  {saving ? 'Saving…' : editOrg ? 'Save Changes' : `Create ${Org}`}
                 </button>
               </div>
             </form>

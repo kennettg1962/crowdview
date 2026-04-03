@@ -41,6 +41,17 @@ router.post('/login', async (req, res) => {
     const user = rows[0];
     const match = await bcrypt.compare(password, user.Password_Hash);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+
+    // Fetch org country for spelling localisation (organisation vs organization)
+    let orgCountry = null;
+    if (user.Parent_Organization_Id) {
+      const [orgRows] = await pool.execute(
+        'SELECT Contact_Country_Txt FROM Organization WHERE Organization_Id = ?',
+        [user.Parent_Organization_Id]
+      );
+      orgCountry = orgRows[0]?.Contact_Country_Txt || null;
+    }
+
     const payload = {
       userId: user.User_Id,
       email: user.Email,
@@ -60,6 +71,7 @@ router.post('/login', async (req, res) => {
       connectLastDevice: user.Connect_Last_Used_Device_After_Login_Fl,
       parentOrganizationId: user.Parent_Organization_Id || null,
       corporateAdminFl: user.Corporate_Admin_Fl || 'N',
+      orgCountry,
     });
   } catch (err) {
     console.error(err);

@@ -37,8 +37,8 @@ export default function SplashScreen() {
     setLoading(true); setError('');
     try {
       const res = await api.post('/api/auth/login', { email, password });
-      const { token, userId, email: userEmail, name: userName, lastSourceDeviceId, connectLastDevice, parentOrganizationId, corporateAdminFl } = res.data;
-      login({ userId, email: userEmail, name: userName, lastSourceDeviceId, connectLastDevice, parentOrganizationId: parentOrganizationId || null, corporateAdminFl: corporateAdminFl || 'N' }, token);
+      const { token, userId, email: userEmail, name: userName, lastSourceDeviceId, connectLastDevice, parentOrganizationId, corporateAdminFl, orgCountry } = res.data;
+      login({ userId, email: userEmail, name: userName, lastSourceDeviceId, connectLastDevice, parentOrganizationId: parentOrganizationId || null, corporateAdminFl: corporateAdminFl || 'N', orgCountry: orgCountry || null }, token);
       navigate(corporateAdminFl === 'O' ? '/operations/dashboard' : '/hub', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
