@@ -427,6 +427,16 @@ export default function StreamsScreen() {
     ));
   }, [liveStreams]);
 
+  // Heartbeat while watching any stream — keeps the user "Active" in the dashboard
+  const watching = tiles.some(t => t !== null);
+  useEffect(() => {
+    if (!watching) return;
+    const beat = () => api.post('/api/users/heartbeat').catch(() => {});
+    beat();
+    const id = setInterval(beat, 15000);
+    return () => clearInterval(id);
+  }, [watching]);
+
   // Only one detect active at a time; auto-off after 15 s
   function stopScan() {
     clearTimeout(scanTimerRef.current);
