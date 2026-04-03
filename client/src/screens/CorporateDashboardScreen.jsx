@@ -122,18 +122,21 @@ export default function CorporateDashboardScreen() {
                         </div>
 
                         {/* Detection counts */}
-                        <div className="flex gap-2 flex-shrink-0 text-right">
-                          <div className="flex flex-col items-center">
-                            <span className="text-xs font-semibold text-white">{device.sessionCount.toLocaleString()}</span>
-                            <span className="text-[9px] text-gray-500 uppercase tracking-wide">Session</span>
-                          </div>
-                          <div className="flex flex-col items-center">
-                            <span className="text-xs font-semibold text-white">{device.monthCount.toLocaleString()}</span>
-                            <span className="text-[9px] text-gray-500 uppercase tracking-wide">Month</span>
-                          </div>
-                          <div className="flex flex-col items-center">
-                            <span className="text-xs font-semibold text-white">{device.yearCount.toLocaleString()}</span>
-                            <span className="text-[9px] text-gray-500 uppercase tracking-wide">Year</span>
+                        <div className="flex flex-col items-end flex-shrink-0 gap-0.5">
+                          <span className="text-[9px] text-gray-500 uppercase tracking-wide">Face Detect Usage</span>
+                          <div className="flex gap-2">
+                            <div className="flex flex-col items-center">
+                              <span className="text-xs font-semibold text-white">{device.sessionCount.toLocaleString()}</span>
+                              <span className="text-[9px] text-gray-500 uppercase tracking-wide">Session</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                              <span className="text-xs font-semibold text-white">{device.monthCount.toLocaleString()}</span>
+                              <span className="text-[9px] text-gray-500 uppercase tracking-wide">Month</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                              <span className="text-xs font-semibold text-white">{device.yearCount.toLocaleString()}</span>
+                              <span className="text-[9px] text-gray-500 uppercase tracking-wide">Year</span>
+                            </div>
                           </div>
                         </div>
 
