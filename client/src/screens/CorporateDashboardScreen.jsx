@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
+import { HomeIcon, UsersIcon } from '../components/Icons';
 import api from '../api/api';
 
 const STATUS = {
@@ -54,7 +55,17 @@ export default function CorporateDashboardScreen() {
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
       <AppHeader
+        left={
+          <button onClick={() => navigate('/hub')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
+            <HomeIcon className="w-[30px] h-[30px]" />
+          </button>
+        }
         center={<span className="font-bold text-lg">Corporate Dashboard</span>}
+        right={
+          <button onClick={() => navigate('/corporate/users')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
+            <UsersIcon className="w-[30px] h-[30px]" />
+          </button>
+        }
       />
 
       {/* Tab bar */}
