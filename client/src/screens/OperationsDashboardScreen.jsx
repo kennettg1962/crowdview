@@ -72,7 +72,7 @@ export default function OperationsDashboardScreen() {
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
       <AppHeader
-        center={<span className="font-bold text-lg">Operations Dashboard</span>}
+        center={<span className="font-bold text-lg">CrowdView Operations</span>}
         right={
           <button onClick={() => navigate('/operations/orgs')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
             <UsersIcon className="w-[30px] h-[30px]" />

@@ -108,7 +108,7 @@ export default function OperationsOrgsScreen() {
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
       <AppHeader
-        center={<span className="font-bold text-lg">{Orgs}</span>}
+        center={<span className="font-bold text-lg">CrowdView Operations</span>}
       />
 
       {/* Tab bar */}
