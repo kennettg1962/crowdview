@@ -8,7 +8,7 @@ const inputClass = "w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm
 const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
 export default function SplashScreen() {
-  const { login, isAuthenticated } = useApp();
+  const { login, isAuthenticated, isOperations } = useApp();
   const navigate = useNavigate();
   const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot'
   const [email, setEmail] = useState('');
@@ -20,8 +20,8 @@ export default function SplashScreen() {
   const [success, setSuccess] = useState('');
 
   React.useEffect(() => {
-    if (isAuthenticated) navigate('/hub', { replace: true });
-  }, [isAuthenticated, navigate]);
+    if (isAuthenticated) navigate(isOperations ? '/operations/dashboard' : '/hub', { replace: true });
+  }, [isAuthenticated, isOperations, navigate]);
 
   const resetForm = (newMode) => {
     setMode(newMode);
@@ -39,7 +39,7 @@ export default function SplashScreen() {
       const res = await api.post('/api/auth/login', { email, password });
       const { token, userId, email: userEmail, name: userName, lastSourceDeviceId, connectLastDevice, parentOrganizationId, corporateAdminFl } = res.data;
       login({ userId, email: userEmail, name: userName, lastSourceDeviceId, connectLastDevice, parentOrganizationId: parentOrganizationId || null, corporateAdminFl: corporateAdminFl || 'N' }, token);
-      navigate('/hub', { replace: true });
+      navigate(corporateAdminFl === 'O' ? '/operations/dashboard' : '/hub', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
     } finally {
