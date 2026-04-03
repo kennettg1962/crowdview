@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
-import { HomeIcon, UsersIcon } from '../components/Icons';
+import { UsersIcon } from '../components/Icons';
 import { useApp } from '../context/AppContext';
 import api from '../api/api';
 
@@ -72,11 +72,6 @@ export default function OperationsDashboardScreen() {
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
       <AppHeader
-        left={
-          <button onClick={() => navigate('/streams')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
-            <HomeIcon className="w-[30px] h-[30px]" />
-          </button>
-        }
         center={<span className="font-bold text-lg">Operations Dashboard</span>}
         right={
           <button onClick={() => navigate('/operations/orgs')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
