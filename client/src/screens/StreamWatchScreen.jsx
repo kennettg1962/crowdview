@@ -4,7 +4,7 @@ import Hls from 'hls.js';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
-import { BackIcon, BroadcastIcon, IdIcon, PlayIcon, LiveScanIcon, UserProfileIcon } from '../components/Icons';
+import { BackIcon, BroadcastIcon, IdIcon, PlayIcon, LiveScanIcon } from '../components/Icons';
 import api from '../api/api';
 
 // Capacitor native apps use protocol 'capacitor:' — window.location.hostname is 'localhost'
@@ -20,26 +20,6 @@ const STATUS_COLORS = {
   unknown:    '#ef4444',
 };
 
-const REJOIN_THRESHOLD = 30_000; // 30s absence → move tile to top
-
-function FaceTile({ face, onView }) {
-  const accent = face.status === 'known' ? 'border-green-500' : 'border-orange-500';
-  return (
-    <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
-      {face.cropDataUrl && (
-        <img src={face.cropDataUrl} alt={face.friendName || 'Face'} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-600" />
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white truncate">{face.friendName || 'Unknown'}</p>
-        {face.note && <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{face.note}</p>}
-      </div>
-      <button onClick={onView} title="View" className="flex-shrink-0 p-1.5 text-gray-400 hover:text-white transition-colors">
-        <UserProfileIcon className="w-5 h-5" />
-      </button>
-    </div>
-  );
-}
-
 export default function StreamWatchScreen() {
   const navigate   = useNavigate();
   const { state }  = useLocation();
@@ -52,7 +32,6 @@ export default function StreamWatchScreen() {
   const overlayCanvasRef  = useRef(null);
   const liveScanActiveRef = useRef(false);
   const scanInFlightRef   = useRef(false);
-  const faceLastSeenRef   = useRef({});
 
   const [error, setError]                       = useState(null);
   const [loading, setLoading]                   = useState(true);
@@ -62,7 +41,6 @@ export default function StreamWatchScreen() {
   const [videoRendered, setVideoRendered]       = useState(null);
   const [liveScan, setLiveScan]                 = useState(false);
   const [liveScanInitializing, setLiveScanInitializing] = useState(false);
-  const [recognizedFaces, setRecognizedFaces]   = useState([]);
 
   const calcVideoRendered = useCallback(() => {
     const video = videoRef.current;
@@ -107,8 +85,11 @@ export default function StreamWatchScreen() {
         const code = video.error?.code;
         const msg  = video.error?.message;
         console.warn('[VOD] video error', { code, msg, metadataLoaded });
+        // Ignore aborted-request errors (code 1) — these are normal range-request
+        // cancellations from the browser's media engine, not actual failures.
         if (metadataLoaded && code === 1 /* MEDIA_ERR_ABORTED */) return;
         if (metadataLoaded) {
+          // Real error during playback — log but don't hide the video; user can retry.
           console.error('[VOD] playback error after metadata loaded, code:', code);
           return;
         }
@@ -148,8 +129,6 @@ export default function StreamWatchScreen() {
       const canvas = overlayCanvasRef.current;
       if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
       setLiveScanInitializing(false);
-      setRecognizedFaces([]);
-      faceLastSeenRef.current = {};
       return;
     }
 
@@ -176,48 +155,10 @@ export default function StreamWatchScreen() {
         if (!liveScanActiveRef.current) return;
         const { faces } = res.data;
 
-        // Generate face crops
-        const facesWithCrops = faces.map(face => {
-          const bb = face.boundingBox;
-          const cx = Math.round(bb.left * capture.width);
-          const cy = Math.round(bb.top * capture.height);
-          const cw = Math.round(bb.width * capture.width);
-          const ch = Math.round(bb.height * capture.height);
-          if (cw > 0 && ch > 0) {
-            const crop = document.createElement('canvas');
-            crop.width = cw; crop.height = ch;
-            crop.getContext('2d').drawImage(capture, cx, cy, cw, ch, 0, 0, cw, ch);
-            return { ...face, cropDataUrl: crop.toDataURL('image/jpeg', 0.9) };
-          }
-          return face;
-        });
-
-        // Accumulate face tiles — only re-render for new or returning faces
-        const now = Date.now();
-        const toAdd = [];
-        const toMove = [];
-        facesWithCrops.forEach(f => {
-          if ((f.status !== 'known' && f.status !== 'identified') || !f.friendId) return;
-          const lastSeen = faceLastSeenRef.current[f.friendId] || 0;
-          faceLastSeenRef.current[f.friendId] = now;
-          if (lastSeen === 0) {
-            toAdd.push(f);
-          } else if (now - lastSeen > REJOIN_THRESHOLD) {
-            toMove.push(f);
-          }
-        });
-        if (toAdd.length > 0 || toMove.length > 0) {
-          setRecognizedFaces(prev => {
-            const movingIds = new Set(toMove.map(f => f.friendId));
-            const filtered = prev.filter(f => !movingIds.has(f.friendId));
-            return [...toAdd, ...toMove, ...filtered];
-          });
-        }
-
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        facesWithCrops.forEach(face => {
+        faces.forEach(face => {
           const { boundingBox, status, friendName } = face;
           const x = boundingBox.left   * canvas.width;
           const y = boundingBox.top    * canvas.height;
@@ -314,10 +255,46 @@ export default function StreamWatchScreen() {
 
       <main className="flex-1 flex min-h-0 md:items-stretch md:px-2 md:pb-2 md:gap-0 overflow-hidden">
 
+        {/* Desktop left sidebar */}
+        <div className="hidden md:flex w-[15%] bg-slate-700 rounded-l-xl flex-col">
+          {/* Live button (live streams only) */}
+          {isLive && !loading && !error && (
+            <button
+              onClick={toggleLiveScan}
+              title="Live"
+              className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full text-white
+                ${liveScan ? 'bg-green-700 hover:bg-green-600 animate-pulse' : 'hover:bg-slate-600'}`}
+            >
+              <LiveScanIcon className="w-[42px] h-[42px]" />
+              <span className="text-xs font-medium">Detect</span>
+            </button>
+          )}
+          {/* Id / Resume buttons (VOD only) */}
+          {showVodButtons && !hasFaces && (
+            <button
+              onClick={handleId}
+              disabled={idLoading}
+              title="Id"
+              className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full text-white hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <IdIcon className="w-[42px] h-[42px]" />
+              <span className="text-xs font-medium">Id</span>
+            </button>
+          )}
+          {showVodButtons && hasFaces && (
+            <button
+              onClick={handleResume}
+              title="Resume"
+              className="flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full text-white hover:bg-slate-600"
+            >
+              <PlayIcon className="w-[42px] h-[42px]" />
+              <span className="text-xs font-medium">Resume</span>
+            </button>
+          )}
+        </div>
+
         {/* Video column */}
-        <div className={`flex-1 min-w-0 relative bg-black md:bg-white md:flex md:flex-col md:items-center md:justify-center md:p-3 md:border-t md:border-b md:border-gray-200 overflow-hidden
-          md:flex-none md:[transition:width_0.3s_ease] ${liveScan ? 'md:w-[73%]' : 'md:w-full'}`}
-        >
+        <div className="flex-1 min-w-0 relative bg-black md:bg-white md:flex md:flex-col md:items-center md:justify-center md:p-3 md:border-t md:border-b md:border-gray-200 overflow-hidden">
           <div
             ref={videoContainerRef}
             className="w-full h-full md:w-auto md:h-auto md:flex-1 bg-black md:border-2 md:border-white md:rounded-sm overflow-hidden relative flex items-center justify-center"
@@ -431,12 +408,31 @@ export default function StreamWatchScreen() {
               </div>
             )}
 
-            {/* Detect / Id / Resume — float top-left on video */}
-            <div className="absolute top-3 left-3 flex gap-2 z-10">
+            {/* Stream info overlay */}
+            {!loading && !error && (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2 flex items-center gap-2 pointer-events-none">
+                <BroadcastIcon className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                <span className="text-white text-sm font-medium truncate">{stream.Streamer_Name || 'Unknown'}</span>
+                {stream.Title_Txt && <><span className="text-gray-500 text-sm">·</span><span className="text-gray-300 text-sm truncate">{stream.Title_Txt}</span></>}
+                {isLive && (
+                  <span className="ml-auto flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    LIVE
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Mobile overlays */}
+            <div
+              className="md:hidden absolute left-3 flex gap-2"
+              style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}
+            >
+              {/* Mobile Live button */}
               {isLive && !loading && !error && (
                 <button
                   onClick={toggleLiveScan}
-                  title="Detect"
+                  title="Live"
                   className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-lg transition-colors text-white
                     ${liveScan ? 'bg-green-700 hover:bg-green-600 animate-pulse' : 'bg-black/35 hover:bg-white/20'}`}
                 >
@@ -444,6 +440,7 @@ export default function StreamWatchScreen() {
                   <span className="text-[10px] font-medium">Detect</span>
                 </button>
               )}
+              {/* Mobile Id / Resume buttons */}
               {showVodButtons && !hasFaces && (
                 <button
                   onClick={handleId}
@@ -466,38 +463,11 @@ export default function StreamWatchScreen() {
                 </button>
               )}
             </div>
-
-            {/* Stream info — bottom overlay */}
-            {!loading && !error && (
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2 flex items-center gap-2 pointer-events-none">
-                <BroadcastIcon className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                <span className="text-white text-sm font-medium truncate">{stream.Streamer_Name || 'Unknown'}</span>
-                {stream.Title_Txt && <><span className="text-gray-500 text-sm">·</span><span className="text-gray-300 text-sm truncate">{stream.Title_Txt}</span></>}
-                {isLive && (
-                  <span className="ml-auto flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                    LIVE
-                  </span>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Right face-tile panel — visible on desktop when live scan is active */}
-        {liveScan && (
-          <div className="hidden md:flex flex-1 bg-white rounded-r-xl flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {recognizedFaces.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center mt-8">Scanning for faces…</p>
-              ) : (
-                recognizedFaces.map((face, i) => (
-                  <FaceTile key={face.friendId || i} face={face} onView={() => {}} />
-                ))
-              )}
-            </div>
-          </div>
-        )}
+        {/* Desktop right sidebar spacer */}
+        <div className="hidden md:block w-[15%] bg-slate-700 rounded-r-xl" />
       </main>
 
       <NavBar />
