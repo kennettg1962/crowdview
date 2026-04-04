@@ -769,7 +769,7 @@ export default function HubScreen() {
 
         {/* Desktop right sidebar — face tile panel in corporate live mode, normal sidebar otherwise */}
         {corporateLiveMode ? (
-          <div className={`${showDesk} flex-1 bg-slate-700 rounded-r-xl flex-col overflow-hidden`}>
+          <div className={`${showDesk} flex-1 bg-white rounded-r-xl flex-col overflow-hidden`}>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {recognizedFaces.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center mt-8">Scanning for customers…</p>
