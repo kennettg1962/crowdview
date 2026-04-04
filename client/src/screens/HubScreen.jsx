@@ -62,7 +62,7 @@ function FaceTile({ face, onView }) {
         {face.note && <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{face.note}</p>}
       </div>
       <button onClick={onView} title="View" className="flex-shrink-0 p-1.5 text-gray-400 hover:text-white transition-colors">
-        <UserProfileIcon className="w-5 h-5" />
+        <UserProfileIcon className="w-8 h-8" />
       </button>
     </div>
   );
