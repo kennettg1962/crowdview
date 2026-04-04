@@ -49,7 +49,9 @@ function FloatButton({ icon: Icon, label, onClick, disabled, className = '' }) {
 }
 
 function FaceTile({ face, onView }) {
-  const accent = face.status === 'known' ? 'border-green-500' : 'border-orange-500';
+  const accent = face.status === 'known'      ? 'border-green-500'
+               : face.status === 'identified' ? 'border-orange-500'
+               :                                'border-red-500';
   return (
     <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
       {face.cropDataUrl && (
@@ -346,9 +348,10 @@ export default function HubScreen() {
           const toAdd = [];
           const toMove = []; // returning faces
           facesWithCrops.forEach(f => {
-            if ((f.status !== 'known' && f.status !== 'identified') || !f.friendId) return;
-            const lastSeen = faceLastSeenRef.current[f.friendId] || 0;
-            faceLastSeenRef.current[f.friendId] = now; // always update — no re-render
+            const key = f.friendId || f.faceId;
+            if (!key) return;
+            const lastSeen = faceLastSeenRef.current[key] || 0;
+            faceLastSeenRef.current[key] = now; // always update — no re-render
             if (lastSeen === 0) {
               toAdd.push(f); // brand new face
             } else if (now - lastSeen > REJOIN_THRESHOLD) {
@@ -358,9 +361,8 @@ export default function HubScreen() {
           });
           if (toAdd.length > 0 || toMove.length > 0) {
             setRecognizedFaces(prev => {
-              // Remove returning faces from wherever they currently sit
-              const movingIds = new Set(toMove.map(f => f.friendId));
-              const filtered = prev.filter(f => !movingIds.has(f.friendId));
+              const movingKeys = new Set(toMove.map(f => f.friendId || f.faceId));
+              const filtered = prev.filter(f => !movingKeys.has(f.friendId || f.faceId));
               return [...toAdd, ...toMove, ...filtered];
             });
           }
@@ -776,7 +778,7 @@ export default function HubScreen() {
               ) : (
                 recognizedFaces.map((face, i) => (
                   <FaceTile
-                    key={face.friendId || i}
+                    key={face.friendId || face.faceId || i}
                     face={face}
                     onView={() => setLiveFacePopup(face)}
                   />
