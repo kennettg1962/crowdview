@@ -105,18 +105,35 @@ export default function HubScreen() {
           videoConstraint = { deviceId: { ideal: profile.data.Last_Source_Device_Id } };
         }
       } catch { /* non-fatal */ }
-      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: { deviceId: { ideal: 'default' } } });
-      startStream(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: true });
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const [vTrack] = stream.getVideoTracks();
+      const audioInputs = devices.filter(d => d.kind === 'audioinput');
+
+      // Prefer the built-in mic — Continuity Camera can cause the iPhone mic to
+      // be selected over the MacBook's built-in one when audio:true is used.
+      const builtIn = audioInputs.find(d => /built.?in/i.test(d.label));
       const [aTrack] = stream.getAudioTracks();
+      const selectedLabel = aTrack?.label || '';
+      if (builtIn && !/built.?in/i.test(selectedLabel)) {
+        // Switch to built-in without interrupting the video track
+        const builtInStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: builtIn.deviceId } } });
+        const [builtInTrack] = builtInStream.getAudioTracks();
+        if (builtInTrack) {
+          aTrack?.stop();
+          stream.removeTrack(aTrack);
+          stream.addTrack(builtInTrack);
+          setCurrentAudioIn(builtIn);
+        }
+      } else if (aTrack) {
+        const dev = audioInputs.find(d => d.label === aTrack.label);
+        if (dev) setCurrentAudioIn(dev);
+      }
+
+      startStream(stream);
+      const [vTrack] = stream.getVideoTracks();
       if (vTrack) {
         const dev = devices.find(d => d.kind === 'videoinput' && d.label === vTrack.label);
         if (dev) setCurrentSource(dev);
-      }
-      if (aTrack) {
-        const dev = devices.find(d => d.kind === 'audioinput' && d.label === aTrack.label);
-        if (dev) setCurrentAudioIn(dev);
       }
     } catch (err) {
       setPermissionError(err);
