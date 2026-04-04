@@ -629,7 +629,7 @@ export default function HubScreen() {
             ${isNative ? '' : `md:flex-none md:bg-white md:flex md:flex-col md:items-center md:justify-center md:p-3
             md:border-t md:border-b md:border-gray-200
             md:[transition:width_0.3s_ease]
-            ${corporateLiveMode ? 'md:w-[58%]' : (selectedFace ? 'md:w-[42%]' : 'md:w-[70%]')}`}`}
+            ${corporateLiveMode ? 'md:w-[68%]' : (selectedFace ? 'md:w-[42%]' : 'md:w-[70%]')}`}`}
         >
           <div className={`w-full video-container bg-black overflow-hidden relative ${isNative ? '' : 'border-0 md:border-2 md:border-white md:rounded-sm'}`}>
             {(captureMode === 'glasses' || mediaStream) ? (
