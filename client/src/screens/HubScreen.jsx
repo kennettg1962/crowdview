@@ -11,7 +11,7 @@ import DevicePicker from '../components/DevicePicker';
 import FriendForm from '../components/FriendForm';
 import FriendFormPopup from '../components/FriendFormPopup';
 import {
-  FriendsIcon, LibraryIcon,
+  FriendsIcon, LibraryIcon, BackIcon,
   IdIcon, ActionIcon, CutIcon, MicIcon,
   MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon, FlipCameraIcon,
   HomeIcon, BroadcastIcon, UserProfileIcon, LogoutIcon, UsersIcon,
@@ -48,6 +48,24 @@ function FloatButton({ icon: Icon, label, onClick, disabled, className = '' }) {
   );
 }
 
+function FaceTile({ face, onView }) {
+  const accent = face.status === 'known' ? 'border-green-500' : 'border-orange-500';
+  return (
+    <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
+      {face.cropDataUrl && (
+        <img src={face.cropDataUrl} alt={face.friendName || 'Face'} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-600" />
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-white truncate">{face.friendName || 'Unknown'}</p>
+        {face.note && <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{face.note}</p>}
+      </div>
+      <button onClick={onView} title="View" className="flex-shrink-0 p-1.5 text-gray-400 hover:text-white transition-colors">
+        <UserProfileIcon className="w-5 h-5" />
+      </button>
+    </div>
+  );
+}
+
 export default function HubScreen() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,6 +96,8 @@ export default function HubScreen() {
   const [liveFaces, setLiveFaces] = useState([]);
   const [selectedFace, setSelectedFace] = useState(null);
   const [liveFacePopup, setLiveFacePopup] = useState(null);
+  const [recognizedFaces, setRecognizedFaces] = useState([]); // corporate live mode tiles
+  const seenFriendIdsRef = useRef(new Set());
 
   // Stable friend object for FriendForm — only changes when selectedFace changes,
   // not on every scan cycle re-render (which would re-trigger photo loading)
@@ -269,6 +289,8 @@ export default function HubScreen() {
       setSelectedFace(null);
       setLiveFacePopup(null);
       setLiveScanInitializing(false);
+      setRecognizedFaces([]);
+      seenFriendIdsRef.current = new Set();
       return;
     }
     const interval = setInterval(async () => {
@@ -311,6 +333,18 @@ export default function HubScreen() {
           return face;
         });
         setLiveFaces(facesWithCrops);
+
+        // Corporate live mode: accumulate tiles for newly seen known/identified customers
+        if (isCorporate) {
+          const newFaces = facesWithCrops.filter(
+            f => (f.status === 'known' || f.status === 'identified') &&
+                 f.friendId && !seenFriendIdsRef.current.has(f.friendId)
+          );
+          if (newFaces.length > 0) {
+            newFaces.forEach(f => seenFriendIdsRef.current.add(f.friendId));
+            setRecognizedFaces(prev => [...newFaces, ...prev]);
+          }
+        }
 
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -437,6 +471,7 @@ export default function HubScreen() {
   });
 
   const canId = isStreaming;
+  const corporateLiveMode = isCorporate && liveScan;
 
   // On native Capacitor the viewport width can exceed 768px in landscape,
   // which would trigger Tailwind's md: breakpoint and show the desktop layout.
@@ -463,8 +498,8 @@ export default function HubScreen() {
       return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
     });
     setSelectedFace(hit || null);
-    // Popup only on mobile — desktop uses the right-panel FriendForm
-    if (hit && window.innerWidth < 768) setLiveFacePopup(hit);
+    // Corporate always uses popup; non-corporate desktop uses the inline FriendForm panel
+    if (hit && (isCorporate || window.innerWidth < 768)) setLiveFacePopup(hit);
   }
 
   // Permission error message
@@ -512,19 +547,40 @@ export default function HubScreen() {
 
       {/* ── Desktop header — normal flow ── */}
       <header className={`${showDesk} bg-slate-700 px-6 py-3 items-center justify-between`}>
-        <button onClick={() => navigate('/friends')} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
-          <FriendsIcon className="w-9 h-9" />
-          <span className="text-xs font-medium">{isCorporate ? 'Customers' : 'Friends'}</span>
-        </button>
+        {corporateLiveMode ? (
+          <button onClick={() => setLiveScan(false)} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
+            <BackIcon className="w-9 h-9" />
+            <span className="text-xs font-medium">Back</span>
+          </button>
+        ) : (
+          <button onClick={() => navigate('/friends')} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
+            <FriendsIcon className="w-9 h-9" />
+            <span className="text-xs font-medium">{isCorporate ? 'Customers' : 'Friends'}</span>
+          </button>
+        )}
         <span className="text-white font-bold text-2xl tracking-wide">{isCorporate ? 'CrowdView Corporate' : 'CrowdView'}</span>
-        <button onClick={() => navigate('/library')} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
-          <LibraryIcon className="w-9 h-9" />
-          <span className="text-xs font-medium">Library</span>
-        </button>
+        {corporateLiveMode ? (
+          !(isStreamingOut || isStreamingConnecting) ? (
+            <button onClick={handleStream} disabled={!isStreaming} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors disabled:opacity-30">
+              <StreamIcon className="w-9 h-9" />
+              <span className="text-xs font-medium">Stream</span>
+            </button>
+          ) : (
+            <button onClick={handleStopStream} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
+              <StopCircleIcon className="w-9 h-9" />
+              <span className="text-xs font-medium text-red-400">{isStreamingConnecting ? 'Connecting…' : 'Stop'}</span>
+            </button>
+          )
+        ) : (
+          <button onClick={() => navigate('/library')} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
+            <LibraryIcon className="w-9 h-9" />
+            <span className="text-xs font-medium">Library</span>
+          </button>
+        )}
       </header>
 
-      {/* Device pickers — desktop only */}
-      <div className={`${showDesk} bg-slate-700 px-4 pb-3 items-center justify-center gap-2 flex-wrap`}>
+      {/* Device pickers — desktop only, hidden during corporate live mode */}
+      <div className={`${corporateLiveMode ? 'hidden' : showDesk} bg-slate-700 px-4 pb-3 items-center justify-center gap-2 flex-wrap`}>
         <DevicePicker
           icon={MovieCameraIcon}
           kind="videoinput"
@@ -546,8 +602,8 @@ export default function HubScreen() {
       {/* Main layout — mobile: full-screen absolute; desktop: 3-column flex */}
       <main className={`absolute inset-0 z-0 flex ${isNative ? '' : 'md:relative md:inset-auto md:z-auto md:flex-1 md:items-stretch md:p-0 md:px-2 md:pb-2 md:gap-0'}`}>
 
-        {/* Desktop left sidebar (hidden on mobile) */}
-        <div className={`${showDesk} w-[15%] bg-slate-700 rounded-l-xl flex-col`}>
+        {/* Desktop left sidebar (hidden on mobile, hidden in corporate live mode) */}
+        <div className={`${corporateLiveMode ? 'hidden' : showDesk} w-[15%] bg-slate-700 rounded-l-xl flex-col`}>
           {liveScan ? (
             <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-xl animate-pulse" />
           ) : (
@@ -573,7 +629,7 @@ export default function HubScreen() {
             ${isNative ? '' : `md:flex-none md:bg-white md:flex md:flex-col md:items-center md:justify-center md:p-3
             md:border-t md:border-b md:border-gray-200
             md:[transition:width_0.3s_ease]
-            ${selectedFace ? 'md:w-[42%]' : 'md:w-[70%]'}`}`}
+            ${corporateLiveMode ? 'md:w-[58%]' : (selectedFace ? 'md:w-[42%]' : 'md:w-[70%]')}`}`}
         >
           <div className={`w-full video-container bg-black overflow-hidden relative ${isNative ? '' : 'border-0 md:border-2 md:border-white md:rounded-sm'}`}>
             {(captureMode === 'glasses' || mediaStream) ? (
@@ -678,8 +734,8 @@ export default function HubScreen() {
           </div>
         </div>
 
-        {/* Face detail panel — desktop only, slides in when a bounding box is clicked */}
-        {selectedFace && (
+        {/* Face detail panel — desktop only, non-corporate, slides in when a bounding box is clicked */}
+        {selectedFace && !isCorporate && (
           <div className={`${showDesk} w-[28%] flex-col overflow-hidden`} style={{ transition: 'width 0.3s ease' }}>
             <FriendForm
               friend={selectedFriendProp}
@@ -691,40 +747,61 @@ export default function HubScreen() {
           </div>
         )}
 
-        {/* Desktop right sidebar (hidden on mobile) */}
-        <div className={`${showDesk} w-[15%] bg-slate-700 rounded-r-xl flex-col items-center`}>
-          {!(isStreamingOut || isStreamingConnecting) ? (
-            <SideButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
-          ) : (
-            <>
-              <SideButton icon={StopCircleIcon} label="Stop Stream" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-xl" />
-              <span className="text-red-400 text-xs font-semibold text-center px-2 mt-1 leading-snug">{isStreamingConnecting ? 'Connecting…' : 'CrowdView Live'}</span>
-            </>
-          )}
-
-          {liveStreams.filter(s => s.Friend_Id).length > 0 && (
-            <div className="mt-3 w-full px-2 flex flex-col items-center gap-2">
-              <span className="text-gray-400 text-xs font-medium">Live</span>
-              {liveStreams.filter(s => s.Friend_Id).map(s => (
-                <button
-                  key={s.Stream_Id}
-                  onClick={() => navigate('/streams/watch', { state: { stream: s, isLive: true } })}
-                  className="flex flex-col items-center gap-1 group"
-                  title={s.Streamer_Name}
-                >
-                  {s.Friend_Photo_Id ? (
-                    <img src={`/api/friends/${s.Friend_Id}/photos/${s.Friend_Photo_Id}/data`} alt={s.Streamer_Name} className="w-10 h-10 rounded-full object-cover border-2 border-red-500 group-hover:border-red-400" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-slate-600 border-2 border-red-500 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">{s.Streamer_Name?.[0] || '?'}</span>
-                    </div>
-                  )}
-                  <span className="text-gray-400 text-xs truncate w-full text-center">{s.Streamer_Name}</span>
-                </button>
-              ))}
+        {/* Desktop right sidebar — face tile panel in corporate live mode, normal sidebar otherwise */}
+        {corporateLiveMode ? (
+          <div className={`${showDesk} flex-1 bg-slate-700 rounded-r-xl flex-col overflow-hidden`}>
+            <div className="px-4 py-3 border-b border-slate-600 flex-shrink-0">
+              <p className="text-sm font-semibold text-white">Recognized</p>
             </div>
-          )}
-        </div>
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {recognizedFaces.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center mt-8">Scanning for customers…</p>
+              ) : (
+                recognizedFaces.map((face, i) => (
+                  <FaceTile
+                    key={face.friendId || i}
+                    face={face}
+                    onView={() => setLiveFacePopup(face)}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className={`${showDesk} w-[15%] bg-slate-700 rounded-r-xl flex-col items-center`}>
+            {!(isStreamingOut || isStreamingConnecting) ? (
+              <SideButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
+            ) : (
+              <>
+                <SideButton icon={StopCircleIcon} label="Stop Stream" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-xl" />
+                <span className="text-red-400 text-xs font-semibold text-center px-2 mt-1 leading-snug">{isStreamingConnecting ? 'Connecting…' : 'CrowdView Live'}</span>
+              </>
+            )}
+
+            {liveStreams.filter(s => s.Friend_Id).length > 0 && (
+              <div className="mt-3 w-full px-2 flex flex-col items-center gap-2">
+                <span className="text-gray-400 text-xs font-medium">Live</span>
+                {liveStreams.filter(s => s.Friend_Id).map(s => (
+                  <button
+                    key={s.Stream_Id}
+                    onClick={() => navigate('/streams/watch', { state: { stream: s, isLive: true } })}
+                    className="flex flex-col items-center gap-1 group"
+                    title={s.Streamer_Name}
+                  >
+                    {s.Friend_Photo_Id ? (
+                      <img src={`/api/friends/${s.Friend_Id}/photos/${s.Friend_Photo_Id}/data`} alt={s.Streamer_Name} className="w-10 h-10 rounded-full object-cover border-2 border-red-500 group-hover:border-red-400" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-600 border-2 border-red-500 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">{s.Streamer_Name?.[0] || '?'}</span>
+                      </div>
+                    )}
+                    <span className="text-gray-400 text-xs truncate w-full text-center">{s.Streamer_Name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* ── Mobile nav — fixed overlay at bottom ── */}
@@ -812,11 +889,12 @@ export default function HubScreen() {
           onClose={() => { setLiveFacePopup(null); setSelectedFace(null); }}
           onSave={(saved) => {
             if (!saved || !liveFacePopup) return;
-            setLiveFaces(prev => prev.map(f =>
-              f.faceId === liveFacePopup.faceId
-                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId }
-                : f
-            ));
+            const update = f => f.faceId === liveFacePopup.faceId
+              ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId }
+              : f;
+            setLiveFaces(prev => prev.map(update));
+            setRecognizedFaces(prev => prev.map(update));
+            if (saved.friendId) seenFriendIdsRef.current.add(saved.friendId);
             setLiveFacePopup(null);
             setSelectedFace(null);
           }}
