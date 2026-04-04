@@ -58,6 +58,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
   const liveScanActiveRef = useRef(false);
   const scanInFlightRef   = useRef(false);
   const faceLastSeenRef   = useRef({});
+  const displayParamsRef  = useRef({ displayW: 0, displayH: 0, offsetX: 0, offsetY: 0 });
 
   const [tileError, setTileError]               = useState(false);
   const [tileLoading, setTileLoading]           = useState(true);
@@ -174,6 +175,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         displayH = containerH; displayW = containerH * vAR;
         offsetX = (containerW - displayW) / 2;
       }
+      displayParamsRef.current = { displayW, displayH, offsetX, offsetY };
 
       const maxW    = 640;
       const scale   = Math.min(1, maxW / video.videoWidth);
@@ -279,22 +281,11 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         <canvas
           ref={canvasRef}
           onClick={e => {
-            if (!scanActive || !canvasRef.current || !videoRef.current || liveFaces.length === 0) return;
-            const canvas = canvasRef.current;
-            const video  = videoRef.current;
-            const rect   = canvas.getBoundingClientRect();
+            if (!scanActive || liveFaces.length === 0 || !canvasRef.current) return;
+            const rect = canvasRef.current.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const clickY = e.clientY - rect.top;
-            const vAR = video.videoWidth / video.videoHeight;
-            const cAR = rect.width / rect.height;
-            let displayW, displayH, offsetX = 0, offsetY = 0;
-            if (vAR > cAR) {
-              displayW = rect.width;  displayH = rect.width / vAR;
-              offsetY = (rect.height - displayH) / 2;
-            } else {
-              displayH = rect.height; displayW = rect.height * vAR;
-              offsetX = (rect.width - displayW) / 2;
-            }
+            const { displayW, displayH, offsetX, offsetY } = displayParamsRef.current;
             const hit = liveFaces.find(face => {
               const x = offsetX + face.boundingBox.left  * displayW;
               const y = offsetY + face.boundingBox.top   * displayH;
