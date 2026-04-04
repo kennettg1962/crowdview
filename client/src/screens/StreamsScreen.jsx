@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Hls from 'hls.js';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
-import FriendForm from '../components/FriendForm';
 import {
   MovieCameraIcon, FriendsIcon, BroadcastIcon, DeleteIcon,
   XIcon, LiveScanIcon, DownloadIcon,
@@ -22,6 +21,19 @@ const HLS_BASE = window.location.protocol === 'capacitor:'
   : `${SERVER_ORIGIN}/hls`;
 
 const STATUS_COLORS = { known: '#22c55e', identified: '#f97316', unknown: '#ef4444' };
+const REJOIN_THRESHOLD = 30_000;
+
+function FaceTile({ face }) {
+  const accent = face.status === 'known' ? 'border-green-500' : 'border-orange-500';
+  return (
+    <div className={`flex items-center gap-2 p-2 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
+      {face.cropDataUrl && (
+        <img src={face.cropDataUrl} alt={face.friendName || 'Face'} className="w-10 h-10 rounded object-cover flex-shrink-0 border border-gray-600" />
+      )}
+      <p className="text-xs font-semibold text-white truncate">{face.friendName || 'Unknown'}</p>
+    </div>
+  );
+}
 
 function duration(start, end) {
   const ms = new Date(end || Date.now()) - new Date(start);
@@ -31,13 +43,13 @@ function duration(start, end) {
 }
 
 // ── Self-contained live-stream tile ──────────────────────────────────────────
-// Each tile manages its own HLS stream, detect scan, and friend form panel.
 function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
   const videoRef          = useRef(null);
   const canvasRef         = useRef(null);
   const hlsRef            = useRef(null);
   const liveScanActiveRef = useRef(false);
   const scanInFlightRef   = useRef(false);
+  const faceLastSeenRef   = useRef({});
 
   const [tileError, setTileError]               = useState(false);
   const [tileLoading, setTileLoading]           = useState(true);
@@ -45,19 +57,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
   const [retryKey, setRetryKey]                 = useState(0);
   const [liveFaces, setLiveFaces]               = useState([]);
   const [scanInitializing, setScanInitializing] = useState(false);
-  const [selectedFace, setSelectedFace]         = useState(null);
-
-  const selectedFriendProp = useMemo(() => {
-    if (!selectedFace?.friendId) return null;
-    return {
-      Friend_Id:           selectedFace.friendId,
-      Name_Txt:            selectedFace.friendName  || '',
-      Note_Multi_Line_Txt: selectedFace.note        || '',
-      Friend_Group:        selectedFace.friendGroup || 'Friend',
-      Linked_User_Name:    null,
-      Linked_User_Email:   null,
-    };
-  }, [selectedFace]);
+  const [recognizedFaces, setRecognizedFaces]   = useState([]);
 
   // HLS setup
   useEffect(() => {
@@ -114,11 +114,6 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
     };
   }, [stream, retryKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clear selected face when scan is turned off
-  useEffect(() => {
-    if (!scanActive) setSelectedFace(null);
-  }, [scanActive]);
-
   // Scan interval
   useEffect(() => {
     liveScanActiveRef.current = scanActive;
@@ -127,6 +122,8 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
       if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
       setLiveFaces([]);
       setScanInitializing(false);
+      setRecognizedFaces([]);
+      faceLastSeenRef.current = {};
       return;
     }
     setScanInitializing(true);
@@ -188,6 +185,23 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         });
         setLiveFaces(facesWithCrops);
 
+        // Accumulate face tiles — only re-render for new or returning faces
+        const now = Date.now();
+        const toAdd = [], toMove = [];
+        facesWithCrops.forEach(f => {
+          if ((f.status !== 'known' && f.status !== 'identified') || !f.friendId) return;
+          const lastSeen = faceLastSeenRef.current[f.friendId] || 0;
+          faceLastSeenRef.current[f.friendId] = now;
+          if (lastSeen === 0) toAdd.push(f);
+          else if (now - lastSeen > REJOIN_THRESHOLD) toMove.push(f);
+        });
+        if (toAdd.length > 0 || toMove.length > 0) {
+          setRecognizedFaces(prev => {
+            const movingIds = new Set(toMove.map(f => f.friendId));
+            return [...toAdd, ...toMove, ...prev.filter(f => !movingIds.has(f.friendId))];
+          });
+        }
+
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         facesWithCrops.forEach(face => {
@@ -223,48 +237,18 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
     };
   }, [scanActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleCanvasClick(e) {
-    if (!scanActive || !canvasRef.current || !videoRef.current || liveFaces.length === 0) return;
-    const canvas = canvasRef.current;
-    const video  = videoRef.current;
-    // Work in CSS pixels — canvas.width == BRC.width so no scale needed
-    const rect   = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
-    const vAR = video.videoWidth / video.videoHeight;
-    const cAR = rect.width / rect.height;
-    let displayW, displayH, offsetX = 0, offsetY = 0;
-    if (vAR > cAR) {
-      displayW = rect.width;  displayH = rect.width / vAR;
-      offsetY = (rect.height - displayH) / 2;
-    } else {
-      displayH = rect.height; displayW = rect.height * vAR;
-      offsetX = (rect.width - displayW) / 2;
-    }
-
-    const hit = liveFaces.find(face => {
-      const x = offsetX + face.boundingBox.left  * displayW;
-      const y = offsetY + face.boundingBox.top   * displayH;
-      const w =           face.boundingBox.width * displayW;
-      const h =           face.boundingBox.height * displayH;
-      return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
-    });
-    if (hit) setSelectedFace(hit);
-  }
-
   return (
     <div className="relative bg-black rounded-lg overflow-hidden flex w-full h-full group">
 
-      {/* Video side — shrinks when friend form is open */}
-      <div className={`relative min-h-0 transition-all duration-300 ${selectedFace ? 'w-[55%]' : 'flex-1'}`}>
+      {/* Video — fixed left 60% */}
+      <div className="relative w-[60%] flex-shrink-0 min-h-0">
         <video ref={videoRef} playsInline muted autoPlay className="w-full h-full object-contain" />
 
-        {/* Floating detect button — overlaid on left of video; hidden on mobile */}
+        {/* Detect button — float top-left on video */}
         <button
           onClick={e => { e.stopPropagation(); onToggleScan(); }}
           title={scanActive ? 'Stop detect' : 'Detect faces'}
-          className={`hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-20 flex-col items-center gap-0.5
+          className={`absolute left-2 top-2 z-20 flex flex-col items-center gap-0.5
             px-2 py-2 rounded-lg transition-colors backdrop-blur-sm
             ${scanActive ? 'bg-green-700/90 hover:bg-green-600/90 animate-pulse' : 'bg-black/50 hover:bg-black/70'}`}
         >
@@ -274,10 +258,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
 
         <canvas
           ref={canvasRef}
-          onClick={handleCanvasClick}
-          onTouchEnd={e => { e.preventDefault(); handleCanvasClick(e.changedTouches[0]); }}
-          className={`absolute inset-0 w-full h-full
-            ${scanActive && liveFaces.length > 0 ? 'cursor-pointer' : 'pointer-events-none'}`}
+          className="absolute inset-0 w-full h-full pointer-events-none"
         />
 
         {/* Spinner */}
@@ -288,7 +269,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
           </div>
         )}
 
-        {/* Tap-to-play overlay — iOS MSE autoplay is blocked until user gesture */}
+        {/* Tap-to-play overlay */}
         {tapToPlay && !tileError && (
           <div
             className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer z-10"
@@ -302,16 +283,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
           </div>
         )}
 
-        {/* Close tile button */}
-        <button
-          onClick={e => { e.stopPropagation(); onClose(); }}
-          title="Remove stream"
-          className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <XIcon className="w-3 h-3" />
-        </button>
-
-        {/* Streamer name */}
+        {/* Streamer name — bottom overlay */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5 pointer-events-none">
           <p className="text-white text-xs font-medium truncate">{stream.Streamer_Name}</p>
           {stream.Title_Txt && <p className="text-gray-300 text-[10px] truncate">{stream.Title_Txt}</p>}
@@ -321,6 +293,15 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         <div className="absolute top-1.5 left-1.5 pointer-events-none">
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse block" />
         </div>
+
+        {/* Close button */}
+        <button
+          onClick={e => { e.stopPropagation(); onClose(); }}
+          title="Remove stream"
+          className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <XIcon className="w-3 h-3" />
+        </button>
 
         {tileError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 text-gray-400 text-xs text-center px-2">
@@ -335,18 +316,20 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         )}
       </div>
 
-      {/* Friend form panel — inside this tile */}
-      {selectedFace && (
-        <div className="w-[45%] flex-shrink-0 overflow-hidden flex flex-col border-l border-gray-700">
-          <FriendForm
-            friend={selectedFriendProp}
-            capturedPhotoUrl={!selectedFace.friendId ? selectedFace.cropDataUrl : null}
-            onClose={() => setSelectedFace(null)}
-            onSave={() => setSelectedFace(null)}
-            onDelete={() => setSelectedFace(null)}
-          />
+      {/* Face tile panel — right 40%, always visible */}
+      <div className="flex-1 bg-white overflow-y-auto flex flex-col">
+        <div className="flex-1 p-2 space-y-1.5">
+          {recognizedFaces.length === 0 ? (
+            <p className="text-gray-400 text-[10px] text-center mt-4">
+              {scanActive ? 'Scanning…' : 'Press Detect'}
+            </p>
+          ) : (
+            recognizedFaces.map((face, i) => (
+              <FaceTile key={face.friendId || i} face={face} />
+            ))
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
