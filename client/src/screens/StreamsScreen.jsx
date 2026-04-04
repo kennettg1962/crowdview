@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Hls from 'hls.js';
 import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
+import FriendForm from '../components/FriendForm';
 import {
   MovieCameraIcon, FriendsIcon, BroadcastIcon, DeleteIcon,
-  XIcon, LiveScanIcon, DownloadIcon,
+  XIcon, LiveScanIcon, DownloadIcon, UserProfileIcon,
 } from '../components/Icons';
 import { useApp } from '../context/AppContext';
 import api from '../api/api';
@@ -23,14 +24,20 @@ const HLS_BASE = window.location.protocol === 'capacitor:'
 const STATUS_COLORS = { known: '#22c55e', identified: '#f97316', unknown: '#ef4444' };
 const REJOIN_THRESHOLD = 30_000;
 
-function FaceTile({ face }) {
+function FaceTile({ face, onView }) {
   const accent = face.status === 'known' ? 'border-green-500' : 'border-orange-500';
   return (
     <div className={`flex items-center gap-2 p-2 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
       {face.cropDataUrl && (
         <img src={face.cropDataUrl} alt={face.friendName || 'Face'} className="w-10 h-10 rounded object-cover flex-shrink-0 border border-gray-600" />
       )}
-      <p className="text-xs font-semibold text-white truncate">{face.friendName || 'Unknown'}</p>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-white truncate">{face.friendName || 'Unknown'}</p>
+        {face.note && <p className="text-[10px] text-gray-400 line-clamp-1 mt-0.5">{face.note}</p>}
+      </div>
+      <button onClick={onView} title="View" className="flex-shrink-0 p-1 text-gray-400 hover:text-white transition-colors">
+        <UserProfileIcon className="w-4 h-4" />
+      </button>
     </div>
   );
 }
@@ -58,6 +65,19 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
   const [liveFaces, setLiveFaces]               = useState([]);
   const [scanInitializing, setScanInitializing] = useState(false);
   const [recognizedFaces, setRecognizedFaces]   = useState([]);
+  const [selectedFace, setSelectedFace]         = useState(null);
+
+  const selectedFriendProp = useMemo(() => {
+    if (!selectedFace?.friendId) return null;
+    return {
+      Friend_Id:           selectedFace.friendId,
+      Name_Txt:            selectedFace.friendName  || '',
+      Note_Multi_Line_Txt: selectedFace.note        || '',
+      Friend_Group:        selectedFace.friendGroup || 'Friend',
+      Linked_User_Name:    null,
+      Linked_User_Email:   null,
+    };
+  }, [selectedFace]);
 
   // HLS setup
   useEffect(() => {
@@ -122,8 +142,6 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
       if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
       setLiveFaces([]);
       setScanInitializing(false);
-      setRecognizedFaces([]);
-      faceLastSeenRef.current = {};
       return;
     }
     setScanInitializing(true);
@@ -316,19 +334,29 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         )}
       </div>
 
-      {/* Face tile panel — right 40%, always visible */}
-      <div className="flex-1 bg-white overflow-y-auto flex flex-col">
-        <div className="flex-1 p-2 space-y-1.5">
-          {recognizedFaces.length === 0 ? (
-            <p className="text-gray-400 text-[10px] text-center mt-4">
-              {scanActive ? 'Scanning…' : 'Press Detect'}
-            </p>
-          ) : (
-            recognizedFaces.map((face, i) => (
-              <FaceTile key={face.friendId || i} face={face} />
-            ))
-          )}
-        </div>
+      {/* Right panel — FriendForm when viewing, face tiles otherwise */}
+      <div className="flex-1 bg-white overflow-hidden flex flex-col">
+        {selectedFace ? (
+          <FriendForm
+            friend={selectedFriendProp}
+            capturedPhotoUrl={!selectedFace.friendId ? selectedFace.cropDataUrl : null}
+            onClose={() => setSelectedFace(null)}
+            onSave={() => setSelectedFace(null)}
+            onDelete={() => setSelectedFace(null)}
+          />
+        ) : (
+          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+            {recognizedFaces.length === 0 ? (
+              <p className="text-gray-400 text-[10px] text-center mt-4">
+                {scanActive ? 'Scanning…' : 'Press Detect'}
+              </p>
+            ) : (
+              recognizedFaces.map((face, i) => (
+                <FaceTile key={face.friendId || i} face={face} onView={() => setSelectedFace(face)} />
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
