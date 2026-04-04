@@ -265,15 +265,15 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
   return (
     <div className="relative bg-black rounded-lg overflow-hidden flex w-full h-full group">
 
-      {/* Video — fixed left 60% */}
-      <div className="relative w-[60%] flex-shrink-0 min-h-0">
+      {/* Video — full width on mobile, 60% on desktop */}
+      <div className="relative flex-1 md:flex-none md:w-[60%] min-h-0">
         <video ref={videoRef} playsInline muted autoPlay className="w-full h-full object-contain" />
 
         {/* Detect button — float top-left on video */}
         <button
           onClick={e => { e.stopPropagation(); onToggleScan(); }}
           title={scanActive ? 'Stop detect' : 'Detect faces'}
-          className={`absolute left-2 top-2 z-20 flex flex-col items-center gap-0.5
+          className={`hidden md:flex absolute left-2 top-2 z-20 flex-col items-center gap-0.5
             px-2 py-2 rounded-lg transition-colors backdrop-blur-sm
             ${scanActive ? 'bg-green-700/90 hover:bg-green-600/90 animate-pulse' : 'bg-black/50 hover:bg-black/70'}`}
         >
@@ -375,8 +375,8 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         />
       )}
 
-      {/* Right panel — FriendForm when viewing, face tiles otherwise */}
-      <div className="flex-1 bg-white overflow-hidden flex flex-col">
+      {/* Right panel — desktop only */}
+      <div className="hidden md:flex flex-1 bg-white overflow-hidden flex-col">
         {selectedFace ? (
           <FriendForm
             friend={selectedFriendProp}
