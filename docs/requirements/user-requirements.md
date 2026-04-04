@@ -198,3 +198,20 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 
 ### [2026-03] Requirements Tracking — `#meta`
 - User provided a PDF defining a requirements tracking protocol and asked Claude to update CLAUDE.md and seed the four requirements documents from project history.
+
+## 2026-04-02
+
+### [2026-04-02] iOS live stream playback — `#ios #streaming #bug`
+- Live stream tiles showed "Stream unavailable" or spun indefinitely on iOS Capacitor app.
+- Root cause sequence: CORS error (HLS.js from capacitor:// to nginx /hls/), then MSE autoplay blocked silently (play() resolves but video freezes after first frame).
+- Fix: Express proxy at /api/stream/hls/* with all upstream headers forwarded; HLS.js used for all platforms; iOS autoplay block handled by showing a tap-to-play overlay (skipping play() call entirely on Capacitor after MANIFEST_PARSED).
+
+### [2026-04-02] Live Now tab — friends' streams not appearing on mobile — `#ios #streaming #bug`
+- On mobile, only the logged-in user's own streams appeared; friends' streams did not show.
+- Root cause: friend was not linked to their CrowdView account via Friend_User_Id. The stream query requires Friend_User_Id to join streams to friends.
+- Resolution: by design — user must link friends via the Manage Friends screen. Confirmed link UI works correctly on mobile.
+
+### [2026-04-02] HubScreen landscape orientation on iOS — `#ios #ux #layout`
+- In landscape mode on iPhone, HubScreen switched to the desktop layout (sidebars, device pickers, bordered video) instead of maintaining the mobile overlay layout.
+- Root cause: Tailwind md: breakpoint (768px) fires when phone landscape width exceeds 768px.
+- Fix: detect Capacitor native platform (capacitor: protocol) and suppress all md: layout classes, locking to mobile overlay layout regardless of orientation.

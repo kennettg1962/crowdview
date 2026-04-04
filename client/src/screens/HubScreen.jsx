@@ -97,7 +97,10 @@ export default function HubScreen() {
   const [selectedFace, setSelectedFace] = useState(null);
   const [liveFacePopup, setLiveFacePopup] = useState(null);
   const [recognizedFaces, setRecognizedFaces] = useState([]); // corporate live mode tiles
-  const seenFriendIdsRef = useRef(new Set());
+  // Tracks last-seen timestamp per friendId. Stored in a ref so continuous
+  // detection never triggers a re-render — only new/returning faces do.
+  const faceLastSeenRef = useRef({});
+  const REJOIN_THRESHOLD = 30_000; // 30 s absence = treat as returning
 
   // Stable friend object for FriendForm — only changes when selectedFace changes,
   // not on every scan cycle re-render (which would re-trigger photo loading)
@@ -290,7 +293,7 @@ export default function HubScreen() {
       setLiveFacePopup(null);
       setLiveScanInitializing(false);
       setRecognizedFaces([]);
-      seenFriendIdsRef.current = new Set();
+      faceLastSeenRef.current = {};
       return;
     }
     const interval = setInterval(async () => {
@@ -334,15 +337,32 @@ export default function HubScreen() {
         });
         setLiveFaces(facesWithCrops);
 
-        // Corporate live mode: accumulate tiles for newly seen known/identified customers
+        // Corporate live mode: accumulate tiles efficiently.
+        // faceLastSeenRef stores { friendId: timestamp } — updated every cycle
+        // without triggering a re-render. setRecognizedFaces is called only when
+        // a face is new (never seen) or returning (absent ≥ REJOIN_THRESHOLD).
         if (isCorporate) {
-          const newFaces = facesWithCrops.filter(
-            f => (f.status === 'known' || f.status === 'identified') &&
-                 f.friendId && !seenFriendIdsRef.current.has(f.friendId)
-          );
-          if (newFaces.length > 0) {
-            newFaces.forEach(f => seenFriendIdsRef.current.add(f.friendId));
-            setRecognizedFaces(prev => [...newFaces, ...prev]);
+          const now = Date.now();
+          const toAdd = [];
+          const toMove = []; // returning faces
+          facesWithCrops.forEach(f => {
+            if ((f.status !== 'known' && f.status !== 'identified') || !f.friendId) return;
+            const lastSeen = faceLastSeenRef.current[f.friendId] || 0;
+            faceLastSeenRef.current[f.friendId] = now; // always update — no re-render
+            if (lastSeen === 0) {
+              toAdd.push(f); // brand new face
+            } else if (now - lastSeen > REJOIN_THRESHOLD) {
+              toMove.push(f); // returning face — move to top with fresh crop
+            }
+            // else: continuous detection — no state change needed
+          });
+          if (toAdd.length > 0 || toMove.length > 0) {
+            setRecognizedFaces(prev => {
+              // Remove returning faces from wherever they currently sit
+              const movingIds = new Set(toMove.map(f => f.friendId));
+              const filtered = prev.filter(f => !movingIds.has(f.friendId));
+              return [...toAdd, ...toMove, ...filtered];
+            });
           }
         }
 
@@ -629,7 +649,7 @@ export default function HubScreen() {
             ${isNative ? '' : `md:flex-none md:bg-white md:flex md:flex-col md:items-center md:justify-center md:p-3
             md:border-t md:border-b md:border-gray-200
             md:[transition:width_0.3s_ease]
-            ${corporateLiveMode ? 'md:w-[68%]' : (selectedFace ? 'md:w-[42%]' : 'md:w-[70%]')}`}`}
+            ${corporateLiveMode ? 'md:w-[73%]' : (selectedFace ? 'md:w-[42%]' : 'md:w-[70%]')}`}`}
         >
           <div className={`w-full video-container bg-black overflow-hidden relative ${isNative ? '' : 'border-0 md:border-2 md:border-white md:rounded-sm'}`}>
             {(captureMode === 'glasses' || mediaStream) ? (
@@ -750,9 +770,6 @@ export default function HubScreen() {
         {/* Desktop right sidebar — face tile panel in corporate live mode, normal sidebar otherwise */}
         {corporateLiveMode ? (
           <div className={`${showDesk} flex-1 bg-slate-700 rounded-r-xl flex-col overflow-hidden`}>
-            <div className="px-4 py-3 border-b border-slate-600 flex-shrink-0">
-              <p className="text-sm font-semibold text-white">Recognized</p>
-            </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {recognizedFaces.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center mt-8">Scanning for customers…</p>
@@ -894,7 +911,7 @@ export default function HubScreen() {
               : f;
             setLiveFaces(prev => prev.map(update));
             setRecognizedFaces(prev => prev.map(update));
-            if (saved.friendId) seenFriendIdsRef.current.add(saved.friendId);
+            if (saved.friendId) faceLastSeenRef.current[saved.friendId] = Date.now();
             setLiveFacePopup(null);
             setSelectedFace(null);
           }}
