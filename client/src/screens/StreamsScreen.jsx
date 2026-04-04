@@ -5,6 +5,7 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import FriendForm from '../components/FriendForm';
+import FriendFormPopup from '../components/FriendFormPopup';
 import {
   MovieCameraIcon, FriendsIcon, BroadcastIcon, DeleteIcon,
   XIcon, LiveScanIcon, DownloadIcon, UserProfileIcon,
@@ -66,6 +67,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
   const [scanInitializing, setScanInitializing] = useState(false);
   const [recognizedFaces, setRecognizedFaces]   = useState([]);
   const [selectedFace, setSelectedFace]         = useState(null);
+  const [liveFacePopup, setLiveFacePopup]       = useState(null);
 
   const selectedFriendProp = useMemo(() => {
     if (!selectedFace?.friendId) return null;
@@ -276,7 +278,33 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
 
         <canvas
           ref={canvasRef}
-          className="absolute inset-0 w-full h-full pointer-events-none"
+          onClick={e => {
+            if (!scanActive || !canvasRef.current || !videoRef.current || liveFaces.length === 0) return;
+            const canvas = canvasRef.current;
+            const video  = videoRef.current;
+            const rect   = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            const vAR = video.videoWidth / video.videoHeight;
+            const cAR = rect.width / rect.height;
+            let displayW, displayH, offsetX = 0, offsetY = 0;
+            if (vAR > cAR) {
+              displayW = rect.width;  displayH = rect.width / vAR;
+              offsetY = (rect.height - displayH) / 2;
+            } else {
+              displayH = rect.height; displayW = rect.height * vAR;
+              offsetX = (rect.width - displayW) / 2;
+            }
+            const hit = liveFaces.find(face => {
+              const x = offsetX + face.boundingBox.left  * displayW;
+              const y = offsetY + face.boundingBox.top   * displayH;
+              const w =           face.boundingBox.width * displayW;
+              const h =           face.boundingBox.height * displayH;
+              return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
+            });
+            if (hit) setLiveFacePopup(hit);
+          }}
+          className={`absolute inset-0 w-full h-full ${scanActive && liveFaces.length > 0 ? 'cursor-pointer' : 'pointer-events-none'}`}
         />
 
         {/* Spinner */}
@@ -333,6 +361,25 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
           </div>
         )}
       </div>
+
+      {liveFacePopup && (
+        <FriendFormPopup
+          friend={liveFacePopup.friendId ? { Friend_Id: liveFacePopup.friendId, Name_Txt: liveFacePopup.friendName } : null}
+          capturedPhotoUrl={liveFacePopup.cropDataUrl || null}
+          onClose={() => setLiveFacePopup(null)}
+          onSave={(saved) => {
+            if (saved?.friendId) {
+              faceLastSeenRef.current[saved.friendId] = Date.now();
+              setRecognizedFaces(prev => prev.map(f =>
+                f.faceId === liveFacePopup.faceId
+                  ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId }
+                  : f
+              ));
+            }
+            setLiveFacePopup(null);
+          }}
+        />
+      )}
 
       {/* Right panel — FriendForm when viewing, face tiles otherwise */}
       <div className="flex-1 bg-white overflow-hidden flex flex-col">
