@@ -105,35 +105,30 @@ export default function HubScreen() {
           videoConstraint = { deviceId: { ideal: profile.data.Last_Source_Device_Id } };
         }
       } catch { /* non-fatal */ }
-      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: true });
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const audioInputs = devices.filter(d => d.kind === 'audioinput');
+      // Probe audio devices before requesting the full stream so we can ask for
+      // the built-in mic by exact deviceId. Without this, Continuity Camera
+      // makes the iPhone mic the system default and Chrome honours that.
+      let audioConstraint = true;
+      try {
+        const probe = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        probe.getAudioTracks().forEach(t => t.stop());
+        const probeDevices = await navigator.mediaDevices.enumerateDevices();
+        const builtIn = probeDevices.find(d => d.kind === 'audioinput' && /built.?in/i.test(d.label));
+        if (builtIn) audioConstraint = { deviceId: { exact: builtIn.deviceId } };
+      } catch { /* non-fatal — fall back to audio: true */ }
 
-      // Prefer the built-in mic — Continuity Camera can cause the iPhone mic to
-      // be selected over the MacBook's built-in one when audio:true is used.
-      const builtIn = audioInputs.find(d => /built.?in/i.test(d.label));
-      const [aTrack] = stream.getAudioTracks();
-      const selectedLabel = aTrack?.label || '';
-      if (builtIn && !/built.?in/i.test(selectedLabel)) {
-        // Switch to built-in without interrupting the video track
-        const builtInStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: builtIn.deviceId } } });
-        const [builtInTrack] = builtInStream.getAudioTracks();
-        if (builtInTrack) {
-          aTrack?.stop();
-          stream.removeTrack(aTrack);
-          stream.addTrack(builtInTrack);
-          setCurrentAudioIn(builtIn);
-        }
-      } else if (aTrack) {
-        const dev = audioInputs.find(d => d.label === aTrack.label);
-        if (dev) setCurrentAudioIn(dev);
-      }
-
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint, audio: audioConstraint });
       startStream(stream);
+      const devices = await navigator.mediaDevices.enumerateDevices();
       const [vTrack] = stream.getVideoTracks();
+      const [aTrack] = stream.getAudioTracks();
       if (vTrack) {
         const dev = devices.find(d => d.kind === 'videoinput' && d.label === vTrack.label);
         if (dev) setCurrentSource(dev);
+      }
+      if (aTrack) {
+        const dev = devices.find(d => d.kind === 'audioinput' && d.label === aTrack.label);
+        if (dev) setCurrentAudioIn(dev);
       }
     } catch (err) {
       setPermissionError(err);
@@ -213,7 +208,7 @@ export default function HubScreen() {
       setCurrentAudioIn(connected);
     }
     try {
-      const constraint = device?.deviceId ? { deviceId: { ideal: device.deviceId } } : { deviceId: { ideal: 'default' } };
+      const constraint = device?.deviceId ? { deviceId: { exact: device.deviceId } } : true;
       await applyAudioTrack(constraint);
     } catch (err) {
       console.error('Mic switch failed, falling back to default:', err);
