@@ -26,7 +26,9 @@ const STATUS_COLORS = { known: '#22c55e', identified: '#f97316', unknown: '#ef44
 const REJOIN_THRESHOLD = 30_000;
 
 function FaceTile({ face, onView }) {
-  const accent = face.status === 'known' ? 'border-green-500' : 'border-orange-500';
+  const accent = face.status === 'known'       ? 'border-green-500'
+               : face.status === 'identified'  ? 'border-orange-500'
+               :                                 'border-red-500';
   return (
     <div className={`flex items-center gap-2 p-2 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
       {face.cropDataUrl && (
@@ -207,20 +209,21 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         });
         setLiveFaces(facesWithCrops);
 
-        // Accumulate face tiles — only re-render for new or returning faces
+        // Accumulate face tiles — all faces; dedup by friendId (known) or faceId (unknown)
         const now = Date.now();
         const toAdd = [], toMove = [];
         facesWithCrops.forEach(f => {
-          if ((f.status !== 'known' && f.status !== 'identified') || !f.friendId) return;
-          const lastSeen = faceLastSeenRef.current[f.friendId] || 0;
-          faceLastSeenRef.current[f.friendId] = now;
+          const key = f.friendId || f.faceId;
+          if (!key) return;
+          const lastSeen = faceLastSeenRef.current[key] || 0;
+          faceLastSeenRef.current[key] = now;
           if (lastSeen === 0) toAdd.push(f);
           else if (now - lastSeen > REJOIN_THRESHOLD) toMove.push(f);
         });
         if (toAdd.length > 0 || toMove.length > 0) {
           setRecognizedFaces(prev => {
-            const movingIds = new Set(toMove.map(f => f.friendId));
-            return [...toAdd, ...toMove, ...prev.filter(f => !movingIds.has(f.friendId))];
+            const movingKeys = new Set(toMove.map(f => f.friendId || f.faceId));
+            return [...toAdd, ...toMove, ...prev.filter(f => !movingKeys.has(f.friendId || f.faceId))];
           });
         }
 
@@ -390,7 +393,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
               </p>
             ) : (
               recognizedFaces.map((face, i) => (
-                <FaceTile key={face.friendId || i} face={face} onView={() => setSelectedFace(face)} />
+                <FaceTile key={face.friendId || face.faceId || i} face={face} onView={() => setSelectedFace(face)} />
               ))
             )}
           </div>
