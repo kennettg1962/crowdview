@@ -137,13 +137,16 @@ router.post('/identify', auth, async (req, res) => {
         const best = employeeMatches[0];
         faceId = best.Face.FaceId;
         // ExternalImageId: org{orgId}_emp{employeeId}_p{photoId}
+        console.log(`[identify] employee best match ExternalImageId=${best.Face.ExternalImageId} orgId=${req.user.parentOrganizationId}`);
         const empMatch = best.Face.ExternalImageId.match(/org\d+_emp(\d+)_/);
+        console.log(`[identify] empMatch=${JSON.stringify(empMatch)}`);
         if (empMatch) {
           const matchedEmpId = parseInt(empMatch[1], 10);
           const [empRows] = await pool.execute(
             'SELECT Organization_Employee_Id, Employee_Nm FROM Organization_Employee WHERE Organization_Employee_Id = ? AND Organization_Id = ?',
             [matchedEmpId, req.user.parentOrganizationId]
           );
+          console.log(`[identify] empRows for empId=${matchedEmpId} orgId=${req.user.parentOrganizationId}: ${empRows.length} row(s)`);
           if (empRows.length) {
             const emp = empRows[0];
             employeeId = emp.Organization_Employee_Id;
