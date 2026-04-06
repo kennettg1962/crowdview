@@ -109,7 +109,43 @@ router.post('/identify', auth, async (req, res) => {
       let status = 'unknown';
       let matchedLabel = 'Unrecognized';
 
-      if (userMatches.length > 0) {
+      if (employeeMatches.length > 0) {
+        // Employees take precedence over customers
+        const best = employeeMatches[0];
+        faceId = best.Face.FaceId;
+        // ExternalImageId: org{orgId}_emp{employeeId}_p{photoId}
+        const empMatch = best.Face.ExternalImageId.match(/org\d+_emp(\d+)_/);
+        if (empMatch) {
+          const matchedEmpId = parseInt(empMatch[1], 10);
+          const [empRows] = await pool.execute(
+            'SELECT Organization_Employee_Id, Employee_Nm FROM Organization_Employee WHERE Organization_Employee_Id = ? AND Organization_Id = ?',
+            [matchedEmpId, req.user.parentOrganizationId]
+          );
+          if (empRows.length) {
+            const emp = empRows[0];
+            employeeId = emp.Organization_Employee_Id;
+            friendName = emp.Employee_Nm;
+            status = 'employee';
+            matchedLabel = `Employee: ${emp.Employee_Nm}`;
+            // Record attendance (one row per day) and individual detection event
+            const today = new Date().toISOString().split('T')[0];
+            pool.execute(
+              `INSERT INTO Organization_Employee_Attendance (Organization_Employee_Id, Organization_Id, Attendance_Dt)
+               VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE Organization_Employee_Id = Organization_Employee_Id`,
+              [emp.Organization_Employee_Id, req.user.parentOrganizationId, today]
+            ).catch(err => console.error('[attendance]', err.message));
+            pool.execute(
+              `INSERT INTO Organization_Employee_Detection (Organization_Employee_Id, Organization_Id, Detected_By_User_Id)
+               SELECT ?, ?, ? WHERE NOT EXISTS (
+                 SELECT 1 FROM Organization_Employee_Detection
+                 WHERE Organization_Employee_Id = ? AND Detected_At >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
+               )`,
+              [emp.Organization_Employee_Id, req.user.parentOrganizationId, req.user.userId,
+               emp.Organization_Employee_Id]
+            ).catch(err => console.error('[detection]', err.message));
+          }
+        }
+      } else if (userMatches.length > 0) {
         const best = userMatches[0]; // already sorted by similarity desc
         faceId = best.Face.FaceId;
 
@@ -151,44 +187,6 @@ router.post('/identify', auth, async (req, res) => {
                  friendId, req.user.parentOrganizationId, req.user.userId]
               ).catch(err => console.error('[friend-detection]', err.message));
             }
-          }
-        }
-      } else if (employeeMatches.length > 0) {
-        const best = employeeMatches[0];
-        faceId = best.Face.FaceId;
-        // ExternalImageId: org{orgId}_emp{employeeId}_p{photoId}
-        console.log(`[identify] employee best match ExternalImageId=${best.Face.ExternalImageId} orgId=${req.user.parentOrganizationId}`);
-        const empMatch = best.Face.ExternalImageId.match(/org\d+_emp(\d+)_/);
-        console.log(`[identify] empMatch=${JSON.stringify(empMatch)}`);
-        if (empMatch) {
-          const matchedEmpId = parseInt(empMatch[1], 10);
-          const [empRows] = await pool.execute(
-            'SELECT Organization_Employee_Id, Employee_Nm FROM Organization_Employee WHERE Organization_Employee_Id = ? AND Organization_Id = ?',
-            [matchedEmpId, req.user.parentOrganizationId]
-          );
-          console.log(`[identify] empRows for empId=${matchedEmpId} orgId=${req.user.parentOrganizationId}: ${empRows.length} row(s)`);
-          if (empRows.length) {
-            const emp = empRows[0];
-            employeeId = emp.Organization_Employee_Id;
-            friendName = emp.Employee_Nm;
-            status = 'employee';
-            matchedLabel = `Employee: ${emp.Employee_Nm}`;
-            // Record attendance (one row per day) and individual detection event
-            const today = new Date().toISOString().split('T')[0];
-            pool.execute(
-              `INSERT INTO Organization_Employee_Attendance (Organization_Employee_Id, Organization_Id, Attendance_Dt)
-               VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE Organization_Employee_Id = Organization_Employee_Id`,
-              [emp.Organization_Employee_Id, req.user.parentOrganizationId, today]
-            ).catch(err => console.error('[attendance]', err.message));
-            pool.execute(
-              `INSERT INTO Organization_Employee_Detection (Organization_Employee_Id, Organization_Id, Detected_By_User_Id)
-               SELECT ?, ?, ? WHERE NOT EXISTS (
-                 SELECT 1 FROM Organization_Employee_Detection
-                 WHERE Organization_Employee_Id = ? AND Detected_At >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
-               )`,
-              [emp.Organization_Employee_Id, req.user.parentOrganizationId, req.user.userId,
-               emp.Organization_Employee_Id]
-            ).catch(err => console.error('[detection]', err.message));
           }
         }
       } else if (Object.keys(friendUserMap).length > 0) {
