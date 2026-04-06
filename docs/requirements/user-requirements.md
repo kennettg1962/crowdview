@@ -229,3 +229,11 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 - Attendance is recorded automatically on each successful detection: one record per employee per day (INSERT ... ON DUPLICATE KEY UPDATE to avoid duplicate rows).
 - The `Organization` table has a new `Employee_Fl CHAR(1) NOT NULL DEFAULT 'N'` field; not yet used to gate the UI.
 - `BadgeIcon` (ID badge/clipboard SVG) added to `Icons.jsx` for the Employees NavBar tab.
+
+### [2026-04-06] Customer tier system — `#corporate #customers #tiers`
+- Corporate organizations get a configurable customer tier system.
+- Default tiers seeded on org creation: Security Risk (black #111827), Standard (green #22c55e), Silver (#9ca3af), Gold (#f59e0b), Platinum (blue #3b82f6), VIP (purple #a855f7).
+- Tier colors are fixed; only tier names are user-editable via a gear-icon → tier management modal in ManageFriendsScreen.
+- Customers can be assigned a tier in the FriendForm (corporate only) — shown as a colored badge on customer list rows.
+- When a customer is identified (status='known'), the bounding box color reflects their tier color (instead of the default green). Applied across HubScreen, StreamsScreen, and IdScreen.
+- Employee bounding box color changed from black to white to distinguish from unknown (red).

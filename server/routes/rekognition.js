@@ -105,6 +105,7 @@ router.post('/identify', auth, async (req, res) => {
       let friendName = null;
       let note = null;
       let friendGroup = null;
+      let tier = null;
       let faceId = `face_${i + 1}`;
       let status = 'unknown';
       let matchedLabel = 'Unrecognized';
@@ -158,13 +159,22 @@ router.post('/identify', auth, async (req, res) => {
           const ownerUserId = uPart ? parseInt(uPart.slice(1), 10) : userId;
 
           const [rows] = await pool.execute(
-            'SELECT Name_Txt, Note_Multi_Line_Txt, Friend_Group FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
+            'SELECT Name_Txt, Note_Multi_Line_Txt, Friend_Group, Customer_Tier_Id FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
             [friendId, ownerUserId]
           );
           if (rows.length) {
             friendName = rows[0].Name_Txt;
             note = rows[0].Note_Multi_Line_Txt || null;
             friendGroup = rows[0].Friend_Group || null;
+            if (rows[0].Customer_Tier_Id) {
+              const [tierRows] = await pool.execute(
+                'SELECT Tier_Id, Tier_Name_Txt, Tier_Color_Txt FROM Organization_Customer_Tier WHERE Tier_Id = ?',
+                [rows[0].Customer_Tier_Id]
+              );
+              if (tierRows.length) {
+                tier = { id: tierRows[0].Tier_Id, name: tierRows[0].Tier_Name_Txt, color: tierRows[0].Tier_Color_Txt };
+              }
+            }
             status = 'known';
             matchedLabel = `Customer: ${friendName}`;
             // Corporate only: record friend attendance + detection (dedupe: 1 min same user)
@@ -253,6 +263,7 @@ router.post('/identify', auth, async (req, res) => {
         employeeId,
         friendName,
         friendGroup,
+        tier,
         note,
         matchedLabel,
         attributes,

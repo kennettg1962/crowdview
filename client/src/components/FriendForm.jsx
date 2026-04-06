@@ -18,6 +18,8 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
   const [name, setName] = useState(friend?.Name_Txt || '');
   const [note, setNote] = useState(friend?.Note_Multi_Line_Txt || '');
   const [group, setGroup] = useState(friend?.Friend_Group || defaultGroup);
+  const [tierId, setTierId] = useState(friend?.Customer_Tier_Id || null);
+  const [tiers, setTiers] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -40,7 +42,12 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
     return () => { if (pendingPhotoUrl) URL.revokeObjectURL(pendingPhotoUrl); };
   }, [pendingPhotoUrl]);
 
-  useEffect(() => { isDirty.current = true; }, [name, note, group]);
+  useEffect(() => {
+    if (!isCorporate) return;
+    api.get('/api/corporate/tiers').then(res => setTiers(res.data)).catch(() => {});
+  }, [isCorporate]);
+
+  useEffect(() => { isDirty.current = true; }, [name, note, group, tierId]);
 
   useEffect(() => {
     if (!friend?.Friend_Id) return;
@@ -52,6 +59,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
         .then(res => {
           setNote(res.data.Note_Multi_Line_Txt || '');
           setGroup(res.data.Friend_Group || defaultGroup);
+          setTierId(res.data.Customer_Tier_Id || null);
           setLinkedUserName(res.data.Linked_User_Name || null);
           setLinkedUserEmail(res.data.Linked_User_Email || null);
         })
@@ -86,10 +94,10 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
     setSaving(true);
     try {
       if (friend?.Friend_Id) {
-        await api.put(`/api/friends/${friend.Friend_Id}`, { name: name.trim(), note, group });
+        await api.put(`/api/friends/${friend.Friend_Id}`, { name: name.trim(), note, group, tierId: tierId || null });
         onSave && onSave({ name: name.trim(), friendId: friend.Friend_Id });
       } else {
-        const res = await api.post('/api/friends', { name: name.trim(), note, group });
+        const res = await api.post('/api/friends', { name: name.trim(), note, group, tierId: tierId || null });
         const newId = res.data?.friendId;
         if (newId) {
           if (pendingPhoto) {
@@ -288,6 +296,22 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
             className="w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 resize-none"
             placeholder={`Optional notes about this ${noun}`} />
         </div>
+
+        {/* Tier — corporate only */}
+        {isCorporate && tiers.length > 0 && (
+          <div>
+            <label className="text-gray-300 text-sm block mb-1">Tier</label>
+            <select value={tierId || ''} onChange={e => setTierId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+              <option value="">— No tier —</option>
+              {tiers.map(t => (
+                <option key={t.tierId} value={t.tierId}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Group — hidden in corporate mode (always 'Business') */}
         {!isCorporate && (

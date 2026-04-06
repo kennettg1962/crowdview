@@ -49,12 +49,15 @@ function FloatButton({ icon: Icon, label, onClick, disabled, className = '' }) {
 }
 
 function FaceTile({ face, onView }) {
-  const accent = face.status === 'known'      ? 'border-green-500'
-               : face.status === 'identified' ? 'border-orange-500'
-               : face.status === 'employee'   ? 'border-white'
-               :                                'border-red-500';
+  const tierColor = face.status === 'known' && face.tier?.color ? face.tier.color : null;
+  const accentClass = tierColor ? ''
+                    : face.status === 'known'      ? 'border-green-500'
+                    : face.status === 'identified' ? 'border-orange-500'
+                    : face.status === 'employee'   ? 'border-white'
+                    :                                'border-red-500';
   return (
-    <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
+    <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-lg border-l-2 ${accentClass}`}
+         style={tierColor ? { borderLeftColor: tierColor } : undefined}>
       {face.cropDataUrl && (
         <img src={face.cropDataUrl} alt={face.friendName || 'Face'} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-600" />
       )}
@@ -381,9 +384,9 @@ export default function HubScreen() {
           const w = boundingBox.width  * canvas.width;
           const h = boundingBox.height * canvas.height;
 
-          const color = status === 'known'      ? '#22c55e'
+          const color = status === 'employee'   ? '#ffffff'
+                      : status === 'known'      ? (face.tier?.color || '#22c55e')
                       : status === 'identified' ? '#f97316'
-                      : status === 'employee'   ? '#ffffff'
                       : '#ef4444';
 
           ctx.strokeStyle = color;

@@ -292,7 +292,7 @@ export default function IdScreen() {
               }, {});
               return faces.map((face, i) => {
               const { left, top, width, height } = face.boundingBox;
-              const color = STATUS_COLORS[face.status]?.border || '#ffffff';
+              const color = face.status === 'known' && face.tier?.color ? face.tier.color : (STATUS_COLORS[face.status]?.border || '#ffffff');
               const isHovered = hoveredFaceIndex === i;
               const tooltipAttrs = buildTooltip(face);
               const tooltipAbove = top > 0.45;

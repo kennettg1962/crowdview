@@ -31,9 +31,12 @@ router.get('/', auth, async (req, res) => {
     let query = `SELECT f.*,
       (SELECT Photo_Mime_Type FROM Friend_Photo fp WHERE fp.Friend_Id = f.Friend_Id ORDER BY fp.Friend_Photo_Id ASC LIMIT 1) AS Primary_Photo_Mime,
       u2.Name_Txt AS Linked_User_Name,
-      u2.Email   AS Linked_User_Email
+      u2.Email   AS Linked_User_Email,
+      t.Tier_Name_Txt AS Tier_Name,
+      t.Tier_Color_Txt AS Tier_Color
       FROM Friend f
       LEFT JOIN User u2 ON u2.User_Id = f.Friend_User_Id
+      LEFT JOIN Organization_Customer_Tier t ON t.Tier_Id = f.Customer_Tier_Id
       WHERE ${scope.clause}`;
     const params = [...scope.params];
     if (group && group !== 'All') { query += ' AND f.Friend_Group = ?'; params.push(group); }
@@ -53,9 +56,12 @@ router.get('/:id', auth, async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT f.*,
         u2.Name_Txt AS Linked_User_Name,
-        u2.Email    AS Linked_User_Email
+        u2.Email    AS Linked_User_Email,
+        t.Tier_Name_Txt AS Tier_Name,
+        t.Tier_Color_Txt AS Tier_Color
          FROM Friend f
          LEFT JOIN User u2 ON u2.User_Id = f.Friend_User_Id
+         LEFT JOIN Organization_Customer_Tier t ON t.Tier_Id = f.Customer_Tier_Id
         WHERE f.Friend_Id = ? AND ${scope.clause}`,
       [req.params.id, ...scope.params]
     );
@@ -69,12 +75,12 @@ router.get('/:id', auth, async (req, res) => {
 
 // POST /api/friends
 router.post('/', auth, async (req, res) => {
-  const { name, note, group } = req.body;
+  const { name, note, group, tierId } = req.body;
   if (!name) return res.status(400).json({ error: 'Name required' });
   try {
     const [result] = await pool.execute(
-      'INSERT INTO Friend (User_Id, Name_Txt, Note_Multi_Line_Txt, Friend_Group) VALUES (?, ?, ?, ?)',
-      [req.user.userId, name, note || '', group || 'Friend']
+      'INSERT INTO Friend (User_Id, Name_Txt, Note_Multi_Line_Txt, Friend_Group, Customer_Tier_Id) VALUES (?, ?, ?, ?, ?)',
+      [req.user.userId, name, note || '', group || 'Friend', tierId || null]
     );
     res.status(201).json({ friendId: result.insertId });
   } catch (err) {
@@ -85,13 +91,13 @@ router.post('/', auth, async (req, res) => {
 
 // PUT /api/friends/:id
 router.put('/:id', auth, async (req, res) => {
-  const { name, note, group } = req.body;
+  const { name, note, group, tierId } = req.body;
   const scope = friendsScope(req.user);
   try {
     const [result] = await pool.execute(
-      `UPDATE Friend f SET f.Name_Txt = ?, f.Note_Multi_Line_Txt = ?, f.Friend_Group = ?
+      `UPDATE Friend f SET f.Name_Txt = ?, f.Note_Multi_Line_Txt = ?, f.Friend_Group = ?, f.Customer_Tier_Id = ?
         WHERE f.Friend_Id = ? AND ${scope.clause}`,
-      [name, note || '', group || 'Friend', req.params.id, ...scope.params]
+      [name, note || '', group || 'Friend', tierId || null, req.params.id, ...scope.params]
     );
     if (!result.affectedRows) return res.status(404).json({ error: 'Friend not found' });
     res.json({ message: 'Friend updated' });

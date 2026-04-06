@@ -574,6 +574,41 @@ router.get('/employees/:id/attendance/:date', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/corporate/tiers  — list customer tiers for this org
+// ---------------------------------------------------------------------------
+router.get('/tiers', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT Tier_Id, Tier_Name_Txt, Tier_Color_Txt, Sort_Order FROM Organization_Customer_Tier WHERE Organization_Id = ? ORDER BY Sort_Order ASC',
+      [req.user.parentOrganizationId]
+    );
+    res.json(rows.map(r => ({ tierId: r.Tier_Id, name: r.Tier_Name_Txt, color: r.Tier_Color_Txt, sortOrder: r.Sort_Order })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/corporate/tiers/:id  — rename a tier (color is fixed)
+// ---------------------------------------------------------------------------
+router.put('/tiers/:id', async (req, res) => {
+  const { name } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'Name required' });
+  try {
+    const [result] = await pool.execute(
+      'UPDATE Organization_Customer_Tier SET Tier_Name_Txt = ? WHERE Tier_Id = ? AND Organization_Id = ?',
+      [name.trim(), req.params.id, req.user.parentOrganizationId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ error: 'Tier not found' });
+    res.json({ message: 'Tier updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/corporate/friends/dashboard  — detection stats per corporate friend
 // IMPORTANT: defined before /:id routes
 // ---------------------------------------------------------------------------

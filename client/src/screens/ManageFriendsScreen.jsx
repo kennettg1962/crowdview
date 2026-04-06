@@ -5,7 +5,7 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import FriendFormPopup from '../components/FriendFormPopup';
-import { MovieCameraIcon, PlusIcon, DeleteIcon, XIcon } from '../components/Icons';
+import { MovieCameraIcon, PlusIcon, DeleteIcon, XIcon, SettingsIcon } from '../components/Icons';
 import AuthImage from '../components/AuthImage';
 import api from '../api/api';
 
@@ -30,6 +30,12 @@ export default function ManageFriendsScreen() {
   const [deletingFriend, setDeletingFriend] = useState(null);
   const [capturedFaceUrl, setCapturedFaceUrl] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Tiers
+  const [tiers, setTiers]             = useState([]);
+  const [showTierModal, setShowTierModal] = useState(false);
+  const [editingTierName, setEditingTierName] = useState({});
+  const [tierSaving, setTierSaving]   = useState(null);
 
   // Dashboard tab
   const [dashData, setDashData]       = useState([]);
@@ -58,6 +64,15 @@ export default function ManageFriendsScreen() {
     }
   }, [group]);
 
+  const loadTiers = useCallback(async () => {
+    if (!isCorporate) return;
+    try {
+      const res = await api.get('/api/corporate/tiers');
+      setTiers(res.data);
+      setEditingTierName(Object.fromEntries(res.data.map(t => [t.tierId, t.name])));
+    } catch (err) { console.error(err); }
+  }, [isCorporate]);
+
   const loadDashboard = useCallback(async () => {
     if (!isCorporate) return;
     setDashLoading(true);
@@ -70,6 +85,7 @@ export default function ManageFriendsScreen() {
 
   useEffect(() => { loadFriends(); }, [loadFriends]);
   useEffect(() => { if (activeTab === 'dashboard') loadDashboard(); }, [activeTab, loadDashboard]);
+  useEffect(() => { loadTiers(); }, [loadTiers]);
 
   async function openDrilldown(friend) {
     setDrilldownFriend(friend); setDrilldownLoading(true);
@@ -87,6 +103,17 @@ export default function ManageFriendsScreen() {
       setDetections(res.data);
     } catch (err) { console.error(err); }
     finally { setDetectionLoading(false); }
+  }
+
+  async function saveTierName(tierId) {
+    const name = editingTierName[tierId]?.trim();
+    if (!name) return;
+    setTierSaving(tierId);
+    try {
+      await api.put(`/api/corporate/tiers/${tierId}`, { name });
+      await loadTiers();
+    } catch (err) { console.error(err); }
+    finally { setTierSaving(null); }
   }
 
   function handleAddNew() { fileInputRef.current?.click(); }
@@ -156,11 +183,18 @@ export default function ManageFriendsScreen() {
         }
         center={<span className="text-white font-bold text-xl tracking-wide text-center leading-tight">{isCorporate ? <><div>CrowdView</div><div>Corporate</div></> : 'CrowdView'}</span>}
         right={
-          activeTab === 'customers' && (
-            <button onClick={handleAddNew} title={`Add ${Noun}`} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
-              <PlusIcon className="w-[30px] h-[30px]" />
-            </button>
-          )
+          <div className="flex items-center gap-1">
+            {isCorporate && (
+              <button onClick={() => setShowTierModal(true)} title="Manage Tiers" className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
+                <SettingsIcon className="w-[26px] h-[26px]" />
+              </button>
+            )}
+            {activeTab === 'customers' && (
+              <button onClick={handleAddNew} title={`Add ${Noun}`} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
+                <PlusIcon className="w-[30px] h-[30px]" />
+              </button>
+            )}
+          </div>
         }
       />
 
@@ -260,8 +294,14 @@ export default function ManageFriendsScreen() {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <p className="text-white text-sm font-medium truncate">{friend.Name_Txt}</p>
+                                {friend.Tier_Name && (
+                                  <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-medium"
+                                    style={{ backgroundColor: friend.Tier_Color + '33', color: friend.Tier_Color, border: `1px solid ${friend.Tier_Color}66` }}>
+                                    {friend.Tier_Name}
+                                  </span>
+                                )}
                                 {friend.Linked_User_Name && (
                                   <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded bg-blue-600/30 text-blue-400 border border-blue-600/40">linked</span>
                                 )}
@@ -347,6 +387,38 @@ export default function ManageFriendsScreen() {
                   );
                 })
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tier management modal */}
+      {showTierModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+          <div className="bg-gray-800 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+              <p className="text-white font-semibold text-sm">Customer Tiers</p>
+              <button onClick={() => setShowTierModal(false)} className="text-gray-400 hover:text-white">
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="divide-y divide-gray-700 overflow-y-auto max-h-96">
+              {tiers.map(t => (
+                <div key={t.tierId} className="px-5 py-3 flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: t.color }} />
+                  <input
+                    value={editingTierName[t.tierId] ?? t.name}
+                    onChange={e => setEditingTierName(prev => ({ ...prev, [t.tierId]: e.target.value }))}
+                    onBlur={() => saveTierName(t.tierId)}
+                    onKeyDown={e => e.key === 'Enter' && saveTierName(t.tierId)}
+                    className="flex-1 bg-gray-700 text-white rounded px-2 py-1 text-sm focus:outline-none focus:border-blue-500 border border-gray-600"
+                  />
+                  {tierSaving === t.tierId && <span className="text-gray-500 text-xs">saving…</span>}
+                </div>
+              ))}
+            </div>
+            <div className="px-5 py-3 border-t border-gray-700 text-gray-500 text-xs">
+              Edit a tier name and press Enter or click away to save. Colors are fixed.
             </div>
           </div>
         </div>

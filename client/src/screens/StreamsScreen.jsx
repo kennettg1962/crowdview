@@ -26,12 +26,15 @@ const STATUS_COLORS = { known: '#22c55e', identified: '#f97316', employee: '#fff
 const REJOIN_THRESHOLD = 30_000;
 
 function FaceTile({ face, onView }) {
-  const accent = face.status === 'known'       ? 'border-green-500'
-               : face.status === 'identified'  ? 'border-orange-500'
-               : face.status === 'employee'    ? 'border-white'
-               :                                 'border-red-500';
+  const tierColor = face.status === 'known' && face.tier?.color ? face.tier.color : null;
+  const accentClass = tierColor ? ''
+                    : face.status === 'known'      ? 'border-green-500'
+                    : face.status === 'identified' ? 'border-orange-500'
+                    : face.status === 'employee'   ? 'border-white'
+                    :                                'border-red-500';
   return (
-    <div className={`flex items-center gap-2 p-2 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
+    <div className={`flex items-center gap-2 p-2 bg-gray-800 rounded-lg border-l-2 ${accentClass}`}
+         style={tierColor ? { borderLeftColor: tierColor } : undefined}>
       {face.cropDataUrl && (
         <img src={face.cropDataUrl} alt={face.friendName || 'Face'} className="w-10 h-10 rounded object-cover flex-shrink-0 border border-gray-600" />
       )}
@@ -238,7 +241,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
           const y = offsetY + boundingBox.top    * displayH;
           const w =           boundingBox.width  * displayW;
           const h =           boundingBox.height * displayH;
-          const color = STATUS_COLORS[status] || '#ffffff';
+          const color = status === 'known' && face.tier?.color ? face.tier.color : (STATUS_COLORS[status] || '#ffffff');
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
           ctx.strokeRect(x, y, w, h);

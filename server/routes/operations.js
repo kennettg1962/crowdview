@@ -243,6 +243,22 @@ router.post('/orgs', async (req, res) => {
       throw err;
     }
 
+    // Seed default customer tiers
+    const defaultTiers = [
+      ['Security Risk', '#111827', 0],
+      ['Standard',      '#22c55e', 1],
+      ['Silver',        '#9ca3af', 2],
+      ['Gold',          '#f59e0b', 3],
+      ['Platinum',      '#3b82f6', 4],
+      ['VIP',           '#a855f7', 5],
+    ];
+    for (const [tierName, tierColor, sortOrder] of defaultTiers) {
+      await conn.execute(
+        'INSERT INTO Organization_Customer_Tier (Organization_Id, Tier_Name_Txt, Tier_Color_Txt, Sort_Order) VALUES (?, ?, ?, ?)',
+        [orgId, tierName, tierColor, sortOrder]
+      );
+    }
+
     await conn.commit();
     conn.release();
 
