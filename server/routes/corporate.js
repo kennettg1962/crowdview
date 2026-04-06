@@ -8,7 +8,7 @@ const pool = require('../db/connection');
 const auth = require('../middleware/auth');
 const corporateAdmin = require('../middleware/corporateAdmin');
 const { detectActivity, deviceHeartbeat, DETECT_TTL, HEARTBEAT_TTL, sessionDetectCount } = require('../activity');
-const { indexEmployeeFace, deleteFaces } = require('../rekognition');
+const { indexEmployeeFace, deleteFaces, deleteSubject } = require('../rekognition');
 
 const empUpload = multer({ storage: multer.memoryStorage() });
 
@@ -355,13 +355,17 @@ router.delete('/employees/:id', async (req, res) => {
     const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
     if (!target) return res.status(404).json({ error: 'Employee not found' });
 
-    // Remove face collection entries first
+    // Remove face collection entries — delete by subject name (reliable) and by image_id if stored
     const [photos] = await pool.execute(
-      'SELECT Rekognition_Face_Id FROM Organization_Employee_Photo WHERE Organization_Employee_Id = ? AND Rekognition_Face_Id IS NOT NULL',
+      'SELECT Organization_Employee_Photo_Id, Rekognition_Face_Id FROM Organization_Employee_Photo WHERE Organization_Employee_Id = ?',
       [req.params.id]
     );
     const faceIds = photos.map(p => p.Rekognition_Face_Id).filter(Boolean);
     if (faceIds.length) deleteFaces(faceIds).catch(err => console.error('deleteFaces:', err.message));
+    photos.forEach(p => {
+      const subject = `org${req.user.parentOrganizationId}_emp${req.params.id}_p${p.Organization_Employee_Photo_Id}`;
+      deleteSubject(subject).catch(err => console.error('deleteSubject:', err.message));
+    });
 
     await pool.execute(
       'DELETE FROM Organization_Employee WHERE Organization_Employee_Id = ? AND Organization_Id = ?',
@@ -458,8 +462,12 @@ router.delete('/employees/:id/photos/:pid', async (req, res) => {
       'SELECT Rekognition_Face_Id FROM Organization_Employee_Photo WHERE Organization_Employee_Photo_Id = ? AND Organization_Employee_Id = ?',
       [req.params.pid, req.params.id]
     );
-    if (photoRows.length && photoRows[0].Rekognition_Face_Id) {
-      deleteFaces([photoRows[0].Rekognition_Face_Id]).catch(err => console.error('deleteFaces:', err.message));
+    if (photoRows.length) {
+      if (photoRows[0].Rekognition_Face_Id) {
+        deleteFaces([photoRows[0].Rekognition_Face_Id]).catch(err => console.error('deleteFaces:', err.message));
+      }
+      const subject = `org${req.user.parentOrganizationId}_emp${req.params.id}_p${req.params.pid}`;
+      deleteSubject(subject).catch(err => console.error('deleteSubject:', err.message));
     }
     const [result] = await pool.execute(
       'DELETE FROM Organization_Employee_Photo WHERE Organization_Employee_Photo_Id = ? AND Organization_Employee_Id = ?',

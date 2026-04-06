@@ -172,4 +172,15 @@ async function indexEmployeeFace(buf, orgId, employeeId, photoId) {
   return data.image_id || null;
 }
 
-module.exports = { ensureCollection, indexFace, indexEmployeeFace, deleteFaces, detectFaces, searchFace };
+// ---------------------------------------------------------------------------
+// deleteSubject — remove all indexed faces for a given subject name
+// ---------------------------------------------------------------------------
+async function deleteSubject(subject) {
+  const SUBJECTS_URL = `${BASE_URL}/api/v1/recognition/subjects`;
+  await fetch(`${SUBJECTS_URL}/${encodeURIComponent(subject)}`, {
+    method: 'DELETE',
+    headers: { 'x-api-key': RECOGNIZE_KEY },
+  });
+}
+
+module.exports = { ensureCollection, indexFace, indexEmployeeFace, deleteFaces, deleteSubject, detectFaces, searchFace };

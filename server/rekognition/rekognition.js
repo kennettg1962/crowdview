@@ -122,4 +122,7 @@ async function indexEmployeeFace(buf, orgId, employeeId, photoId) {
   return record ? record.Face.FaceId : null;
 }
 
-module.exports = { ensureCollection, indexFace, indexEmployeeFace, deleteFaces, detectFaces, searchFace };
+// deleteSubject — no-op for AWS Rekognition (faces are deleted by faceId via deleteFaces)
+async function deleteSubject(_subject) {}
+
+module.exports = { ensureCollection, indexFace, indexEmployeeFace, deleteFaces, deleteSubject, detectFaces, searchFace };
