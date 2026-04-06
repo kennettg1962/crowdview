@@ -474,6 +474,28 @@ router.delete('/employees/:id/photos/:pid', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/corporate/employees/:id/photos/primary/data  — first photo blob
+// IMPORTANT: must be defined before /:id/photos/:pid/data
+// ---------------------------------------------------------------------------
+router.get('/employees/:id/photos/primary/data', async (req, res) => {
+  try {
+    const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
+    if (!target) return res.status(404).json({ error: 'Employee not found' });
+    const [rows] = await pool.execute(
+      `SELECT Photo_Data, Photo_Mime_Type FROM Organization_Employee_Photo
+        WHERE Organization_Employee_Id = ? ORDER BY Created_At ASC LIMIT 1`,
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).end();
+    res.set('Content-Type', rows[0].Photo_Mime_Type || 'image/jpeg');
+    res.send(rows[0].Photo_Data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/corporate/employees/:id/photos/:pid/data  — serve photo blob
 // ---------------------------------------------------------------------------
 router.get('/employees/:id/photos/:pid/data', async (req, res) => {

@@ -5,7 +5,7 @@ import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import AuthImage from '../components/AuthImage';
 import FacePickerPopup from '../components/FacePickerPopup';
-import { HomeIcon, PlusIcon, DeleteIcon } from '../components/Icons';
+import { HomeIcon, PlusIcon, DeleteIcon, UploadIcon, XIcon } from '../components/Icons';
 import api from '../api/api';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -35,11 +35,9 @@ export default function EmployeesScreen() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Employee list (Employees tab)
   const [employees, setEmployees]   = useState([]);
   const [empLoading, setEmpLoading] = useState(true);
 
-  // Dashboard data
   const [dashData, setDashData]       = useState([]);
   const [dashLoading, setDashLoading] = useState(true);
 
@@ -50,18 +48,19 @@ export default function EmployeesScreen() {
   const [formError, setFormError]       = useState('');
   const [saving, setSaving]             = useState(false);
 
-  // Photos (edit form)
-  const [photos, setPhotos]                 = useState([]);
+  // Photo wallet (form)
+  const [photos, setPhotos]               = useState([]);
+  const [photoIndex, setPhotoIndex]       = useState(0);
   const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef(null);
 
   // Face-picker flow (new employee)
-  const addPhotoInputRef                  = useRef(null);
-  const [showFacePicker, setShowFacePicker]   = useState(false);
-  const [pickerImageUrl, setPickerImageUrl]   = useState(null);
-  const [pickerFaces, setPickerFaces]         = useState([]);
-  const [pickerLoading, setPickerLoading]     = useState(false);
-  const [pendingFaceCrop, setPendingFaceCrop] = useState(null); // data URL for new employee photo
+  const addPhotoInputRef                    = useRef(null);
+  const [showFacePicker, setShowFacePicker] = useState(false);
+  const [pickerImageUrl, setPickerImageUrl] = useState(null);
+  const [pickerFaces, setPickerFaces]       = useState([]);
+  const [pickerLoading, setPickerLoading]   = useState(false);
+  const [pendingFaceCrop, setPendingFaceCrop] = useState(null);
 
   // Delete confirmation
   const [deletingEmployee, setDeletingEmployee] = useState(null);
@@ -72,7 +71,7 @@ export default function EmployeesScreen() {
   const [resetError, setResetError]           = useState('');
   const [resetSaving, setResetSaving]         = useState(false);
 
-  // Dashboard drilldown
+  // Drilldown
   const [drilldownEmp, setDrilldownEmp]         = useState(null);
   const [drilldownDates, setDrilldownDates]     = useState([]);
   const [drilldownLoading, setDrilldownLoading] = useState(false);
@@ -81,60 +80,46 @@ export default function EmployeesScreen() {
 
   const loadEmployees = useCallback(async () => {
     setEmpLoading(true);
-    try {
-      const res = await api.get('/api/corporate/employees');
-      setEmployees(res.data);
-    } catch (err) { console.error(err); }
+    try { const res = await api.get('/api/corporate/employees'); setEmployees(res.data); }
+    catch (err) { console.error(err); }
     finally { setEmpLoading(false); }
   }, []);
 
   const loadDashboard = useCallback(async () => {
     setDashLoading(true);
-    try {
-      const res = await api.get('/api/corporate/employees/dashboard');
-      setDashData(res.data);
-    } catch (err) { console.error(err); }
+    try { const res = await api.get('/api/corporate/employees/dashboard'); setDashData(res.data); }
+    catch (err) { console.error(err); }
     finally { setDashLoading(false); }
   }, []);
 
-  useEffect(() => {
-    loadEmployees();
-    loadDashboard();
-  }, [loadEmployees, loadDashboard]);
+  useEffect(() => { loadEmployees(); loadDashboard(); }, [loadEmployees, loadDashboard]);
 
   async function loadPhotos(employeeId) {
     try {
       const res = await api.get(`/api/corporate/employees/${employeeId}/photos`);
       setPhotos(res.data);
+      setPhotoIndex(0);
     } catch (err) { console.error(err); }
   }
 
   // ── Add-new flow: file → face picker → form ────────────────────────────────
 
-  function openCreate() {
-    addPhotoInputRef.current?.click();
-  }
+  function openCreate() { addPhotoInputRef.current?.click(); }
 
   async function handleAddPhotoSelected(e) {
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
-
     const imageDataUrl = await readAndResize(file);
     setPickerImageUrl(imageDataUrl);
     setPickerFaces([]);
     setPickerLoading(true);
     setShowFacePicker(true);
-
     try {
       const res = await api.post('/api/rekognition/identify', { imageData: imageDataUrl });
       setPickerFaces(res.data.faces || []);
-    } catch (err) {
-      console.error('Face detection failed:', err);
-      setPickerFaces([]);
-    } finally {
-      setPickerLoading(false);
-    }
+    } catch (err) { console.error('Face detection failed:', err); setPickerFaces([]); }
+    finally { setPickerLoading(false); }
   }
 
   function handleFaceSelected(croppedDataUrl) {
@@ -144,14 +129,11 @@ export default function EmployeesScreen() {
     setForm(EMPTY_FORM);
     setFormError('');
     setPhotos([]);
+    setPhotoIndex(0);
     setShowForm(true);
   }
 
-  function cancelFacePicker() {
-    setShowFacePicker(false);
-    setPickerImageUrl(null);
-    setPickerFaces([]);
-  }
+  function cancelFacePicker() { setShowFacePicker(false); setPickerImageUrl(null); setPickerFaces([]); }
 
   // ── Edit flow ──────────────────────────────────────────────────────────────
 
@@ -176,17 +158,12 @@ export default function EmployeesScreen() {
       } else {
         const res = await api.post('/api/corporate/employees', form);
         const { employeeId } = res.data;
-
-        // Upload the selected face crop as the first photo
         if (pendingFaceCrop) {
           const blob = await fetch(pendingFaceCrop).then(r => r.blob());
           const fd = new FormData();
           fd.append('photo', blob, 'face.jpg');
-          await api.post(
-            `/api/corporate/employees/${employeeId}/photos`,
-            fd,
-            { headers: { 'Content-Type': 'multipart/form-data' } }
-          );
+          await api.post(`/api/corporate/employees/${employeeId}/photos`, fd,
+            { headers: { 'Content-Type': 'multipart/form-data' } });
           setPendingFaceCrop(null);
         }
       }
@@ -195,12 +172,10 @@ export default function EmployeesScreen() {
       setShowForm(false);
     } catch (err) {
       setFormError(err.response?.data?.error || 'Save failed');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
-  // ── Photo management (edit) ────────────────────────────────────────────────
+  // ── Photo management (form wallet) ─────────────────────────────────────────
 
   async function handlePhotoUpload(e) {
     const file = e.target.files[0];
@@ -209,25 +184,21 @@ export default function EmployeesScreen() {
     try {
       const fd = new FormData();
       fd.append('photo', file);
-      await api.post(
-        `/api/corporate/employees/${editEmployee.Organization_Employee_Id}/photos`,
-        fd,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
-      );
+      await api.post(`/api/corporate/employees/${editEmployee.Organization_Employee_Id}/photos`, fd,
+        { headers: { 'Content-Type': 'multipart/form-data' } });
       await loadPhotos(editEmployee.Organization_Employee_Id);
-    } catch (err) {
-      console.error('Photo upload failed:', err);
-    } finally {
-      setPhotoUploading(false);
-      e.target.value = '';
-    }
+      setPhotoIndex(photos.length); // jump to newly uploaded photo
+    } catch (err) { console.error('Upload failed:', err); }
+    finally { setPhotoUploading(false); e.target.value = ''; }
   }
 
-  async function handleDeletePhoto(photoId) {
-    if (!editEmployee) return;
+  async function handleDeleteCurrentPhoto() {
+    if (!editEmployee || photos.length === 0) return;
+    const ph = photos[photoIndex];
     try {
-      await api.delete(`/api/corporate/employees/${editEmployee.Organization_Employee_Id}/photos/${photoId}`);
+      await api.delete(`/api/corporate/employees/${editEmployee.Organization_Employee_Id}/photos/${ph.Organization_Employee_Photo_Id}`);
       await loadPhotos(editEmployee.Organization_Employee_Id);
+      setPhotoIndex(idx => Math.max(0, idx - 1));
     } catch (err) { console.error(err); }
   }
 
@@ -238,8 +209,7 @@ export default function EmployeesScreen() {
     try {
       await api.delete(`/api/corporate/employees/${deletingEmployee.Organization_Employee_Id}`);
       setDeletingEmployee(null);
-      loadEmployees();
-      loadDashboard();
+      loadEmployees(); loadDashboard();
     } catch (err) { console.error(err); }
   }
 
@@ -247,24 +217,18 @@ export default function EmployeesScreen() {
 
   async function handleResetPassword(e) {
     e.preventDefault();
-    setResetError('');
-    setResetSaving(true);
+    setResetError(''); setResetSaving(true);
     try {
       await api.post(`/api/corporate/employees/${resetPwEmployee.Organization_Employee_Id}/reset-password`, { newPassword });
-      setResetPwEmployee(null);
-      setNewPassword('');
-    } catch (err) {
-      setResetError(err.response?.data?.error || 'Reset failed');
-    } finally {
-      setResetSaving(false);
-    }
+      setResetPwEmployee(null); setNewPassword('');
+    } catch (err) { setResetError(err.response?.data?.error || 'Reset failed'); }
+    finally { setResetSaving(false); }
   }
 
-  // ── Dashboard drilldown ────────────────────────────────────────────────────
+  // ── Drilldown ──────────────────────────────────────────────────────────────
 
   async function openDrilldown(emp) {
-    setDrilldownEmp(emp);
-    setDrilldownLoading(true);
+    setDrilldownEmp(emp); setDrilldownLoading(true);
     try {
       const res = await api.get(`/api/corporate/employees/${emp.employeeId}/attendance`);
       setDrilldownDates(res.data);
@@ -285,11 +249,16 @@ export default function EmployeesScreen() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // ── Current photo URL in wallet ────────────────────────────────────────────
+  const walletPhotoUrl = editEmployee && photos[photoIndex]
+    ? `/api/corporate/employees/${editEmployee.Organization_Employee_Id}/photos/${photos[photoIndex].Organization_Employee_Photo_Id}/data`
+    : (!editEmployee && pendingFaceCrop) ? pendingFaceCrop
+    : null;
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="bg-slate-700 min-h-screen flex flex-col">
-      {/* Hidden file inputs */}
       <input ref={addPhotoInputRef} type="file" accept="image/*" className="hidden" onChange={handleAddPhotoSelected} />
 
       <AppHeader
@@ -310,18 +279,10 @@ export default function EmployeesScreen() {
 
       {/* Tab bar */}
       <div className="flex border-b border-gray-700 bg-gray-800">
-        {[
-          { label: 'Dashboard', id: 'dashboard' },
-          { label: 'Employees', id: 'employees' },
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id)}
+        {[{ label: 'Dashboard', id: 'dashboard' }, { label: 'Employees', id: 'employees' }].map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
             className={`flex-1 py-2.5 text-sm font-medium transition-colors
-              ${activeTab === t.id
-                ? 'text-blue-400 border-b-2 border-blue-400'
-                : 'text-gray-400 hover:text-gray-200'}`}
-          >
+              ${activeTab === t.id ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400 hover:text-gray-200'}`}>
             {t.label}
           </button>
         ))}
@@ -333,9 +294,7 @@ export default function EmployeesScreen() {
         {activeTab === 'dashboard' && (
           <div className="w-full max-w-2xl">
             {dashLoading ? (
-              <div className="flex justify-center mt-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-              </div>
+              <div className="flex justify-center mt-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" /></div>
             ) : dashData.length === 0 ? (
               <p className="text-center text-gray-500 mt-12 text-sm">No employees yet</p>
             ) : (
@@ -348,24 +307,15 @@ export default function EmployeesScreen() {
                 </div>
                 <div className="divide-y divide-gray-800">
                   {dashData.map(emp => (
-                    <button
-                      key={emp.employeeId}
-                      onClick={() => openDrilldown(emp)}
-                      className="w-full grid grid-cols-4 gap-2 px-4 py-3 hover:bg-gray-800 transition-colors text-left"
-                    >
+                    <button key={emp.employeeId} onClick={() => openDrilldown(emp)}
+                      className="w-full grid grid-cols-4 gap-2 px-4 py-3 hover:bg-gray-800 transition-colors text-left">
                       <div className="col-span-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">{emp.employeeName}</p>
                         <p className="text-xs text-gray-500 truncate">{emp.loginCode}</p>
                       </div>
-                      <span className={`text-sm font-semibold text-center self-center ${emp.weekCount > 0 ? 'text-green-400' : 'text-gray-600'}`}>
-                        {emp.weekCount}
-                      </span>
-                      <span className={`text-sm font-semibold text-center self-center ${emp.monthCount > 0 ? 'text-blue-400' : 'text-gray-600'}`}>
-                        {emp.monthCount}
-                      </span>
-                      <span className={`text-sm font-semibold text-center self-center ${emp.yearCount > 0 ? 'text-purple-400' : 'text-gray-600'}`}>
-                        {emp.yearCount}
-                      </span>
+                      <span className={`text-sm font-semibold text-center self-center ${emp.weekCount > 0 ? 'text-green-400' : 'text-gray-600'}`}>{emp.weekCount}</span>
+                      <span className={`text-sm font-semibold text-center self-center ${emp.monthCount > 0 ? 'text-blue-400' : 'text-gray-600'}`}>{emp.monthCount}</span>
+                      <span className={`text-sm font-semibold text-center self-center ${emp.yearCount > 0 ? 'text-purple-400' : 'text-gray-600'}`}>{emp.yearCount}</span>
                     </button>
                   ))}
                 </div>
@@ -378,26 +328,19 @@ export default function EmployeesScreen() {
         {activeTab === 'employees' && (
           <div className="w-full max-w-2xl">
             {empLoading ? (
-              <div className="flex justify-center mt-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-              </div>
+              <div className="flex justify-center mt-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" /></div>
             ) : employees.length === 0 ? (
               <div className="flex flex-col items-center justify-center mt-12 gap-3 text-gray-500">
                 <p className="text-sm">No employees yet</p>
-                <button onClick={openCreate} className="text-blue-400 hover:text-blue-300 text-sm underline">
-                  Add your first employee
-                </button>
+                <button onClick={openCreate} className="text-blue-400 hover:text-blue-300 text-sm underline">Add your first employee</button>
               </div>
             ) : (
               <div className="flex gap-2">
                 {/* A-Z index */}
                 <div className="flex flex-col gap-0.5 py-1 text-xs text-gray-500">
                   {ALPHABET.map(letter => (
-                    <button
-                      key={letter}
-                      onClick={() => scrollToLetter(letter)}
-                      className={`hover:text-white leading-none ${grouped[letter] ? 'text-gray-300' : ''}`}
-                    >
+                    <button key={letter} onClick={() => scrollToLetter(letter)}
+                      className={`hover:text-white leading-none ${grouped[letter] ? 'text-gray-300' : ''}`}>
                       {letter}
                     </button>
                   ))}
@@ -409,28 +352,31 @@ export default function EmployeesScreen() {
                     <div key={letter} id={`el-${letter}`}>
                       <div className="bg-gray-900 text-blue-400 text-xs font-bold px-2 py-1">{letter}</div>
                       {letterEmps.map(emp => (
-                        <div key={emp.Organization_Employee_Id} className="flex items-center gap-1 rounded-lg hover:bg-gray-800 transition-colors">
-                          <button
-                            onClick={() => openEdit(emp)}
-                            className="flex-1 flex items-center gap-3 p-3 text-left"
-                          >
+                        <div key={emp.Organization_Employee_Id} className="flex items-center gap-1 hover:bg-gray-800 transition-colors">
+                          <button onClick={() => openEdit(emp)} className="flex-1 flex items-center gap-3 p-3 text-left">
+                            {/* Photo thumbnail */}
+                            <div className="w-[52px] h-[52px] rounded-full bg-gray-700 overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-600">
+                              <AuthImage
+                                src={`/api/corporate/employees/${emp.Organization_Employee_Id}/photos/primary/data`}
+                                alt={emp.Employee_Nm}
+                                className="w-full h-full object-cover"
+                                fallback={<span className="text-gray-500 text-xl">👤</span>}
+                                lazy
+                              />
+                            </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-white text-sm font-medium truncate">{emp.Employee_Nm}</p>
                               <p className="text-gray-500 text-xs truncate">
                                 {emp.Login_Cd}
                                 {Number(emp.Photo_Count) > 0 && (
-                                  <span className="ml-2 text-blue-400">
-                                    {emp.Photo_Count} photo{Number(emp.Photo_Count) !== 1 ? 's' : ''}
-                                  </span>
+                                  <span className="ml-2 text-blue-400">{emp.Photo_Count} photo{Number(emp.Photo_Count) !== 1 ? 's' : ''}</span>
                                 )}
                               </p>
                             </div>
                             <span className="text-gray-600">›</span>
                           </button>
-                          <button
-                            onClick={() => setDeletingEmployee(emp)}
-                            className="p-3 text-red-400/50 hover:text-red-400 transition-colors flex-shrink-0"
-                          >
+                          <button onClick={() => setDeletingEmployee(emp)}
+                            className="p-3 text-red-400/50 hover:text-red-400 transition-colors flex-shrink-0">
                             <DeleteIcon className="w-5 h-5" />
                           </button>
                         </div>
@@ -459,144 +405,131 @@ export default function EmployeesScreen() {
         />
       )}
 
-      {/* ── ADD / EDIT EMPLOYEE MODAL ── */}
+      {/* ── EMPLOYEE FORM MODAL ── */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-lg bg-gray-800 rounded-t-2xl sm:rounded-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+          <div className="w-full max-w-lg bg-gray-800 rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[90vh]">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700 flex-shrink-0">
               <h2 className="text-base font-semibold text-white">
                 {editEmployee ? 'Edit Employee' : 'Add Employee'}
               </h2>
               <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-white">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <XIcon className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              {/* Face crop preview for new employee */}
-              {!editEmployee && pendingFaceCrop && (
-                <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
-                  <img src={pendingFaceCrop} alt="Selected face" className="w-14 h-14 rounded-lg object-cover border border-gray-500 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium">Recognition photo selected</p>
-                    <p className="text-xs text-gray-400">This face will be used for camera detection</p>
-                  </div>
-                  <button type="button" onClick={() => setPendingFaceCrop(null)} className="text-gray-500 hover:text-red-400 flex-shrink-0">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              )}
+            {/* Scrollable body */}
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
 
+              {/* ── Photo wallet ── */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-32 h-32 rounded-lg bg-gray-700 overflow-hidden border-2 border-gray-600 flex items-center justify-center">
+                  {walletPhotoUrl ? (
+                    <AuthImage src={walletPhotoUrl} alt="Employee" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-gray-500 text-5xl">👤</span>
+                  )}
+                </div>
+
+                {/* Multi-photo navigation (edit only) */}
+                {editEmployee && photos.length > 1 && (
+                  <div className="flex items-center gap-3 text-sm text-gray-400">
+                    <button type="button" onClick={() => setPhotoIndex(i => Math.max(0, i - 1))}
+                      disabled={photoIndex === 0} className="disabled:opacity-40 hover:text-white">◀</button>
+                    <span>{photoIndex + 1} / {photos.length}</span>
+                    <button type="button" onClick={() => setPhotoIndex(i => Math.min(photos.length - 1, i + 1))}
+                      disabled={photoIndex === photos.length - 1} className="disabled:opacity-40 hover:text-white">▶</button>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  {/* Upload — edit only */}
+                  {editEmployee && (
+                    <>
+                      <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                      <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoUploading}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg text-sm">
+                        <UploadIcon className="w-4 h-4" /> {photoUploading ? 'Uploading…' : 'Upload'}
+                      </button>
+                    </>
+                  )}
+                  {/* Remove current photo */}
+                  {walletPhotoUrl && (
+                    <button type="button"
+                      onClick={editEmployee ? handleDeleteCurrentPhoto : () => setPendingFaceCrop(null)}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg text-sm transition-colors">
+                      <XIcon className="w-4 h-4" /> Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Fields ── */}
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Employee Name <span className="text-red-400">*</span></label>
-                <input
-                  value={form.employeeName}
-                  onChange={e => setForm(f => ({ ...f, employeeName: e.target.value }))}
+                <input value={form.employeeName} onChange={e => setForm(f => ({ ...f, employeeName: e.target.value }))}
                   required
                   className="w-full bg-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Jane Smith"
-                />
+                  placeholder="Jane Smith" />
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Login Code <span className="text-red-400">*</span></label>
-                <input
-                  value={form.loginCode}
-                  onChange={e => setForm(f => ({ ...f, loginCode: e.target.value }))}
+                <input value={form.loginCode} onChange={e => setForm(f => ({ ...f, loginCode: e.target.value }))}
                   required
                   className="w-full bg-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="jsmith"
-                />
+                  placeholder="jsmith" />
               </div>
               {!editEmployee && (
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Password <span className="text-red-400">*</span></label>
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                    required
-                    minLength={6}
+                  <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                    required minLength={6}
                     className="w-full bg-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Min 6 characters"
-                  />
+                    placeholder="Min 6 characters" />
+                </div>
+              )}
+
+              {/* Reset password link (edit only) */}
+              {editEmployee && (
+                <div>
+                  <button type="button"
+                    onClick={() => { setResetPwEmployee(editEmployee); setNewPassword(''); setResetError(''); }}
+                    className="text-xs text-amber-400 hover:text-amber-300 underline">
+                    Reset Password
+                  </button>
                 </div>
               )}
 
               {formError && <p className="text-red-400 text-sm">{formError}</p>}
-
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowForm(false)}
-                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium py-2.5 rounded-lg">
-                  Cancel
-                </button>
-                <button type="submit" disabled={saving}
-                  className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg">
-                  {saving ? 'Saving…' : editEmployee ? 'Save Changes' : 'Create Employee'}
-                </button>
-              </div>
             </form>
 
-            {/* Photos section — edit only */}
-            {editEmployee && (
-              <div className="px-5 pb-5 space-y-3 border-t border-gray-700 pt-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Recognition Photos</p>
-                  <button
-                    onClick={() => photoInputRef.current?.click()}
-                    disabled={photoUploading}
-                    className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {photoUploading ? 'Uploading…' : '+ Add Photo'}
-                  </button>
-                  <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-                </div>
-
-                {photos.length === 0 ? (
-                  <p className="text-xs text-gray-500">No photos yet — add a clear face photo for recognition</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {photos.map(ph => (
-                      <div key={ph.Organization_Employee_Photo_Id} className="relative group">
-                        <AuthImage
-                          src={`/api/corporate/employees/${editEmployee.Organization_Employee_Id}/photos/${ph.Organization_Employee_Photo_Id}/data`}
-                          alt="Employee photo"
-                          className="w-16 h-16 rounded-lg object-cover border border-gray-600"
-                        />
-                        <button
-                          onClick={() => handleDeletePhoto(ph.Organization_Employee_Photo_Id)}
-                          className="absolute top-0.5 right-0.5 bg-black/70 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => { setResetPwEmployee(editEmployee); setNewPassword(''); setResetError(''); }}
-                    className="text-xs text-amber-400 hover:text-amber-300 underline"
-                  >
-                    Reset Password
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* Footer */}
+            <div className="flex gap-3 px-5 py-4 border-t border-gray-700 flex-shrink-0">
+              {editEmployee && (
+                <button type="button" onClick={() => setDeletingEmployee(editEmployee)}
+                  className="p-2.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition-colors" title="Delete employee">
+                  <DeleteIcon className="w-5 h-5" />
+                </button>
+              )}
+              <button type="button" onClick={() => setShowForm(false)}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium py-2.5 rounded-lg">
+                Cancel
+              </button>
+              <button type="submit" form="empForm" disabled={saving}
+                onClick={handleSubmit}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg">
+                {saving ? 'Saving…' : editEmployee ? 'Save Changes' : 'Create Employee'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* ── DELETE CONFIRMATION ── */}
       {deletingEmployee && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]">
           <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
             <p className="text-white font-medium mb-1">Delete {deletingEmployee.Employee_Nm}?</p>
             <p className="text-gray-400 text-sm mb-4">This will permanently remove the employee, their photos, and all attendance records.</p>
@@ -608,21 +541,15 @@ export default function EmployeesScreen() {
         </div>
       )}
 
-      {/* ── RESET PASSWORD MODAL ── */}
+      {/* ── RESET PASSWORD ── */}
       {resetPwEmployee && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]">
           <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
             <p className="text-white font-medium mb-3">Reset password for {resetPwEmployee.Employee_Nm}</p>
             <form onSubmit={handleResetPassword} className="space-y-3">
-              <input
-                type="password"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                required
-                minLength={6}
-                placeholder="New password (min 6 chars)"
-                className="w-full bg-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                required minLength={6} placeholder="New password (min 6 chars)"
+                className="w-full bg-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               {resetError && <p className="text-red-400 text-xs">{resetError}</p>}
               <div className="flex gap-3">
                 <button type="button" onClick={() => setResetPwEmployee(null)} className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">Cancel</button>
@@ -635,7 +562,7 @@ export default function EmployeesScreen() {
         </div>
       )}
 
-      {/* ── ATTENDANCE DRILLDOWN MODAL ── */}
+      {/* ── ATTENDANCE DRILLDOWN ── */}
       {drilldownEmp && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
           <div className="bg-gray-800 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden">
@@ -645,16 +572,12 @@ export default function EmployeesScreen() {
                 <p className="text-gray-500 text-xs">Detection history</p>
               </div>
               <button onClick={() => setDrilldownEmp(null)} className="text-gray-400 hover:text-white">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <XIcon className="w-5 h-5" />
               </button>
             </div>
             <div className="overflow-y-auto max-h-80 divide-y divide-gray-700">
               {drilldownLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500" />
-                </div>
+                <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500" /></div>
               ) : drilldownDates.length === 0 ? (
                 <p className="text-center text-gray-500 text-sm py-8">No detections recorded yet</p>
               ) : (
