@@ -51,7 +51,7 @@ function FloatButton({ icon: Icon, label, onClick, disabled, className = '' }) {
 function FaceTile({ face, onView }) {
   const accent = face.status === 'known'      ? 'border-green-500'
                : face.status === 'identified' ? 'border-orange-500'
-               : face.status === 'employee'   ? 'border-gray-900'
+               : face.status === 'employee'   ? 'border-white'
                :                                'border-red-500';
   return (
     <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
@@ -383,7 +383,7 @@ export default function HubScreen() {
 
           const color = status === 'known'      ? '#22c55e'
                       : status === 'identified' ? '#f97316'
-                      : status === 'employee'   ? '#111827'
+                      : status === 'employee'   ? '#ffffff'
                       : '#ef4444';
 
           ctx.strokeStyle = color;

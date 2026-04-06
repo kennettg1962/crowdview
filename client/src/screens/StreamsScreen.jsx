@@ -22,13 +22,13 @@ const HLS_BASE = window.location.protocol === 'capacitor:'
   ? `${SERVER_ORIGIN}/api/stream/hls`
   : `${SERVER_ORIGIN}/hls`;
 
-const STATUS_COLORS = { known: '#22c55e', identified: '#f97316', employee: '#111827', unknown: '#ef4444' };
+const STATUS_COLORS = { known: '#22c55e', identified: '#f97316', employee: '#ffffff', unknown: '#ef4444' };
 const REJOIN_THRESHOLD = 30_000;
 
 function FaceTile({ face, onView }) {
   const accent = face.status === 'known'       ? 'border-green-500'
                : face.status === 'identified'  ? 'border-orange-500'
-               : face.status === 'employee'    ? 'border-gray-900'
+               : face.status === 'employee'    ? 'border-white'
                :                                 'border-red-500';
   return (
     <div className={`flex items-center gap-2 p-2 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
