@@ -573,4 +573,79 @@ router.get('/employees/:id/attendance/:date', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /api/corporate/friends/dashboard  — detection stats per corporate friend
+// IMPORTANT: defined before /:id routes
+// ---------------------------------------------------------------------------
+router.get('/friends/dashboard', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT f.Friend_Id      AS friendId,
+              f.Name_Txt       AS friendName,
+              u.Name_Txt       AS ownerName,
+              COUNT(DISTINCT CASE WHEN a.Attendance_Dt >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+                                  THEN a.Attendance_Dt END) AS weekCount,
+              COUNT(DISTINCT CASE WHEN a.Attendance_Dt >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+                                  THEN a.Attendance_Dt END) AS monthCount,
+              COUNT(DISTINCT CASE WHEN a.Attendance_Dt >= DATE_FORMAT(CURDATE(), '%Y-01-01')
+                                  THEN a.Attendance_Dt END) AS yearCount
+         FROM Friend f
+         JOIN User u ON u.User_Id = f.User_Id
+         LEFT JOIN Friend_Attendance a ON a.Friend_Id = f.Friend_Id
+        WHERE u.Parent_Organization_Id = ?
+        GROUP BY f.Friend_Id, f.Name_Txt, u.Name_Txt
+        ORDER BY f.Name_Txt ASC`,
+      [req.user.parentOrganizationId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/corporate/friends/:id/attendance  — date drilldown with detection counts
+// ---------------------------------------------------------------------------
+router.get('/friends/:id/attendance', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT a.Attendance_Dt,
+              COUNT(d.Friend_Detection_Id) AS Detection_Count
+         FROM Friend_Attendance a
+         LEFT JOIN Friend_Detection d
+           ON d.Friend_Id = a.Friend_Id
+          AND DATE(d.Detected_At) = a.Attendance_Dt
+        WHERE a.Friend_Id = ? AND a.Organization_Id = ?
+        GROUP BY a.Attendance_Dt
+        ORDER BY a.Attendance_Dt DESC`,
+      [req.params.id, req.user.parentOrganizationId]
+    );
+    res.json(rows.map(r => ({ date: r.Attendance_Dt, count: Number(r.Detection_Count) })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/corporate/friends/:id/attendance/:date  — individual detections for a date
+// ---------------------------------------------------------------------------
+router.get('/friends/:id/attendance/:date', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT d.Detected_At, u.Name_Txt AS Detected_By
+         FROM Friend_Detection d
+         LEFT JOIN User u ON u.User_Id = d.Detected_By_User_Id
+        WHERE d.Friend_Id = ? AND d.Organization_Id = ? AND DATE(d.Detected_At) = ?
+        ORDER BY d.Detected_At ASC`,
+      [req.params.id, req.user.parentOrganizationId, req.params.date]
+    );
+    res.json(rows.map(r => ({ detectedAt: r.Detected_At, detectedBy: r.Detected_By || 'Unknown' })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;

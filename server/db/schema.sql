@@ -93,6 +93,28 @@ CREATE TABLE IF NOT EXISTS `Organization_Employee_Attendance` (
   CONSTRAINT `OEA_emp_fk` FOREIGN KEY (`Organization_Employee_Id`) REFERENCES `Organization_Employee` (`Organization_Employee_Id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS `Friend_Attendance` (
+  `Friend_Attendance_Id` BIGINT NOT NULL AUTO_INCREMENT,
+  `Friend_Id` INT NOT NULL,
+  `Organization_Id` BIGINT NOT NULL,
+  `Attendance_Dt` DATE NOT NULL,
+  `Created_At` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`Friend_Attendance_Id`),
+  UNIQUE KEY `uq_friend_date` (`Friend_Id`, `Attendance_Dt`),
+  CONSTRAINT `FA_friend_fk` FOREIGN KEY (`Friend_Id`) REFERENCES `Friend` (`Friend_Id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `Friend_Detection` (
+  `Friend_Detection_Id` BIGINT NOT NULL AUTO_INCREMENT,
+  `Friend_Id` INT NOT NULL,
+  `Organization_Id` BIGINT NOT NULL,
+  `Detected_By_User_Id` INT NOT NULL,
+  `Detected_At` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`Friend_Detection_Id`),
+  KEY `FD_friend_idx` (`Friend_Id`, `Detected_At`),
+  CONSTRAINT `FD_friend_fk` FOREIGN KEY (`Friend_Id`) REFERENCES `Friend` (`Friend_Id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS `Organization_Employee_Detection` (
   `Organization_Employee_Detection_Id` BIGINT NOT NULL AUTO_INCREMENT,
   `Organization_Employee_Id` BIGINT NOT NULL,

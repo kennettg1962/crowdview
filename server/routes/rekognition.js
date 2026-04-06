@@ -131,6 +131,26 @@ router.post('/identify', auth, async (req, res) => {
             friendGroup = rows[0].Friend_Group || null;
             status = 'known';
             matchedLabel = `Customer: ${friendName}`;
+            // Corporate only: record friend attendance + detection (dedupe: 1 min same user)
+            if (req.user.parentOrganizationId) {
+              const today = new Date().toISOString().split('T')[0];
+              pool.execute(
+                `INSERT INTO Friend_Attendance (Friend_Id, Organization_Id, Attendance_Dt)
+                 VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE Friend_Id = Friend_Id`,
+                [friendId, req.user.parentOrganizationId, today]
+              ).catch(err => console.error('[friend-attendance]', err.message));
+              pool.execute(
+                `INSERT INTO Friend_Detection (Friend_Id, Organization_Id, Detected_By_User_Id)
+                 SELECT ?, ?, ? WHERE NOT EXISTS (
+                   SELECT 1 FROM Friend_Detection
+                   WHERE Friend_Id = ? AND Organization_Id = ?
+                     AND Detected_At >= DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+                     AND Detected_By_User_Id = ?
+                 )`,
+                [friendId, req.user.parentOrganizationId, req.user.userId,
+                 friendId, req.user.parentOrganizationId, req.user.userId]
+              ).catch(err => console.error('[friend-detection]', err.message));
+            }
           }
         }
       } else if (employeeMatches.length > 0) {
