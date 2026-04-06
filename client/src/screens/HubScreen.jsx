@@ -315,7 +315,7 @@ export default function HubScreen() {
       }
 
       // Capture frame from active source (phone camera or glasses)
-      const capture = await getCaptureFrame(640, 0.8).catch(() => null);
+      const capture = await getCaptureFrame(1280, 0.82).catch(() => null);
       if (!capture || !liveScanActiveRef.current) return;
       const dataUrl = capture.toDataURL('image/jpeg', 0.8);
 
