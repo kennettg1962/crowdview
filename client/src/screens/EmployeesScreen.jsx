@@ -71,10 +71,14 @@ export default function EmployeesScreen() {
   const [resetError, setResetError]           = useState('');
   const [resetSaving, setResetSaving]         = useState(false);
 
-  // Drilldown
+  // Drilldown — level 1 (dates)
   const [drilldownEmp, setDrilldownEmp]         = useState(null);
   const [drilldownDates, setDrilldownDates]     = useState([]);
   const [drilldownLoading, setDrilldownLoading] = useState(false);
+  // Drilldown — level 2 (individual detections for a date)
+  const [detectionDate, setDetectionDate]       = useState(null); // { date, label }
+  const [detections, setDetections]             = useState([]);
+  const [detectionLoading, setDetectionLoading] = useState(false);
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -234,6 +238,15 @@ export default function EmployeesScreen() {
       setDrilldownDates(res.data);
     } catch (err) { console.error(err); }
     finally { setDrilldownLoading(false); }
+  }
+
+  async function openDetections(empId, date, label) {
+    setDetectionDate({ date, label }); setDetectionLoading(true);
+    try {
+      const res = await api.get(`/api/corporate/employees/${empId}/attendance/${date}`);
+      setDetections(res.data);
+    } catch (err) { console.error(err); }
+    finally { setDetectionLoading(false); }
   }
 
   // ── A-Z grouping ───────────────────────────────────────────────────────────
@@ -569,7 +582,7 @@ export default function EmployeesScreen() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
               <div>
                 <p className="text-white font-semibold text-sm">{drilldownEmp.employeeName}</p>
-                <p className="text-gray-500 text-xs">Detection history</p>
+                <p className="text-gray-500 text-xs">Detection history — click a date for details</p>
               </div>
               <button onClick={() => setDrilldownEmp(null)} className="text-gray-400 hover:text-white">
                 <XIcon className="w-5 h-5" />
@@ -581,9 +594,44 @@ export default function EmployeesScreen() {
               ) : drilldownDates.length === 0 ? (
                 <p className="text-center text-gray-500 text-sm py-8">No detections recorded yet</p>
               ) : (
-                drilldownDates.map((dt, i) => (
-                  <div key={i} className="px-5 py-3">
-                    <p className="text-white text-sm">{new Date(dt).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                drilldownDates.map((row, i) => {
+                  const label = new Date(row.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                  return (
+                    <button key={i} onClick={() => openDetections(drilldownEmp.employeeId, row.date, label)}
+                      className="w-full px-5 py-3 flex items-center justify-between hover:bg-gray-700 text-left">
+                      <p className="text-white text-sm">{label}</p>
+                      <span className="text-gray-400 text-xs ml-3 shrink-0">{row.count} detection{row.count !== 1 ? 's' : ''} ›</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detectionDate && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] px-4">
+          <div className="bg-gray-800 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+              <div>
+                <p className="text-white font-semibold text-sm">{detectionDate.label}</p>
+                <p className="text-gray-500 text-xs">Individual detections</p>
+              </div>
+              <button onClick={() => setDetectionDate(null)} className="text-gray-400 hover:text-white">
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-80 divide-y divide-gray-700">
+              {detectionLoading ? (
+                <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500" /></div>
+              ) : detections.length === 0 ? (
+                <p className="text-center text-gray-500 text-sm py-8">No detail records found</p>
+              ) : (
+                detections.map((d, i) => (
+                  <div key={i} className="px-5 py-3 flex items-center justify-between">
+                    <p className="text-white text-sm">{new Date(d.detectedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                    <p className="text-gray-400 text-xs">{d.detectedBy}</p>
                   </div>
                 ))
               )}

@@ -153,13 +153,18 @@ router.post('/identify', auth, async (req, res) => {
             friendName = emp.Employee_Nm;
             status = 'employee';
             matchedLabel = `Employee: ${emp.Employee_Nm}`;
-            // Record attendance asynchronously (INSERT IGNORE duplicate)
+            // Record attendance (one row per day) and individual detection event
             const today = new Date().toISOString().split('T')[0];
             pool.execute(
               `INSERT INTO Organization_Employee_Attendance (Organization_Employee_Id, Organization_Id, Attendance_Dt)
                VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE Organization_Employee_Id = Organization_Employee_Id`,
               [emp.Organization_Employee_Id, req.user.parentOrganizationId, today]
             ).catch(err => console.error('[attendance]', err.message));
+            pool.execute(
+              `INSERT INTO Organization_Employee_Detection (Organization_Employee_Id, Organization_Id, Detected_By_User_Id)
+               VALUES (?, ?, ?)`,
+              [emp.Organization_Employee_Id, req.user.parentOrganizationId, req.user.userId]
+            ).catch(err => console.error('[detection]', err.message));
           }
         }
       } else if (Object.keys(friendUserMap).length > 0) {

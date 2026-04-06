@@ -524,19 +524,49 @@ router.get('/employees/:id/photos/:pid/data', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/corporate/employees/:id/attendance  — date drilldown for one employee
+// GET /api/corporate/employees/:id/attendance  — date drilldown with detection counts
 // ---------------------------------------------------------------------------
 router.get('/employees/:id/attendance', async (req, res) => {
   try {
     const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
     if (!target) return res.status(404).json({ error: 'Employee not found' });
     const [rows] = await pool.execute(
-      `SELECT Attendance_Dt FROM Organization_Employee_Attendance
-        WHERE Organization_Employee_Id = ?
-        ORDER BY Attendance_Dt DESC`,
+      `SELECT a.Attendance_Dt,
+              COUNT(d.Organization_Employee_Detection_Id) AS Detection_Count
+         FROM Organization_Employee_Attendance a
+         LEFT JOIN Organization_Employee_Detection d
+           ON d.Organization_Employee_Id = a.Organization_Employee_Id
+          AND DATE(d.Detected_At) = a.Attendance_Dt
+        WHERE a.Organization_Employee_Id = ?
+        GROUP BY a.Attendance_Dt
+        ORDER BY a.Attendance_Dt DESC`,
       [req.params.id]
     );
-    res.json(rows.map(r => r.Attendance_Dt));
+    res.json(rows.map(r => ({ date: r.Attendance_Dt, count: Number(r.Detection_Count) })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/corporate/employees/:id/attendance/:date  — individual detections for a date
+// ---------------------------------------------------------------------------
+router.get('/employees/:id/attendance/:date', async (req, res) => {
+  try {
+    const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
+    if (!target) return res.status(404).json({ error: 'Employee not found' });
+    const [rows] = await pool.execute(
+      `SELECT d.Detected_At, u.Name_Txt AS Detected_By
+         FROM Organization_Employee_Detection d
+         LEFT JOIN User u ON u.User_Id = d.Detected_By_User_Id
+        WHERE d.Organization_Employee_Id = ?
+          AND d.Organization_Id = ?
+          AND DATE(d.Detected_At) = ?
+        ORDER BY d.Detected_At ASC`,
+      [req.params.id, req.user.parentOrganizationId, req.params.date]
+    );
+    res.json(rows.map(r => ({ detectedAt: r.Detected_At, detectedBy: r.Detected_By || 'Unknown' })));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

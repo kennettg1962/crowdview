@@ -93,6 +93,17 @@ CREATE TABLE IF NOT EXISTS `Organization_Employee_Attendance` (
   CONSTRAINT `OEA_emp_fk` FOREIGN KEY (`Organization_Employee_Id`) REFERENCES `Organization_Employee` (`Organization_Employee_Id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS `Organization_Employee_Detection` (
+  `Organization_Employee_Detection_Id` BIGINT NOT NULL AUTO_INCREMENT,
+  `Organization_Employee_Id` BIGINT NOT NULL,
+  `Organization_Id` BIGINT NOT NULL,
+  `Detected_By_User_Id` INT NOT NULL,
+  `Detected_At` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`Organization_Employee_Detection_Id`),
+  KEY `OED_emp_idx` (`Organization_Employee_Id`, `Detected_At`),
+  CONSTRAINT `OED_emp_fk` FOREIGN KEY (`Organization_Employee_Id`) REFERENCES `Organization_Employee` (`Organization_Employee_Id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS `Organization_Employee_Photo` (
   `Organization_Employee_Photo_Id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Primary Key',
   `Organization_Employee_Id` BIGINT NOT NULL COMMENT 'Employee ID',
