@@ -104,4 +104,22 @@ async function searchFace(buf) {
   }
 }
 
-module.exports = { ensureCollection, indexFace, deleteFaces, detectFaces, searchFace };
+/**
+ * Index an employee face into the collection.
+ * ExternalImageId format: org{orgId}_emp{employeeId}_p{photoId}
+ */
+async function indexEmployeeFace(buf, orgId, employeeId, photoId) {
+  const externalImageId = `org${orgId}_emp${employeeId}_p${photoId}`;
+  const result = await client.send(new IndexFacesCommand({
+    CollectionId: COLLECTION_ID,
+    Image: { Bytes: buf },
+    ExternalImageId: externalImageId,
+    MaxFaces: 1,
+    QualityFilter: 'AUTO',
+    DetectionAttributes: [],
+  }));
+  const record = result.FaceRecords && result.FaceRecords[0];
+  return record ? record.Face.FaceId : null;
+}
+
+module.exports = { ensureCollection, indexFace, indexEmployeeFace, deleteFaces, detectFaces, searchFace };

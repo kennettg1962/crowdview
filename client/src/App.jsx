@@ -18,6 +18,7 @@ import CorporateDashboardScreen from './screens/CorporateDashboardScreen';
 import OperationsDashboardScreen from './screens/OperationsDashboardScreen';
 import OperationsOrgDetailScreen from './screens/OperationsOrgDetailScreen';
 import OperationsOrgsScreen from './screens/OperationsOrgsScreen';
+import EmployeesScreen from './screens/EmployeesScreen';
 
 function AuthGuard({ children }) {
   const { isAuthenticated } = useApp();
@@ -70,8 +71,9 @@ function AppRoutes() {
       <Route path="/streams" element={<AuthGuard><StreamsScreen /></AuthGuard>} />
       <Route path="/streams/watch" element={<AuthGuard><StreamWatchScreen /></AuthGuard>} />
       <Route path="/reset-password" element={<ResetPasswordScreen />} />
-      <Route path="/corporate/users"     element={<OAUGuard><CorporateUsersScreen /></OAUGuard>} />
-      <Route path="/corporate/dashboard" element={<OAUGuard><CorporateDashboardScreen /></OAUGuard>} />
+      <Route path="/corporate/users"      element={<OAUGuard><CorporateUsersScreen /></OAUGuard>} />
+      <Route path="/corporate/dashboard"  element={<OAUGuard><CorporateDashboardScreen /></OAUGuard>} />
+      <Route path="/corporate/employees"  element={<OAUGuard><EmployeesScreen /></OAUGuard>} />
       <Route path="/operations/dashboard" element={<OpsGuard><OperationsDashboardScreen /></OpsGuard>} />
       <Route path="/operations/org/:orgId" element={<OpsGuard><OperationsOrgDetailScreen /></OpsGuard>} />
       <Route path="/operations/orgs"       element={<OpsGuard><OperationsOrgsScreen /></OpsGuard>} />

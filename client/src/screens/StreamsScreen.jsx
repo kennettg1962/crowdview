@@ -22,12 +22,13 @@ const HLS_BASE = window.location.protocol === 'capacitor:'
   ? `${SERVER_ORIGIN}/api/stream/hls`
   : `${SERVER_ORIGIN}/hls`;
 
-const STATUS_COLORS = { known: '#22c55e', identified: '#f97316', unknown: '#ef4444' };
+const STATUS_COLORS = { known: '#22c55e', identified: '#f97316', employee: '#111827', unknown: '#ef4444' };
 const REJOIN_THRESHOLD = 30_000;
 
 function FaceTile({ face, onView }) {
   const accent = face.status === 'known'       ? 'border-green-500'
                : face.status === 'identified'  ? 'border-orange-500'
+               : face.status === 'employee'    ? 'border-gray-900'
                :                                 'border-red-500';
   return (
     <div className={`flex items-center gap-2 p-2 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
@@ -38,9 +39,11 @@ function FaceTile({ face, onView }) {
         <p className="text-xs font-semibold text-white truncate">{face.friendName || 'Unknown'}</p>
         {face.note && <p className="text-[10px] text-gray-400 line-clamp-1 mt-0.5">{face.note}</p>}
       </div>
-      <button onClick={onView} title="View" className="flex-shrink-0 p-1 text-gray-400 hover:text-white transition-colors">
-        <UserProfileIcon className="w-7 h-7" />
-      </button>
+      {face.friendId && (
+        <button onClick={onView} title="View" className="flex-shrink-0 p-1 text-gray-400 hover:text-white transition-colors">
+          <UserProfileIcon className="w-7 h-7" />
+        </button>
+      )}
     </div>
   );
 }
@@ -213,7 +216,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         const now = Date.now();
         const toAdd = [], toMove = [];
         facesWithCrops.forEach(f => {
-          const key = f.friendId || f.faceId;
+          const key = f.friendId || f.employeeId || f.faceId;
           if (!key) return;
           const lastSeen = faceLastSeenRef.current[key] || 0;
           faceLastSeenRef.current[key] = now;
@@ -222,8 +225,8 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         });
         if (toAdd.length > 0 || toMove.length > 0) {
           setRecognizedFaces(prev => {
-            const movingKeys = new Set(toMove.map(f => f.friendId || f.faceId));
-            return [...toAdd, ...toMove, ...prev.filter(f => !movingKeys.has(f.friendId || f.faceId))];
+            const movingKeys = new Set(toMove.map(f => f.friendId || f.employeeId || f.faceId));
+            return [...toAdd, ...toMove, ...prev.filter(f => !movingKeys.has(f.friendId || f.employeeId || f.faceId))];
           });
         }
 
@@ -393,7 +396,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
               </p>
             ) : (
               recognizedFaces.map((face, i) => (
-                <FaceTile key={face.friendId || face.faceId || i} face={face} onView={() => setSelectedFace(face)} />
+                <FaceTile key={face.friendId || face.employeeId || face.faceId || i} face={face} onView={() => setSelectedFace(face)} />
               ))
             )}
           </div>

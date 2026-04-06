@@ -1,6 +1,6 @@
 # System Requirements
 
-Living specification of technical decisions, data contracts, and system behaviour. Last updated: 2026-03-26.
+Living specification of technical decisions, data contracts, and system behaviour. Last updated: 2026-04-06.
 
 ---
 
@@ -593,6 +593,62 @@ Both fields are present for all users. Individual users receive `parentOrganizat
 - A sysadmin inserts a row into the `Organization` table and inserts the first OAU directly into the `User` table with `Parent_Organization_Id` set and `Corporate_Admin_Fl = 'Y'`
 - Subsequent org users are created by the OAU via the Corporate Users screen
 
+### Employee Routes (`/api/corporate/employees`)
+
+All employee routes require OAU authentication (`corporateAdmin` middleware).
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| GET | `/api/corporate/employees` | OAU | Returns all employees for the OAU's organisation |
+| POST | `/api/corporate/employees` | OAU | Create new employee; body: `{name, note?}` |
+| PUT | `/api/corporate/employees/:id` | OAU | Update employee details |
+| DELETE | `/api/corporate/employees/:id` | OAU | Delete employee; cascades to photos and attendance; cleans up CompreFace faces |
+| GET | `/api/corporate/employees/:id/photos` | OAU | List employee photo metadata |
+| GET | `/api/corporate/employees/:id/photos/primary/data` | OAU | Binary; primary photo |
+| GET | `/api/corporate/employees/:id/photos/:pid/data` | OAU | Binary; Content-Type from DB |
+| POST | `/api/corporate/employees/:id/photos` | OAU | Multipart `photo`; triggers async face indexing |
+| DELETE | `/api/corporate/employees/:id/photos/:pid` | OAU | Removes photo and async deletes face from CompreFace |
+| GET | `/api/corporate/employees/attendance` | OAU | Returns attendance counts (week/month/year) per employee for the organisation |
+| GET | `/api/corporate/employees/:id/attendance` | OAU | Returns specific detection dates for a single employee |
+
+### Employee Face Collection Naming
+
+Employee face photos are indexed in CompreFace/Rekognition using the naming convention:
+
+```
+org{orgId}_emp{employeeId}_p{photoId}
+```
+
+For example, photo ID 7 for employee ID 3 in organisation ID 1 → `org1_emp3_p7`.
+
+This convention is distinct from the friend photo naming and allows the recognition engine to resolve matches back to a specific employee record.
+
+### Employee Detection & Attendance Recording
+
+During a detection run (`POST /api/rekognition/identify`), the face search includes employee collections in addition to friend/customer collections. When an employee face is matched:
+
+1. The face object returned includes `employeeId`, `employeeName`, and `status: 'employee'`.
+2. The client renders the bounding box in black (`#111827`, i.e. `bg-gray-900`) instead of the friend colour coding.
+3. The face tile in the right-panel list shows a black left border (`border-gray-900`).
+4. No "View" button is rendered on employee face tiles; View is only available for friends/customers (identified by `friendId`).
+5. The server records attendance: `INSERT INTO Organization_Employee_Attendance (Organization_Employee_Id, Attendance_Date) VALUES (?, CURDATE()) ON DUPLICATE KEY UPDATE Organization_Employee_Id = Organization_Employee_Id` — effectively a no-op if the employee was already detected today.
+
+### NavBar Behaviour (OAU — updated)
+
+OAU NavBar now includes an Employees tab between Streams and Users:
+
+| Tab | Icon | Path |
+|-----|------|------|
+| Home | HomeIcon | `/hub` |
+| Customers | FriendsIcon | `/friends` |
+| Library | LibraryIcon | `/library` |
+| Streams | StreamsIcon | `/streams` |
+| Employees | BadgeIcon | `/corporate/employees` |
+| Users | UsersIcon | `/corporate/users` |
+| Logout | LogoutIcon | `logout()` |
+
+`BadgeIcon`: new SVG icon added to `client/src/components/Icons.jsx` — an ID badge / clipboard outline glyph.
+
 ### DB Schema Additions
 
 #### `Organization`
@@ -600,6 +656,7 @@ Both fields are present for all users. Individual users receive `parentOrganizat
 |--------|------|-------|
 | Organization_Id | INT PK auto-increment | |
 | Name_Txt | VARCHAR(200) | Organisation display name |
+| Employee_Fl | CHAR(1) NOT NULL DEFAULT 'N' | Reserved for future gating of Employees module; not currently used in UI logic |
 | Created_At | TIMESTAMP | default NOW() |
 
 #### `User` table additions
@@ -607,3 +664,31 @@ Both fields are present for all users. Individual users receive `parentOrganizat
 |--------|------|-------|
 | Parent_Organization_Id | INT FK → Organization | nullable; NULL = individual user |
 | Corporate_Admin_Fl | CHAR(1) | 'Y'/'N', default 'N' |
+
+#### `Organization_Employee`
+| Column | Type | Notes |
+|--------|------|-------|
+| Organization_Employee_Id | INT PK auto-increment | |
+| Organization_Id | INT FK → Organization (cascade delete) | |
+| Name_Txt | VARCHAR(100) | |
+| Note_Multi_Line_Txt | TEXT | nullable; job title or notes |
+| Created_At | TIMESTAMP | default NOW() |
+
+#### `Organization_Employee_Photo`
+| Column | Type | Notes |
+|--------|------|-------|
+| Organization_Employee_Photo_Id | INT PK auto-increment | |
+| Organization_Employee_Id | INT FK → Organization_Employee (cascade delete) | |
+| Photo_Data | LONGBLOB | |
+| Photo_Mime_Type | VARCHAR | default 'image/jpeg' |
+| Rekognition_Face_Id | VARCHAR | nullable; CompreFace/Rekognition face UUID |
+| Created_At | TIMESTAMP | default NOW() |
+
+#### `Organization_Employee_Attendance`
+| Column | Type | Notes |
+|--------|------|-------|
+| Organization_Employee_Attendance_Id | INT PK auto-increment | |
+| Organization_Employee_Id | INT FK → Organization_Employee (cascade delete) | |
+| Attendance_Date | DATE | |
+| Created_At | TIMESTAMP | default NOW() |
+| UNIQUE KEY | (Organization_Employee_Id, Attendance_Date) | Enforces one record per employee per day |

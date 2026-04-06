@@ -1,6 +1,6 @@
 # Process Flow Requirements
 
-Living specification ordered by screen. Detailed enough to produce wireframes. Last updated: 2026-03-26.
+Living specification ordered by screen. Detailed enough to produce wireframes. Last updated: 2026-04-06.
 
 ---
 
@@ -16,7 +16,8 @@ Living specification ordered by screen. Detailed enough to produce wireframes. L
 │   ├── /streams (StreamsScreen)
 │   │   └── /streams/watch (StreamWatchScreen)
 │   ├── /post (PostScreen) [stub]
-│   └── /corporate/users (CorporateUsersScreen) [OAU only] ←→ CorporateUserForm popup
+│   ├── /corporate/users (CorporateUsersScreen) [OAU only] ←→ CorporateUserForm popup
+│   └── /corporate/employees (EmployeesScreen) [OAU only] ←→ EmployeeFormPopup
 ├── /profile (ProfileScreen)  [individual users only]
 └── /reset-password?token= (ResetPasswordScreen)
 ```
@@ -595,7 +596,7 @@ cropped face data URL (padded 12%)
 
 ### Layout
 - Fixed bottom bar, full width
-- Tabs equally spaced (5 for individual users; 5 for corporate non-OAU; 6 for OAU)
+- Tabs equally spaced (5 for individual users; 5 for corporate non-OAU; 7 for OAU)
 
 ### Tabs — Individual users
 | Tab | Icon | Path / Action |
@@ -633,10 +634,11 @@ cropped face data URL (padded 12%)
 | Customers | FriendsIcon | `/friends` |
 | Library | LibraryIcon | `/library` |
 | Streams | StreamsIcon | `/streams` |
+| Employees | BadgeIcon | `/corporate/employees` |
 | Users | UsersIcon | `/corporate/users` |
 | Logout | LogoutIcon | Calls `logout()` directly; navigates to `/` |
 
-- Same as corporate non-OAU plus an additional "Users" tab
+- Same as corporate non-OAU plus additional "Employees" and "Users" tabs
 
 ---
 
@@ -730,6 +732,106 @@ cropped face data URL (padded 12%)
 
 ---
 
+## 17. EmployeesScreen (`/corporate/employees`) — OAU only
+
+### Access Guard
+- `OAUGuard` wrapper in `App.jsx`; redirects non-OAU users to `/hub`.
+
+### Layout
+```
+[AppHeader: HubIcon (→/hub) | "CrowdView Corporate" | PlusIcon (add employee)]
+[Tab bar: "Dashboard" | "Employees"]
+[Tab content]
+[NavBar (OAU tabs)]
+[TrueFooter]
+```
+
+### Header
+- Left: Hub icon → navigates to `/hub`
+- Center: "CrowdView Corporate" (bold)
+- Right: Plus icon → opens EmployeeFormPopup in add mode (visible on Employees tab; hidden or disabled on Dashboard tab)
+
+### Tab Bar
+- Two tabs: "Dashboard" and "Employees"
+- Active tab highlighted; persists within the screen session
+
+---
+
+### Dashboard Tab
+
+**Purpose:** Attendance statistics — how many days each employee was detected within a chosen time window, with the ability to drill down to specific detection dates.
+
+**Controls:**
+- Time range selector: Week / Month / Year (pill or dropdown)
+
+**Employee Stats List:**
+- One row per employee, sorted A-Z by name
+- Each row:
+  - Employee name (bold)
+  - Detected days count for the selected range (e.g. "12 days")
+  - Expand/chevron control → reveals a list of specific detection dates (from `Organization_Employee_Attendance` table)
+- Empty state: "No attendance data yet"
+
+**Drilldown (expanded row):**
+- List of dates on which the employee was detected (e.g. "Mon 31 Mar 2026", "Tue 1 Apr 2026")
+- Dates sorted descending (most recent first)
+
+---
+
+### Employees Tab
+
+**Purpose:** Manage the employee roster — add, edit, delete employees and manage their face photos.
+
+**Employee List:**
+- A-Z indexed, same visual structure as ManageFriendsScreen
+- Sorted alphabetically by name; letter section headers
+- Each employee row:
+  - Left: circular profile photo from primary employee photo endpoint; fallback: gray circle with generic icon
+  - Center: Name (bold), optional note or job title (small, gray)
+  - Right: red trash icon button → delete confirmation
+- Tapping/clicking a row (not trash) → opens EmployeeFormPopup in edit mode
+
+**Empty State:**
+- "No employees found" + "Add your first employee" prompt
+
+**Delete Flow:**
+- Trash button → confirmation dialog ("Are you sure you want to delete [name]?") → DELETE `/api/corporate/employees/:id`
+- List refreshes after delete
+
+---
+
+## 18. EmployeeFormPopup (Overlay from EmployeesScreen)
+
+### Modes
+- **Add mode** (no existing employee): create a new employee record
+- **Edit mode** (existing employee): update details; manage photo wallet
+
+### Layout
+- Fixed full-screen dark backdrop
+- Modal card, max-width ~448px, scrollable body
+- Header: "Add Employee" (add mode) or employee's name (edit mode) + X close button
+
+### Fields
+| Field | Type | Notes |
+|-------|------|-------|
+| Name | text input | Required; max 100 characters |
+| Note / Job Title | textarea | Optional |
+
+### Photo Wallet (edit mode)
+- Grid of employee photos (from `/api/corporate/employees/:id/photos`)
+- Each photo: thumbnail; delete button (X) on hover → removes photo and deletes face from CompreFace collection
+- "Add Photo" button: file input → upload to `/api/corporate/employees/:id/photos` → async face indexing triggered
+
+### Buttons
+- Save (primary) → POST `/api/corporate/employees` (add) or PUT `/api/corporate/employees/:id` (edit)
+- Cancel → closes popup without saving
+
+### Validation
+- Name required
+- API errors shown inline
+
+---
+
 ## Screen Transition Summary
 
 | From | Trigger | To | Data Passed |
@@ -751,3 +853,7 @@ cropped face data URL (padded 12%)
 | CorporateUsersScreen | Plus icon / row tap | CorporateUserForm (overlay) | user object (edit) or null (add) |
 | CorporateUserForm | Save (add) | CorporateUsersScreen | List refresh |
 | CorporateUsersScreen | Hub icon | HubScreen | — |
+| NavBar (OAU) | Employees tab | EmployeesScreen | — |
+| EmployeesScreen | Plus icon / row tap | EmployeeFormPopup (overlay) | employee object (edit) or null (add) |
+| EmployeeFormPopup | Save (add) | EmployeesScreen | List refresh |
+| EmployeesScreen | Hub icon | HubScreen | — |

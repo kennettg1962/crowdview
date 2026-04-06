@@ -85,15 +85,23 @@ router.post('/identify', auth, async (req, res) => {
       console.log(`[identify] face ${i + 1} — userId=${userId} orgPrefixes=${orgPrefixes}`);
       console.log(`[identify] all matches:`, JSON.stringify(matches.map(m => ({ id: m.Face.ExternalImageId, sim: m.Similarity }))));
 
+      const empPrefix = req.user.parentOrganizationId ? `org${req.user.parentOrganizationId}_emp` : null;
+
       const userMatches = matches.filter(m =>
         orgPrefixes.some(p => m.Face.ExternalImageId.startsWith(p)) && m.Similarity >= 70
       );
+      const employeeMatches = empPrefix
+        ? matches.filter(m => m.Face.ExternalImageId.startsWith(empPrefix) && m.Similarity >= 70)
+        : [];
       const fofMatches = matches.filter(m =>
-        !orgPrefixes.some(p => m.Face.ExternalImageId.startsWith(p)) && m.Similarity >= 72
+        !orgPrefixes.some(p => m.Face.ExternalImageId.startsWith(p)) &&
+        (!empPrefix || !m.Face.ExternalImageId.startsWith(empPrefix)) &&
+        m.Similarity >= 72
       );
-      console.log(`[identify] userMatches: ${userMatches.length}, fofMatches: ${fofMatches.length}`);
+      console.log(`[identify] userMatches: ${userMatches.length}, employeeMatches: ${employeeMatches.length}, fofMatches: ${fofMatches.length}`);
 
       let friendId = null;
+      let employeeId = null;
       let friendName = null;
       let note = null;
       let friendGroup = null;
@@ -123,6 +131,32 @@ router.post('/identify', auth, async (req, res) => {
             friendGroup = rows[0].Friend_Group || null;
             status = 'known';
             matchedLabel = `Customer: ${friendName}`;
+          }
+        }
+      } else if (employeeMatches.length > 0) {
+        const best = employeeMatches[0];
+        faceId = best.Face.FaceId;
+        // ExternalImageId: org{orgId}_emp{employeeId}_p{photoId}
+        const empMatch = best.Face.ExternalImageId.match(/org\d+_emp(\d+)_/);
+        if (empMatch) {
+          const matchedEmpId = parseInt(empMatch[1], 10);
+          const [empRows] = await pool.execute(
+            'SELECT Organization_Employee_Id, Employee_Nm FROM Organization_Employee WHERE Organization_Employee_Id = ? AND Organization_Id = ?',
+            [matchedEmpId, req.user.parentOrganizationId]
+          );
+          if (empRows.length) {
+            const emp = empRows[0];
+            employeeId = emp.Organization_Employee_Id;
+            friendName = emp.Employee_Nm;
+            status = 'employee';
+            matchedLabel = `Employee: ${emp.Employee_Nm}`;
+            // Record attendance asynchronously (INSERT IGNORE duplicate)
+            const today = new Date().toISOString().split('T')[0];
+            pool.execute(
+              `INSERT INTO Organization_Employee_Attendance (Organization_Employee_Id, Organization_Id, Attendance_Dt)
+               VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE Organization_Employee_Id = Organization_Employee_Id`,
+              [emp.Organization_Employee_Id, req.user.parentOrganizationId, today]
+            ).catch(err => console.error('[attendance]', err.message));
           }
         }
       } else if (Object.keys(friendUserMap).length > 0) {
@@ -186,6 +220,7 @@ router.post('/identify', auth, async (req, res) => {
         confidence: (detail.Confidence || 0) / 100,
         status,
         friendId,
+        employeeId,
         friendName,
         friendGroup,
         note,

@@ -215,3 +215,17 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 - In landscape mode on iPhone, HubScreen switched to the desktop layout (sidebars, device pickers, bordered video) instead of maintaining the mobile overlay layout.
 - Root cause: Tailwind md: breakpoint (768px) fires when phone landscape width exceeds 768px.
 - Fix: detect Capacitor native platform (capacitor: protocol) and suppress all md: layout classes, locking to mobile overlay layout regardless of orientation.
+
+---
+
+## 2026-04-06
+
+### [2026-04-06] Corporate Employees module — CRUD screen, photo management, attendance tracking — `#corporate #employees`
+- OAU users gain an Employees screen at `/corporate/employees` accessible via a new NavBar tab (BadgeIcon).
+- Screen has two tabs: Dashboard (attendance stats per employee — week/month/year detected days, drilldown to specific dates) and Employees (A-Z list with add/edit/delete and per-employee photo wallet).
+- Employee photos are uploaded and deleted through the UI; each upload triggers async face indexing in CompreFace/Rekognition.
+- Face collection naming convention for employee photos: `org{orgId}_emp{employeeId}_p{photoId}`.
+- During live detection, employees are matched and shown in the right-panel face tiles with a black bounding box (#111827) and black left border (border-gray-900). No View button is shown on employee face tiles (View is reserved for friends/customers who have a friendId).
+- Attendance is recorded automatically on each successful detection: one record per employee per day (INSERT ... ON DUPLICATE KEY UPDATE to avoid duplicate rows).
+- The `Organization` table has a new `Employee_Fl CHAR(1) NOT NULL DEFAULT 'N'` field; not yet used to gate the UI.
+- `BadgeIcon` (ID badge/clipboard SVG) added to `Icons.jsx` for the Employees NavBar tab.

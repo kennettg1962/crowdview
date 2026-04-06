@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { HomeIcon, FriendsIcon, LibraryIcon, BroadcastIcon, UserProfileIcon, LogoutIcon, UsersIcon } from './Icons';
+import { HomeIcon, FriendsIcon, LibraryIcon, BroadcastIcon, UserProfileIcon, LogoutIcon, UsersIcon, BadgeIcon } from './Icons';
 
 export default function NavBar() {
   const navigate = useNavigate();
@@ -101,10 +101,16 @@ export default function NavBar() {
         {isCorporate ? (
           <>
             {isOAU && (
-              <button onClick={() => navigate('/corporate/users')} className={tab('/corporate/users')}>
-                <UsersIcon className="w-5 h-5" />
-                <span>Users</span>
-              </button>
+              <>
+                <button onClick={() => navigate('/corporate/users')} className={tab('/corporate/users')}>
+                  <UsersIcon className="w-5 h-5" />
+                  <span>Users</span>
+                </button>
+                <button onClick={() => navigate('/corporate/employees')} className={tab('/corporate/employees')}>
+                  <BadgeIcon className="w-5 h-5" />
+                  <span>Employees</span>
+                </button>
+              </>
             )}
             <button
               onClick={() => { logout(); navigate('/'); }}

@@ -51,6 +51,7 @@ function FloatButton({ icon: Icon, label, onClick, disabled, className = '' }) {
 function FaceTile({ face, onView }) {
   const accent = face.status === 'known'      ? 'border-green-500'
                : face.status === 'identified' ? 'border-orange-500'
+               : face.status === 'employee'   ? 'border-gray-900'
                :                                'border-red-500';
   return (
     <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-lg border-l-2 ${accent}`}>
@@ -61,9 +62,11 @@ function FaceTile({ face, onView }) {
         <p className="text-sm font-semibold text-white truncate">{face.friendName || 'Unknown'}</p>
         {face.note && <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{face.note}</p>}
       </div>
-      <button onClick={onView} title="View" className="flex-shrink-0 p-1.5 text-gray-400 hover:text-white transition-colors">
-        <UserProfileIcon className="w-8 h-8" />
-      </button>
+      {face.friendId && (
+        <button onClick={onView} title="View" className="flex-shrink-0 p-1.5 text-gray-400 hover:text-white transition-colors">
+          <UserProfileIcon className="w-8 h-8" />
+        </button>
+      )}
     </div>
   );
 }
@@ -348,7 +351,7 @@ export default function HubScreen() {
           const toAdd = [];
           const toMove = []; // returning faces
           facesWithCrops.forEach(f => {
-            const key = f.friendId || f.faceId;
+            const key = f.friendId || f.employeeId || f.faceId;
             if (!key) return;
             const lastSeen = faceLastSeenRef.current[key] || 0;
             faceLastSeenRef.current[key] = now; // always update — no re-render
@@ -361,8 +364,8 @@ export default function HubScreen() {
           });
           if (toAdd.length > 0 || toMove.length > 0) {
             setRecognizedFaces(prev => {
-              const movingKeys = new Set(toMove.map(f => f.friendId || f.faceId));
-              const filtered = prev.filter(f => !movingKeys.has(f.friendId || f.faceId));
+              const movingKeys = new Set(toMove.map(f => f.friendId || f.employeeId || f.faceId));
+              const filtered = prev.filter(f => !movingKeys.has(f.friendId || f.employeeId || f.faceId));
               return [...toAdd, ...toMove, ...filtered];
             });
           }
@@ -378,8 +381,9 @@ export default function HubScreen() {
           const w = boundingBox.width  * canvas.width;
           const h = boundingBox.height * canvas.height;
 
-          const color = status === 'known' ? '#22c55e'
+          const color = status === 'known'      ? '#22c55e'
                       : status === 'identified' ? '#f97316'
+                      : status === 'employee'   ? '#111827'
                       : '#ef4444';
 
           ctx.strokeStyle = color;
@@ -778,7 +782,7 @@ export default function HubScreen() {
               ) : (
                 recognizedFaces.map((face, i) => (
                   <FaceTile
-                    key={face.friendId || face.faceId || i}
+                    key={face.friendId || face.employeeId || face.faceId || i}
                     face={face}
                     onView={() => setLiveFacePopup(face)}
                   />

@@ -3,10 +3,14 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
 const pool = require('../db/connection');
 const auth = require('../middleware/auth');
 const corporateAdmin = require('../middleware/corporateAdmin');
 const { detectActivity, deviceHeartbeat, DETECT_TTL, HEARTBEAT_TTL, sessionDetectCount } = require('../activity');
+const { indexEmployeeFace, deleteFaces } = require('../rekognition');
+
+const empUpload = multer({ storage: multer.memoryStorage() });
 
 // All routes require auth + OAU role
 router.use(auth, corporateAdmin);
@@ -226,6 +230,285 @@ router.get('/dashboard', async (req, res) => {
     });
   } catch (err) {
     console.error('dashboard error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Employee helpers
+// ---------------------------------------------------------------------------
+async function getOrgEmployee(employeeId, orgId) {
+  const [rows] = await pool.execute(
+    'SELECT * FROM Organization_Employee WHERE Organization_Employee_Id = ? AND Organization_Id = ?',
+    [employeeId, orgId]
+  );
+  return rows[0] || null;
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/corporate/employees  — list all employees in the org
+// ---------------------------------------------------------------------------
+router.get('/employees', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT e.Organization_Employee_Id, e.Employee_Nm, e.Login_Cd, e.Created_At,
+              COUNT(p.Organization_Employee_Photo_Id) AS Photo_Count
+         FROM Organization_Employee e
+         LEFT JOIN Organization_Employee_Photo p ON p.Organization_Employee_Id = e.Organization_Employee_Id
+        WHERE e.Organization_Id = ?
+        GROUP BY e.Organization_Employee_Id, e.Employee_Nm, e.Login_Cd, e.Created_At
+        ORDER BY e.Employee_Nm ASC`,
+      [req.user.parentOrganizationId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/corporate/employees/dashboard  — attendance stats per employee
+// IMPORTANT: must be defined before /employees/:id routes
+// ---------------------------------------------------------------------------
+router.get('/employees/dashboard', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+         e.Organization_Employee_Id AS employeeId,
+         e.Employee_Nm              AS employeeName,
+         e.Login_Cd                 AS loginCode,
+         COUNT(DISTINCT CASE WHEN a.Attendance_Dt >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+                             THEN a.Attendance_Dt END) AS weekCount,
+         COUNT(DISTINCT CASE WHEN a.Attendance_Dt >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+                             THEN a.Attendance_Dt END) AS monthCount,
+         COUNT(DISTINCT CASE WHEN a.Attendance_Dt >= DATE_FORMAT(CURDATE(), '%Y-01-01')
+                             THEN a.Attendance_Dt END) AS yearCount
+       FROM Organization_Employee e
+       LEFT JOIN Organization_Employee_Attendance a
+              ON a.Organization_Employee_Id = e.Organization_Employee_Id
+       WHERE e.Organization_Id = ?
+       GROUP BY e.Organization_Employee_Id, e.Employee_Nm, e.Login_Cd
+       ORDER BY e.Employee_Nm ASC`,
+      [req.user.parentOrganizationId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('employee dashboard error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/corporate/employees  — create employee
+// ---------------------------------------------------------------------------
+router.post('/employees', async (req, res) => {
+  const { employeeName, loginCode, password } = req.body;
+  if (!employeeName || !loginCode || !password)
+    return res.status(400).json({ error: 'Name, login code and password required' });
+  if (password.length < 6)
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    const now = new Date();
+    const [result] = await pool.execute(
+      `INSERT INTO Organization_Employee
+         (Organization_Id, Login_Cd, Login_Password_Hash, Employee_Nm, Created_At, Updated_At)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [req.user.parentOrganizationId, loginCode, hash, employeeName, now, now]
+    );
+    res.status(201).json({ employeeId: result.insertId });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Login code already exists' });
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/corporate/employees/:id  — update employee name / login code
+// ---------------------------------------------------------------------------
+router.put('/employees/:id', async (req, res) => {
+  const { employeeName, loginCode } = req.body;
+  try {
+    const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
+    if (!target) return res.status(404).json({ error: 'Employee not found' });
+    await pool.execute(
+      `UPDATE Organization_Employee
+          SET Employee_Nm = ?, Login_Cd = ?, Updated_At = ?
+        WHERE Organization_Employee_Id = ?`,
+      [employeeName || target.Employee_Nm, loginCode || target.Login_Cd, new Date(), req.params.id]
+    );
+    res.json({ message: 'Employee updated' });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Login code already exists' });
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/corporate/employees/:id  — delete employee
+// ---------------------------------------------------------------------------
+router.delete('/employees/:id', async (req, res) => {
+  try {
+    const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
+    if (!target) return res.status(404).json({ error: 'Employee not found' });
+
+    // Remove face collection entries first
+    const [photos] = await pool.execute(
+      'SELECT Rekognition_Face_Id FROM Organization_Employee_Photo WHERE Organization_Employee_Id = ? AND Rekognition_Face_Id IS NOT NULL',
+      [req.params.id]
+    );
+    const faceIds = photos.map(p => p.Rekognition_Face_Id).filter(Boolean);
+    if (faceIds.length) deleteFaces(faceIds).catch(err => console.error('deleteFaces:', err.message));
+
+    await pool.execute(
+      'DELETE FROM Organization_Employee WHERE Organization_Employee_Id = ? AND Organization_Id = ?',
+      [req.params.id, req.user.parentOrganizationId]
+    );
+    res.json({ message: 'Employee deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/corporate/employees/:id/reset-password
+// ---------------------------------------------------------------------------
+router.post('/employees/:id/reset-password', async (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword) return res.status(400).json({ error: 'newPassword required' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  try {
+    const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
+    if (!target) return res.status(404).json({ error: 'Employee not found' });
+    const hash = await bcrypt.hash(newPassword, 10);
+    await pool.execute(
+      'UPDATE Organization_Employee SET Login_Password_Hash = ?, Updated_At = ? WHERE Organization_Employee_Id = ?',
+      [hash, new Date(), req.params.id]
+    );
+    res.json({ message: 'Password reset' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/corporate/employees/:id/photos  — list employee photos
+// ---------------------------------------------------------------------------
+router.get('/employees/:id/photos', async (req, res) => {
+  try {
+    const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
+    if (!target) return res.status(404).json({ error: 'Employee not found' });
+    const [rows] = await pool.execute(
+      `SELECT Organization_Employee_Photo_Id, Photo_Mime_Type, Created_At
+         FROM Organization_Employee_Photo
+        WHERE Organization_Employee_Id = ?
+        ORDER BY Created_At ASC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/corporate/employees/:id/photos  — upload photo + index face
+// ---------------------------------------------------------------------------
+router.post('/employees/:id/photos', empUpload.single('photo'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Photo file required' });
+  try {
+    const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
+    if (!target) return res.status(404).json({ error: 'Employee not found' });
+    const [result] = await pool.execute(
+      'INSERT INTO Organization_Employee_Photo (Organization_Employee_Id, Photo_Data, Photo_Mime_Type) VALUES (?, ?, ?)',
+      [req.params.id, req.file.buffer, req.file.mimetype]
+    );
+    const photoId = result.insertId;
+    indexEmployeeFace(req.file.buffer, req.user.parentOrganizationId, req.params.id, photoId)
+      .then(faceId => {
+        if (faceId) {
+          return pool.execute(
+            'UPDATE Organization_Employee_Photo SET Rekognition_Face_Id = ? WHERE Organization_Employee_Photo_Id = ?',
+            [faceId, photoId]
+          );
+        }
+      })
+      .catch(err => console.error('indexEmployeeFace error:', err.message));
+    res.status(201).json({ photoId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/corporate/employees/:id/photos/:pid
+// ---------------------------------------------------------------------------
+router.delete('/employees/:id/photos/:pid', async (req, res) => {
+  try {
+    const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
+    if (!target) return res.status(404).json({ error: 'Employee not found' });
+    const [photoRows] = await pool.execute(
+      'SELECT Rekognition_Face_Id FROM Organization_Employee_Photo WHERE Organization_Employee_Photo_Id = ? AND Organization_Employee_Id = ?',
+      [req.params.pid, req.params.id]
+    );
+    if (photoRows.length && photoRows[0].Rekognition_Face_Id) {
+      deleteFaces([photoRows[0].Rekognition_Face_Id]).catch(err => console.error('deleteFaces:', err.message));
+    }
+    const [result] = await pool.execute(
+      'DELETE FROM Organization_Employee_Photo WHERE Organization_Employee_Photo_Id = ? AND Organization_Employee_Id = ?',
+      [req.params.pid, req.params.id]
+    );
+    if (!result.affectedRows) return res.status(404).json({ error: 'Photo not found' });
+    res.json({ message: 'Photo deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/corporate/employees/:id/photos/:pid/data  — serve photo blob
+// ---------------------------------------------------------------------------
+router.get('/employees/:id/photos/:pid/data', async (req, res) => {
+  try {
+    const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
+    if (!target) return res.status(404).json({ error: 'Employee not found' });
+    const [rows] = await pool.execute(
+      'SELECT Photo_Data, Photo_Mime_Type FROM Organization_Employee_Photo WHERE Organization_Employee_Photo_Id = ? AND Organization_Employee_Id = ?',
+      [req.params.pid, req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Photo not found' });
+    res.set('Content-Type', rows[0].Photo_Mime_Type || 'image/jpeg');
+    res.send(rows[0].Photo_Data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/corporate/employees/:id/attendance  — date drilldown for one employee
+// ---------------------------------------------------------------------------
+router.get('/employees/:id/attendance', async (req, res) => {
+  try {
+    const target = await getOrgEmployee(req.params.id, req.user.parentOrganizationId);
+    if (!target) return res.status(404).json({ error: 'Employee not found' });
+    const [rows] = await pool.execute(
+      `SELECT Attendance_Dt FROM Organization_Employee_Attendance
+        WHERE Organization_Employee_Id = ?
+        ORDER BY Attendance_Dt DESC`,
+      [req.params.id]
+    );
+    res.json(rows.map(r => r.Attendance_Dt));
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });

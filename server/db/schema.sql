@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS Organization (
   Contact_Zip_Txt VARCHAR(255) NOT NULL COMMENT 'Contact Zip',
   Contact_Country_Txt VARCHAR(255) NOT NULL COMMENT 'Contact Country',
   Description_Multi_Line_Txt TEXT COMMENT 'Organization Description',
+  Employee_Fl CHAR(1) NOT NULL DEFAULT 'N' COMMENT 'Employee Module Enabled Flag',
   Created_At DATETIME DEFAULT NULL COMMENT 'Create Time',
   Updated_At DATETIME DEFAULT NULL COMMENT 'Update Time'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -67,3 +68,38 @@ CREATE TABLE IF NOT EXISTS User_Media (
   Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (User_Id) REFERENCES User(User_Id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS `Organization_Employee` (
+  `Organization_Employee_Id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Primary Key',
+  `Organization_Id` BIGINT NOT NULL COMMENT 'Organization ID',
+  `Login_Cd` VARCHAR(255) NOT NULL COMMENT 'Login Code',
+  `Login_Password_Hash` VARCHAR(255) NOT NULL COMMENT 'Login Password',
+  `Created_At` DATETIME DEFAULT NULL COMMENT 'Create Time',
+  `Updated_At` DATETIME DEFAULT NULL COMMENT 'Update Time',
+  `Employee_Nm` VARCHAR(255) NOT NULL,
+  PRIMARY KEY (`Organization_Employee_Id`),
+  KEY `Organization_Login_ibfk_Id` (`Organization_Id`),
+  CONSTRAINT `Organization_Employee_ibfk_Id` FOREIGN KEY (`Organization_Id`) REFERENCES `Organization` (`Organization_Id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `Organization_Employee_Attendance` (
+  `Organization_Employee_Attendance_Id` BIGINT NOT NULL AUTO_INCREMENT,
+  `Organization_Employee_Id` BIGINT NOT NULL,
+  `Organization_Id` BIGINT NOT NULL,
+  `Attendance_Dt` DATE NOT NULL,
+  `Created_At` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`Organization_Employee_Attendance_Id`),
+  UNIQUE KEY `uq_emp_date` (`Organization_Employee_Id`, `Attendance_Dt`),
+  CONSTRAINT `OEA_emp_fk` FOREIGN KEY (`Organization_Employee_Id`) REFERENCES `Organization_Employee` (`Organization_Employee_Id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `Organization_Employee_Photo` (
+  `Organization_Employee_Photo_Id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Primary Key',
+  `Organization_Employee_Id` BIGINT NOT NULL COMMENT 'Employee ID',
+  `Photo_Data` LONGBLOB NOT NULL,
+  `Photo_Mime_Type` VARCHAR(50) DEFAULT 'image/jpeg',
+  `Rekognition_Face_Id` VARCHAR(255) NULL,
+  `Created_At` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`Organization_Employee_Photo_Id`),
+  CONSTRAINT `Organization_Employee_Photo_ibfk_Id` FOREIGN KEY (`Organization_Employee_Id`) REFERENCES `Organization_Employee` (`Organization_Employee_Id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

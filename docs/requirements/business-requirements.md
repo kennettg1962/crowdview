@@ -1,6 +1,6 @@
 # Business Requirements
 
-Living specification. Entries are merged/rewritten as requirements evolve. Last updated: 2026-03-26.
+Living specification. Entries are merged/rewritten as requirements evolve. Last updated: 2026-04-06.
 
 ---
 
@@ -108,3 +108,9 @@ CrowdView Corporate is a separate operational tier for business organisations. A
 | BR-C09 | Live and past stream visibility for corporate users is scoped to all members of the same organisation (equivalent to every org member being a "friend" of every other). |
 | BR-C10 | Face identification searches the CompreFace collections of all org members, not just the requesting user's own collection. |
 | BR-C11 | Organisations are provisioned by sysadmin only. There is no self-service organisation sign-up flow. |
+| BR-C12 | Employee records are scoped to the organisation (by `Organization_Id`). Any OAU in the organisation can create, edit, and delete employee records and manage employee photos. |
+| BR-C13 | Employee attendance is recorded automatically on each face-detection run. One attendance record is stored per employee per calendar day; duplicate detections on the same day do not create additional records (INSERT ... ON DUPLICATE KEY). |
+| BR-C14 | Employee face photos are indexed in CompreFace/Rekognition using the naming convention `org{orgId}_emp{employeeId}_p{photoId}`. Deleting an employee photo removes the corresponding face from the recognition collection. |
+| BR-C15 | During live detection, detected employees are visually distinguished from friends/customers: employee bounding boxes are black (#111827) and the face tile in the right panel shows a black left border (border-gray-900). |
+| BR-C16 | No "View" button is shown on employee face tiles. The View action is reserved for friends/customers (records with a `friendId`). |
+| BR-C17 | The `Organization` table carries an `Employee_Fl CHAR(1) NOT NULL DEFAULT 'N'` field reserved for future use to gate access to the Employees module per organisation. It is not currently used to restrict the UI. |

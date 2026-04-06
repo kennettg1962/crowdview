@@ -148,4 +148,28 @@ async function searchFace(buf) {
     }));
 }
 
-module.exports = { ensureCollection, indexFace, deleteFaces, detectFaces, searchFace };
+// ---------------------------------------------------------------------------
+// indexEmployeeFace — add an employee face to the CompreFace collection
+// Subject name convention: org{orgId}_emp{employeeId}_p{photoId}
+// ---------------------------------------------------------------------------
+async function indexEmployeeFace(buf, orgId, employeeId, photoId) {
+  const subject = `org${orgId}_emp${employeeId}_p${photoId}`;
+  const form = new (require('form-data'))();
+  form.append('file', buf, { filename: 'photo.jpg', contentType: 'image/jpeg' });
+  const res = await fetch(
+    `${RECOGNIZE_URL}?subject=${encodeURIComponent(subject)}`,
+    {
+      method: 'POST',
+      headers: { 'x-api-key': RECOGNIZE_KEY, ...form.getHeaders() },
+      body: form,
+    }
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`CompreFace indexEmployeeFace failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  return data.image_id || null;
+}
+
+module.exports = { ensureCollection, indexFace, indexEmployeeFace, deleteFaces, detectFaces, searchFace };
