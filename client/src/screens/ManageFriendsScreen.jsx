@@ -214,10 +214,12 @@ export default function ManageFriendsScreen() {
         {/* ── Customers tab ─────────────────────────────────────────────── */}
         {activeTab === 'customers' && (
           <div className="w-full max-w-2xl flex flex-col gap-3">
-            <select value={group} onChange={e => setGroup(e.target.value)}
-              className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none">
-              {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+            {!isCorporate && (
+              <select value={group} onChange={e => setGroup(e.target.value)}
+                className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none">
+                {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            )}
 
             <div className="flex gap-2">
               <div className="flex flex-col gap-0.5 py-1 text-xs text-gray-500">
