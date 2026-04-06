@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS `Organization_Employee_Attendance` (
 
 CREATE TABLE IF NOT EXISTS `Friend_Attendance` (
   `Friend_Attendance_Id` BIGINT NOT NULL AUTO_INCREMENT,
-  `Friend_Id` INT NOT NULL,
+  `Friend_Id` BIGINT NOT NULL,
   `Organization_Id` BIGINT NOT NULL,
   `Attendance_Dt` DATE NOT NULL,
   `Created_At` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -106,9 +106,9 @@ CREATE TABLE IF NOT EXISTS `Friend_Attendance` (
 
 CREATE TABLE IF NOT EXISTS `Friend_Detection` (
   `Friend_Detection_Id` BIGINT NOT NULL AUTO_INCREMENT,
-  `Friend_Id` INT NOT NULL,
+  `Friend_Id` BIGINT NOT NULL,
   `Organization_Id` BIGINT NOT NULL,
-  `Detected_By_User_Id` INT NOT NULL,
+  `Detected_By_User_Id` BIGINT NOT NULL,
   `Detected_At` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`Friend_Detection_Id`),
   KEY `FD_friend_idx` (`Friend_Id`, `Detected_At`),
