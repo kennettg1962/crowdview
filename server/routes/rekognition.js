@@ -162,8 +162,12 @@ router.post('/identify', auth, async (req, res) => {
             ).catch(err => console.error('[attendance]', err.message));
             pool.execute(
               `INSERT INTO Organization_Employee_Detection (Organization_Employee_Id, Organization_Id, Detected_By_User_Id)
-               VALUES (?, ?, ?)`,
-              [emp.Organization_Employee_Id, req.user.parentOrganizationId, req.user.userId]
+               SELECT ?, ?, ? WHERE NOT EXISTS (
+                 SELECT 1 FROM Organization_Employee_Detection
+                 WHERE Organization_Employee_Id = ? AND Detected_At >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
+               )`,
+              [emp.Organization_Employee_Id, req.user.parentOrganizationId, req.user.userId,
+               emp.Organization_Employee_Id]
             ).catch(err => console.error('[detection]', err.message));
           }
         }
