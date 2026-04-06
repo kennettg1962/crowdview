@@ -14,6 +14,7 @@ import api from '../api/api';
 const STATUS_COLORS = {
   known:      { border: '#22c55e' },
   identified: { border: '#f97316' },
+  employee:   { border: '#ffffff' },
   unknown:    { border: '#ef4444' },
 };
 
@@ -322,6 +323,8 @@ export default function IdScreen() {
                       ? 'bg-green-700/80 text-green-100'
                       : face.status === 'identified'
                       ? 'bg-orange-700/80 text-orange-100'
+                      : face.status === 'employee'
+                      ? 'bg-gray-700/80 text-white'
                       : 'bg-red-700/80 text-red-100'
                   }`}>
                     {face.friendName || `Unknown ${unknownLabels[i]}`}
