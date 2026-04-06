@@ -199,7 +199,6 @@ export default function ManageFriendsScreen() {
                     className="w-full grid grid-cols-4 gap-2 px-4 py-3 hover:bg-gray-800 transition-colors text-left border-b border-gray-800 last:border-0">
                     <div>
                       <p className="text-white text-sm">{f.friendName}</p>
-                      {f.ownerName && <p className="text-gray-500 text-xs">{f.ownerName}</p>}
                     </div>
                     <span className="text-gray-300 text-sm text-center self-center">{f.weekCount}</span>
                     <span className="text-gray-300 text-sm text-center self-center">{f.monthCount}</span>
