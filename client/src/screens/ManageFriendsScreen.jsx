@@ -142,9 +142,6 @@ export default function ManageFriendsScreen() {
     return acc;
   }, {});
 
-  const tabCls = active =>
-    `flex-1 py-2 text-sm font-medium transition-colors ${active ? 'text-white border-b-2 border-blue-400' : 'text-gray-400 hover:text-white'}`;
-
   return (
     <div className="bg-slate-700 min-h-screen flex flex-col">
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
@@ -167,129 +164,128 @@ export default function ManageFriendsScreen() {
         }
       />
 
-      <main className="flex-1 flex flex-col items-center px-4 py-4">
-        <div className="w-full max-w-2xl flex flex-col gap-3 bg-gray-900 rounded-lg p-3">
-
-          {/* Tabs — corporate only */}
-          {isCorporate && (
-            <div className="flex border-b border-gray-700 mb-1">
-              <button className={tabCls(activeTab === 'dashboard')}  onClick={() => setActiveTab('dashboard')}>Dashboard</button>
-              <button className={tabCls(activeTab === 'customers')} onClick={() => setActiveTab('customers')}>{Noun}s</button>
-            </div>
-          )}
-
-          {/* ── Dashboard tab ─────────────────────────────────────────────── */}
-          {activeTab === 'dashboard' && (
-            dashLoading ? (
-              <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" /></div>
-            ) : dashData.length === 0 ? (
-              <p className="text-center text-gray-500 text-sm py-12">No detection data yet</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-gray-400 text-xs border-b border-gray-700">
-                      <th className="text-left py-2 px-3 font-medium">Customer</th>
-                      <th className="text-center py-2 px-2 font-medium">Week</th>
-                      <th className="text-center py-2 px-2 font-medium">Month</th>
-                      <th className="text-center py-2 px-2 font-medium">Year</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800">
-                    {dashData.map(f => (
-                      <tr key={f.friendId} onClick={() => openDrilldown(f)}
-                        className="hover:bg-gray-800 cursor-pointer transition-colors">
-                        <td className="py-2 px-3">
-                          <p className="text-white">{f.friendName}</p>
-                          {f.ownerName && <p className="text-gray-500 text-xs">{f.ownerName}</p>}
-                        </td>
-                        <td className="text-center py-2 px-2 text-gray-300">{f.weekCount}</td>
-                        <td className="text-center py-2 px-2 text-gray-300">{f.monthCount}</td>
-                        <td className="text-center py-2 px-2 text-gray-300">{f.yearCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
-          )}
-
-          {/* ── Customers tab ─────────────────────────────────────────────── */}
-          {activeTab === 'customers' && (
-            <>
-              <select value={group} onChange={e => setGroup(e.target.value)}
-                className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none">
-                {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-
-              <div className="flex gap-2">
-                <div className="flex flex-col gap-0.5 py-1 text-xs text-gray-500">
-                  {ALPHABET.map(letter => (
-                    <button key={letter} onClick={() => scrollToLetter(letter)}
-                      className={`hover:text-white leading-none ${grouped[letter] ? 'text-gray-300' : ''}`}>
-                      {letter}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex-1 space-y-1 bg-gray-900 rounded-lg overflow-hidden">
-                  {loading ? (
-                    <div className="flex items-center justify-center h-32">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-                    </div>
-                  ) : friends.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-32 text-gray-500 gap-2">
-                      <p>No {noun}s found</p>
-                      <button onClick={handleAddNew} className="text-blue-400 hover:text-blue-300 text-sm underline">
-                        Add your first {noun}
-                      </button>
-                    </div>
-                  ) : (
-                    Object.entries(grouped).map(([letter, letterFriends]) => (
-                      <div key={letter} id={`letter-${letter}`}>
-                        <div className="bg-gray-900 text-blue-400 text-xs font-bold px-2 py-1">{letter}</div>
-                        {letterFriends.map(friend => (
-                          <div key={friend.Friend_Id} className="flex items-center gap-1 rounded-lg hover:bg-gray-800 transition-colors">
-                            <button onClick={() => handleFriendClick(friend)}
-                              className="flex-1 flex items-center gap-3 p-3 text-left">
-                              <div className="w-[60px] h-[60px] rounded-full bg-gray-700 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                                {friend.Primary_Photo_Mime ? (
-                                  <AuthImage src={`/api/friends/${friend.Friend_Id}/photos/primary/data`}
-                                    alt={friend.Name_Txt} className="w-full h-full object-cover"
-                                    fallback={<span className="text-gray-500 text-[27px]">👤</span>} lazy maxPx={120} />
-                                ) : (
-                                  <span className="text-gray-500 text-[27px]">👤</span>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-white text-sm font-medium truncate">{friend.Name_Txt}</p>
-                                  {friend.Linked_User_Name && (
-                                    <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded bg-blue-600/30 text-blue-400 border border-blue-600/40">linked</span>
-                                  )}
-                                </div>
-                                {friend.Note_Multi_Line_Txt && (
-                                  <p className="text-gray-500 text-xs truncate">{friend.Note_Multi_Line_Txt}</p>
-                                )}
-                              </div>
-                              <span className="text-gray-600 text-xs flex-shrink-0">{friend.Friend_Group}</span>
-                              <span className="text-gray-600">›</span>
-                            </button>
-                            <button onClick={() => setDeletingFriend(friend)}
-                              className="p-3 text-red-400/50 hover:text-red-400 transition-colors flex-shrink-0"
-                              title={`Delete ${noun}`}>
-                              <DeleteIcon className="w-5 h-5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </>
-          )}
+      {/* Full-width tab bar — corporate only */}
+      {isCorporate && (
+        <div className="flex border-b border-gray-700 bg-gray-800">
+          {[{ id: 'dashboard', label: 'Dashboard' }, { id: 'customers', label: `${Noun}s` }].map(t => (
+            <button key={t.id} onClick={() => setActiveTab(t.id)}
+              className={`flex-1 py-3 text-sm font-medium transition-colors
+                ${activeTab === t.id ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-400 hover:text-gray-200'}`}>
+              {t.label}
+            </button>
+          ))}
         </div>
+      )}
+
+      <main className="flex-1 flex flex-col items-center px-4 py-4 pb-32">
+
+        {/* ── Dashboard tab ─────────────────────────────────────────────── */}
+        {activeTab === 'dashboard' && (
+          <div className="w-full max-w-2xl">
+            {dashLoading ? (
+              <div className="flex justify-center mt-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" /></div>
+            ) : dashData.length === 0 ? (
+              <p className="text-center text-gray-500 text-sm mt-12">No detection data yet</p>
+            ) : (
+              <div className="bg-gray-900 rounded-lg overflow-hidden">
+                <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-gray-800 border-b border-gray-700">
+                  <span className="text-gray-400 text-xs font-medium">Customer</span>
+                  <span className="text-gray-400 text-xs font-medium text-center">Week</span>
+                  <span className="text-gray-400 text-xs font-medium text-center">Month</span>
+                  <span className="text-gray-400 text-xs font-medium text-center">Year</span>
+                </div>
+                {dashData.map(f => (
+                  <button key={f.friendId} onClick={() => openDrilldown(f)}
+                    className="w-full grid grid-cols-4 gap-2 px-4 py-3 hover:bg-gray-800 transition-colors text-left border-b border-gray-800 last:border-0">
+                    <div>
+                      <p className="text-white text-sm">{f.friendName}</p>
+                      {f.ownerName && <p className="text-gray-500 text-xs">{f.ownerName}</p>}
+                    </div>
+                    <span className="text-gray-300 text-sm text-center self-center">{f.weekCount}</span>
+                    <span className="text-gray-300 text-sm text-center self-center">{f.monthCount}</span>
+                    <span className="text-gray-300 text-sm text-center self-center">{f.yearCount}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Customers tab ─────────────────────────────────────────────── */}
+        {activeTab === 'customers' && (
+          <div className="w-full max-w-2xl flex flex-col gap-3">
+            <select value={group} onChange={e => setGroup(e.target.value)}
+              className="w-full bg-gray-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none">
+              {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+
+            <div className="flex gap-2">
+              <div className="flex flex-col gap-0.5 py-1 text-xs text-gray-500">
+                {ALPHABET.map(letter => (
+                  <button key={letter} onClick={() => scrollToLetter(letter)}
+                    className={`hover:text-white leading-none ${grouped[letter] ? 'text-gray-300' : ''}`}>
+                    {letter}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex-1 space-y-1 bg-gray-900 rounded-lg overflow-hidden">
+                {loading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+                  </div>
+                ) : friends.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-32 text-gray-500 gap-2">
+                    <p>No {noun}s found</p>
+                    <button onClick={handleAddNew} className="text-blue-400 hover:text-blue-300 text-sm underline">
+                      Add your first {noun}
+                    </button>
+                  </div>
+                ) : (
+                  Object.entries(grouped).map(([letter, letterFriends]) => (
+                    <div key={letter} id={`letter-${letter}`}>
+                      <div className="bg-gray-900 text-blue-400 text-xs font-bold px-2 py-1">{letter}</div>
+                      {letterFriends.map(friend => (
+                        <div key={friend.Friend_Id} className="flex items-center gap-1 rounded-lg hover:bg-gray-800 transition-colors">
+                          <button onClick={() => handleFriendClick(friend)}
+                            className="flex-1 flex items-center gap-3 p-3 text-left">
+                            <div className="w-[60px] h-[60px] rounded-full bg-gray-700 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                              {friend.Primary_Photo_Mime ? (
+                                <AuthImage src={`/api/friends/${friend.Friend_Id}/photos/primary/data`}
+                                  alt={friend.Name_Txt} className="w-full h-full object-cover"
+                                  fallback={<span className="text-gray-500 text-[27px]">👤</span>} lazy maxPx={120} />
+                              ) : (
+                                <span className="text-gray-500 text-[27px]">👤</span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-white text-sm font-medium truncate">{friend.Name_Txt}</p>
+                                {friend.Linked_User_Name && (
+                                  <span className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded bg-blue-600/30 text-blue-400 border border-blue-600/40">linked</span>
+                                )}
+                              </div>
+                              {friend.Note_Multi_Line_Txt && (
+                                <p className="text-gray-500 text-xs truncate">{friend.Note_Multi_Line_Txt}</p>
+                              )}
+                            </div>
+                            <span className="text-gray-600 text-xs flex-shrink-0">{friend.Friend_Group}</span>
+                            <span className="text-gray-600">›</span>
+                          </button>
+                          <button onClick={() => setDeletingFriend(friend)}
+                            className="p-3 text-red-400/50 hover:text-red-400 transition-colors flex-shrink-0"
+                            title={`Delete ${noun}`}>
+                            <DeleteIcon className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <TrueFooter />
