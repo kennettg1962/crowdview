@@ -22,7 +22,7 @@ function cropFace(imageDataUrl, box) {
   });
 }
 
-export default function FacePickerPopup({ imageDataUrl, faces, onSelectFace, onCancel }) {
+export default function FacePickerPopup({ imageDataUrl, faces, onSelectFace, onCancel, loading = false, actionLabel = 'add as a friend' }) {
   async function handleFaceClick(face) {
     const cropped = await cropFace(imageDataUrl, face.boundingBox);
     onSelectFace(cropped);
@@ -36,9 +36,11 @@ export default function FacePickerPopup({ imageDataUrl, faces, onSelectFace, onC
           <div>
             <h2 className="text-white font-semibold text-lg">Select a Face</h2>
             <p className="text-gray-400 text-sm">
-              {faces.length === 0
-                ? 'No faces were detected in this photo'
-                : `${faces.length} face${faces.length !== 1 ? 's' : ''} detected — click one to add as a friend`}
+              {loading
+                ? 'Detecting faces…'
+                : faces.length === 0
+                  ? 'No faces were detected in this photo'
+                  : `${faces.length} face${faces.length !== 1 ? 's' : ''} detected — click one to ${actionLabel}`}
             </p>
           </div>
           <button onClick={onCancel} className="text-gray-400 hover:text-white">
@@ -55,6 +57,11 @@ export default function FacePickerPopup({ imageDataUrl, faces, onSelectFace, onC
               className="max-w-full max-h-[60vh] rounded-lg block"
               draggable={false}
             />
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white" />
+              </div>
+            )}
             {faces.map((face, i) => {
               const { left, top, width, height } = face.boundingBox;
               return (

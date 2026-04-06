@@ -4,12 +4,32 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import AuthImage from '../components/AuthImage';
+import FacePickerPopup from '../components/FacePickerPopup';
 import { HomeIcon, PlusIcon, DeleteIcon } from '../components/Icons';
 import api from '../api/api';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-
 const EMPTY_FORM = { employeeName: '', loginCode: '', password: '' };
+
+function readAndResize(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 1280;
+        const scale = Math.min(1, maxW / img.naturalWidth);
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.naturalWidth  * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function EmployeesScreen() {
   const navigate = useNavigate();
@@ -24,16 +44,24 @@ export default function EmployeesScreen() {
   const [dashLoading, setDashLoading] = useState(true);
 
   // Form state
-  const [showForm, setShowForm]       = useState(false);
+  const [showForm, setShowForm]         = useState(false);
   const [editEmployee, setEditEmployee] = useState(null);
-  const [form, setForm]               = useState(EMPTY_FORM);
-  const [formError, setFormError]     = useState('');
-  const [saving, setSaving]           = useState(false);
+  const [form, setForm]                 = useState(EMPTY_FORM);
+  const [formError, setFormError]       = useState('');
+  const [saving, setSaving]             = useState(false);
 
   // Photos (edit form)
-  const [photos, setPhotos]               = useState([]);
+  const [photos, setPhotos]                 = useState([]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef(null);
+
+  // Face-picker flow (new employee)
+  const addPhotoInputRef                  = useRef(null);
+  const [showFacePicker, setShowFacePicker]   = useState(false);
+  const [pickerImageUrl, setPickerImageUrl]   = useState(null);
+  const [pickerFaces, setPickerFaces]         = useState([]);
+  const [pickerLoading, setPickerLoading]     = useState(false);
+  const [pendingFaceCrop, setPendingFaceCrop] = useState(null); // data URL for new employee photo
 
   // Delete confirmation
   const [deletingEmployee, setDeletingEmployee] = useState(null);
@@ -81,9 +109,37 @@ export default function EmployeesScreen() {
     } catch (err) { console.error(err); }
   }
 
-  // ── Form helpers ───────────────────────────────────────────────────────────
+  // ── Add-new flow: file → face picker → form ────────────────────────────────
 
   function openCreate() {
+    addPhotoInputRef.current?.click();
+  }
+
+  async function handleAddPhotoSelected(e) {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+
+    const imageDataUrl = await readAndResize(file);
+    setPickerImageUrl(imageDataUrl);
+    setPickerFaces([]);
+    setPickerLoading(true);
+    setShowFacePicker(true);
+
+    try {
+      const res = await api.post('/api/rekognition/identify', { imageData: imageDataUrl });
+      setPickerFaces(res.data.faces || []);
+    } catch (err) {
+      console.error('Face detection failed:', err);
+      setPickerFaces([]);
+    } finally {
+      setPickerLoading(false);
+    }
+  }
+
+  function handleFaceSelected(croppedDataUrl) {
+    setPendingFaceCrop(croppedDataUrl);
+    setShowFacePicker(false);
     setEditEmployee(null);
     setForm(EMPTY_FORM);
     setFormError('');
@@ -91,13 +147,24 @@ export default function EmployeesScreen() {
     setShowForm(true);
   }
 
+  function cancelFacePicker() {
+    setShowFacePicker(false);
+    setPickerImageUrl(null);
+    setPickerFaces([]);
+  }
+
+  // ── Edit flow ──────────────────────────────────────────────────────────────
+
   function openEdit(emp) {
     setEditEmployee(emp);
     setForm({ employeeName: emp.Employee_Nm, loginCode: emp.Login_Cd, password: '' });
     setFormError('');
+    setPendingFaceCrop(null);
     loadPhotos(emp.Organization_Employee_Id);
     setShowForm(true);
   }
+
+  // ── Form submit ────────────────────────────────────────────────────────────
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -107,7 +174,21 @@ export default function EmployeesScreen() {
       if (editEmployee) {
         await api.put(`/api/corporate/employees/${editEmployee.Organization_Employee_Id}`, form);
       } else {
-        await api.post('/api/corporate/employees', form);
+        const res = await api.post('/api/corporate/employees', form);
+        const { employeeId } = res.data;
+
+        // Upload the selected face crop as the first photo
+        if (pendingFaceCrop) {
+          const blob = await fetch(pendingFaceCrop).then(r => r.blob());
+          const fd = new FormData();
+          fd.append('photo', blob, 'face.jpg');
+          await api.post(
+            `/api/corporate/employees/${employeeId}/photos`,
+            fd,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          );
+          setPendingFaceCrop(null);
+        }
       }
       await loadEmployees();
       await loadDashboard();
@@ -119,7 +200,7 @@ export default function EmployeesScreen() {
     }
   }
 
-  // ── Photo management ───────────────────────────────────────────────────────
+  // ── Photo management (edit) ────────────────────────────────────────────────
 
   async function handlePhotoUpload(e) {
     const file = e.target.files[0];
@@ -208,6 +289,9 @@ export default function EmployeesScreen() {
 
   return (
     <div className="bg-slate-700 min-h-screen flex flex-col">
+      {/* Hidden file inputs */}
+      <input ref={addPhotoInputRef} type="file" accept="image/*" className="hidden" onChange={handleAddPhotoSelected} />
+
       <AppHeader
         left={
           <button onClick={() => navigate('/hub')} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
@@ -244,6 +328,7 @@ export default function EmployeesScreen() {
       </div>
 
       <main className="flex-1 flex flex-col items-center px-4 py-4 pb-32">
+
         {/* ── DASHBOARD TAB ── */}
         {activeTab === 'dashboard' && (
           <div className="w-full max-w-2xl">
@@ -255,7 +340,6 @@ export default function EmployeesScreen() {
               <p className="text-center text-gray-500 mt-12 text-sm">No employees yet</p>
             ) : (
               <div className="bg-gray-900 rounded-lg overflow-hidden">
-                {/* Header row */}
                 <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-gray-800 border-b border-gray-700">
                   <span className="text-xs font-semibold text-gray-400 col-span-1">Employee</span>
                   <span className="text-xs font-semibold text-gray-400 text-center">Week</span>
@@ -363,6 +447,18 @@ export default function EmployeesScreen() {
       <TrueFooter />
       <NavBar />
 
+      {/* ── FACE PICKER ── */}
+      {showFacePicker && pickerImageUrl && (
+        <FacePickerPopup
+          imageDataUrl={pickerImageUrl}
+          faces={pickerFaces}
+          loading={pickerLoading}
+          actionLabel="add as an employee"
+          onSelectFace={handleFaceSelected}
+          onCancel={cancelFacePicker}
+        />
+      )}
+
       {/* ── ADD / EDIT EMPLOYEE MODAL ── */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 px-4">
@@ -379,6 +475,22 @@ export default function EmployeesScreen() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              {/* Face crop preview for new employee */}
+              {!editEmployee && pendingFaceCrop && (
+                <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
+                  <img src={pendingFaceCrop} alt="Selected face" className="w-14 h-14 rounded-lg object-cover border border-gray-500 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium">Recognition photo selected</p>
+                    <p className="text-xs text-gray-400">This face will be used for camera detection</p>
+                  </div>
+                  <button type="button" onClick={() => setPendingFaceCrop(null)} className="text-gray-500 hover:text-red-400 flex-shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Employee Name <span className="text-red-400">*</span></label>
                 <input
@@ -467,7 +579,6 @@ export default function EmployeesScreen() {
                   </div>
                 )}
 
-                {/* Reset password */}
                 <div className="pt-2">
                   <button
                     type="button"
