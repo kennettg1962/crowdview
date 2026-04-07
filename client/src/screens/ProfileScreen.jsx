@@ -5,6 +5,7 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import { MovieCameraIcon, FriendsIcon } from '../components/Icons';
+import { Link } from 'react-router-dom';
 import api from '../api/api';
 
 export default function ProfileScreen() {
@@ -190,6 +191,13 @@ export default function ProfileScreen() {
               </div>
             </div>
           )}
+
+          {/* Privacy Policy link */}
+          <div className="text-center pt-2">
+            <Link to="/privacy" className="text-gray-500 hover:text-gray-300 text-xs underline underline-offset-2">
+              Privacy Policy
+            </Link>
+          </div>
         </div>
       </main>
 
