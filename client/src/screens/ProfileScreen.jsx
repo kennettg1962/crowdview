@@ -192,8 +192,16 @@ export default function ProfileScreen() {
             </div>
           )}
 
-          {/* Privacy Policy link */}
-          <div className="text-center pt-2">
+          {/* Help & legal links */}
+          <div className="text-center pt-2 flex items-center justify-center gap-4">
+            <Link to="/quickstart" className="text-gray-500 hover:text-gray-300 text-xs underline underline-offset-2">
+              Quick Start
+            </Link>
+            <span className="text-gray-700 text-xs">·</span>
+            <Link to="/guide" className="text-gray-500 hover:text-gray-300 text-xs underline underline-offset-2">
+              User Guide
+            </Link>
+            <span className="text-gray-700 text-xs">·</span>
             <Link to="/privacy" className="text-gray-500 hover:text-gray-300 text-xs underline underline-offset-2">
               Privacy Policy
             </Link>

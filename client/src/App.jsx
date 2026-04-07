@@ -20,6 +20,8 @@ import OperationsOrgDetailScreen from './screens/OperationsOrgDetailScreen';
 import OperationsOrgsScreen from './screens/OperationsOrgsScreen';
 import EmployeesScreen from './screens/EmployeesScreen';
 import PrivacyPolicyScreen from './screens/PrivacyPolicyScreen';
+import QuickStartScreen from './screens/QuickStartScreen';
+import UserGuideScreen from './screens/UserGuideScreen';
 
 function AuthGuard({ children }) {
   const { isAuthenticated } = useApp();
@@ -78,7 +80,9 @@ function AppRoutes() {
       <Route path="/operations/dashboard" element={<OpsGuard><OperationsDashboardScreen /></OpsGuard>} />
       <Route path="/operations/org/:orgId" element={<OpsGuard><OperationsOrgDetailScreen /></OpsGuard>} />
       <Route path="/operations/orgs"       element={<OpsGuard><OperationsOrgsScreen /></OpsGuard>} />
-      <Route path="/privacy" element={<PrivacyPolicyScreen />} />
+      <Route path="/privacy"     element={<PrivacyPolicyScreen />} />
+      <Route path="/quickstart"  element={<QuickStartScreen />} />
+      <Route path="/guide"       element={<UserGuideScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </>
