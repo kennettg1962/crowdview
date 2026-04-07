@@ -3,6 +3,9 @@ import api from '../api/api';
 import { UploadIcon, XIcon, DeleteIcon } from './Icons';
 import AuthImage from './AuthImage';
 import { useApp } from '../context/AppContext';
+import HelpTip from './HelpTip';
+
+const HELP_CROWDVIEW_ACCOUNT = 'Entering the email address of a friend\'s CrowdView account in this field and clicking the Link button will link you with this friend for Streaming and Face Identification. You will be able to watch their Streams in the Streams screen and use their friends for face identification. Face identification is only one level deep (friends of friends) and is bi-directional — your friend will also be able to watch your streams and use your friends for face identification.';
 
 const GROUPS = ['Friend', 'Family', 'Friend of Friend', 'Friend of Family', 'Business'];
 
@@ -328,7 +331,10 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
         {/* CrowdView Account Link — hidden in corporate mode (links are via org) */}
         {friend?.Friend_Id && !isCorporate && (
           <div>
-            <label className="text-gray-300 text-sm block mb-1">CrowdView Account</label>
+            <div className="flex items-center gap-1.5 mb-1">
+              <label className="text-gray-300 text-sm">CrowdView Account</label>
+              <HelpTip text={HELP_CROWDVIEW_ACCOUNT} />
+            </div>
             {linkedUserName ? (
               <div className="flex items-center justify-between bg-gray-700 rounded-lg px-3 py-2">
                 <div>

@@ -12,6 +12,10 @@ import {
 } from '../components/Icons';
 import { useApp } from '../context/AppContext';
 import api from '../api/api';
+import HelpTip from '../components/HelpTip';
+
+const HELP_LIVE_NOW    = 'The Live Now tab displays video streams of friends you have linked with. To link a friend, ask them for the email address they signed up with and enter it in the CrowdView Account Link field in the Friend Form. Navigate to the Friend Form by clicking the Friends icon and then selecting one of your friends.';
+const HELP_PAST_STREAMS = 'This tab lists past video streams of linked friends. To link a friend, ask them for the email address they signed up with and enter it in the CrowdView Account Link field in the Friend Form. Navigate to the Friend Form by clicking the Friends icon and then selecting one of your friends.';
 
 const SERVER_ORIGIN = window.location.protocol === 'capacitor:'
   ? 'https://crowdview.tv'
@@ -584,12 +588,15 @@ export default function StreamsScreen() {
               tab === t ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300'
             }`}
           >
-            {t === 'live' ? '🔴 Live Now' : '📼 Past Streams'}
-            {t === 'live' && liveStreams.length > 0 && (
-              <span className="ml-2 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5">
-                {liveStreams.length}
-              </span>
-            )}
+            <span className="inline-flex items-center justify-center gap-1.5">
+              {t === 'live' ? '🔴 Live Now' : '📼 Past Streams'}
+              {t === 'live' && liveStreams.length > 0 && (
+                <span className="bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5">
+                  {liveStreams.length}
+                </span>
+              )}
+              <HelpTip text={t === 'live' ? HELP_LIVE_NOW : HELP_PAST_STREAMS} />
+            </span>
           </button>
         ))}
       </div>

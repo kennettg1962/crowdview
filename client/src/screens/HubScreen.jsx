@@ -17,34 +17,46 @@ import {
   HomeIcon, BroadcastIcon, UserProfileIcon, LogoutIcon, UsersIcon,
 } from '../components/Icons';
 import api from '../api/api';
+import HelpTip from '../components/HelpTip';
 
-function SideButton({ icon: Icon, label, onClick, disabled, className = '' }) {
+const HELP_LIVE   = 'Clicking the Live button continuously scans the camera to identify faces in real-time. Click on an identified face to add this person as a friend. See the Quick Start guide for more details.';
+const HELP_ID     = 'Clicking the Id button will identify faces based on the single frame of the video screen that was present when the icon was clicked. Click on an identified face to add this person as a friend.';
+const HELP_ACTION = 'Clicking the Action icon will start recording the current stream and continue recording until the Cut button is clicked (the Cut button appears after the Action icon is pressed).';
+const HELP_STREAM = 'Clicking the Stream icon streams your current video feed to the CrowdView streaming service. This will allow your friends to see the video stream in the Live Now tab of the Streams screen. Please wait 2 or 3 seconds for the stream to appear.';
+
+function SideButton({ icon: Icon, label, onClick, disabled, className = '', helpText }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={label}
-      className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full
-        disabled:opacity-30 disabled:cursor-not-allowed ${className}`}
-    >
-      <Icon className="w-[42px] h-[42px]" />
-      <span className="text-xs font-medium">{label}</span>
-    </button>
+    <div className="relative w-full">
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        title={label}
+        className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-lg transition-colors w-full
+          disabled:opacity-30 disabled:cursor-not-allowed ${className}`}
+      >
+        <Icon className="w-[42px] h-[42px]" />
+        <span className="text-xs font-medium">{label}</span>
+      </button>
+      {helpText && <div className="absolute top-1.5 right-1.5 z-10"><HelpTip text={helpText} /></div>}
+    </div>
   );
 }
 
-function FloatButton({ icon: Icon, label, onClick, disabled, className = '' }) {
+function FloatButton({ icon: Icon, label, onClick, disabled, className = '', helpText }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={label}
-      className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-lg transition-colors
-        disabled:opacity-30 disabled:cursor-not-allowed ${className}`}
-    >
-      <Icon className="w-6 h-6" />
-      <span className="text-[10px] font-medium">{label}</span>
-    </button>
+    <div className="relative inline-block">
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        title={label}
+        className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-lg transition-colors
+          disabled:opacity-30 disabled:cursor-not-allowed ${className}`}
+      >
+        <Icon className="w-6 h-6" />
+        <span className="text-[10px] font-medium">{label}</span>
+      </button>
+      {helpText && <div className="absolute -top-1 -right-1 z-10"><HelpTip text={helpText} /></div>}
+    </div>
   );
 }
 
@@ -646,17 +658,17 @@ export default function HubScreen() {
         {/* Desktop left sidebar (hidden on mobile, hidden in corporate live mode) */}
         <div className={`${corporateLiveMode ? 'hidden' : showDesk} w-[15%] bg-slate-700 rounded-l-xl flex-col`}>
           {liveScan ? (
-            <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-xl animate-pulse" />
+            <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-xl animate-pulse" helpText={HELP_LIVE} />
           ) : (
-            <SideButton icon={LiveScanIcon} label="Live" onClick={() => { setLiveScan(true); setLiveScanInitializing(true); }} disabled={!canId} className="text-white hover:bg-slate-600" />
+            <SideButton icon={LiveScanIcon} label="Live" onClick={() => { setLiveScan(true); setLiveScanInitializing(true); }} disabled={!canId} className="text-white hover:bg-slate-600" helpText={HELP_LIVE} />
           )}
           <div className="mx-3 border-t border-slate-600" />
-          <SideButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-slate-600" />
+          <SideButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-slate-600" helpText={HELP_ID} />
           {!isCorporate && (
             <>
               <div className="mx-3 border-t border-slate-600" />
               {!isRecordingAction ? (
-                <SideButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
+                <SideButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-slate-600" helpText={HELP_ACTION} />
               ) : (
                 <SideButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-xl animate-pulse" />
               )}
@@ -719,12 +731,12 @@ export default function HubScreen() {
           {/* Mobile — top-left: Id + Live (horizontal) */}
           <div className={`${showMob} absolute left-3 z-20 bg-black/35 rounded-xl p-1.5 gap-0.5`}
                style={{ top: 'calc(env(safe-area-inset-top) + 76px)' }}>
-            <FloatButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-white/20" />
+            <FloatButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-white/20" helpText={HELP_ID} />
             <div className="border-l border-white/20 my-1" />
             {liveScan ? (
-              <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-lg animate-pulse" />
+              <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-lg animate-pulse" helpText={HELP_LIVE} />
             ) : (
-              <FloatButton icon={LiveScanIcon} label="Live" onClick={() => { setLiveScan(true); setLiveScanInitializing(true); }} disabled={!canId} className="text-white hover:bg-white/20" />
+              <FloatButton icon={LiveScanIcon} label="Live" onClick={() => { setLiveScan(true); setLiveScanInitializing(true); }} disabled={!canId} className="text-white hover:bg-white/20" helpText={HELP_LIVE} />
             )}
           </div>
 
@@ -735,7 +747,7 @@ export default function HubScreen() {
               {!isCorporate && (
                 <>
                   {!isRecordingAction ? (
-                    <FloatButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-white/20" />
+                    <FloatButton icon={ActionIcon} label="Action" onClick={handleAction} disabled={!isStreaming} className="text-white hover:bg-white/20" helpText={HELP_ACTION} />
                   ) : (
                     <FloatButton icon={CutIcon} label="Cut" onClick={handleCut} className="text-white bg-red-700 hover:bg-red-600 rounded-lg animate-pulse" />
                   )}
@@ -743,7 +755,7 @@ export default function HubScreen() {
                 </>
               )}
               {!(isStreamingOut || isStreamingConnecting) ? (
-                <FloatButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-white/20" />
+                <FloatButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-white/20" helpText={HELP_STREAM} />
               ) : (
                 <FloatButton icon={StopCircleIcon} label="Stop" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-lg" />
               )}
@@ -808,7 +820,7 @@ export default function HubScreen() {
         ) : (
           <div className={`${showDesk} w-[15%] bg-slate-700 rounded-r-xl flex-col items-center`}>
             {!(isStreamingOut || isStreamingConnecting) ? (
-              <SideButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-slate-600" />
+              <SideButton icon={StreamIcon} label="Stream" onClick={handleStream} disabled={!isStreaming} className="text-white hover:bg-slate-600" helpText={HELP_STREAM} />
             ) : (
               <>
                 <SideButton icon={StopCircleIcon} label="Stop Stream" onClick={handleStopStream} className="text-white bg-pink-800 hover:bg-pink-700 rounded-xl" />
