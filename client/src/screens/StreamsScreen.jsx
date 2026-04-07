@@ -14,8 +14,8 @@ import { useApp } from '../context/AppContext';
 import api from '../api/api';
 import HelpTip from '../components/HelpTip';
 
-const HELP_LIVE_NOW    = 'The Live Now tab displays video streams of friends you have linked with. To link a friend, ask them for the email address they signed up with and enter it in the CrowdView Account Link field in the Friend Form. Navigate to the Friend Form by clicking the Friends icon and then selecting one of your friends.';
-const HELP_PAST_STREAMS = 'This tab lists past video streams of linked friends. To link a friend, ask them for the email address they signed up with and enter it in the CrowdView Account Link field in the Friend Form. Navigate to the Friend Form by clicking the Friends icon and then selecting one of your friends.';
+const HELP_LIVE_NOW    = 'The Live Now tab displays video streams of friends you have linked with. To link a friend, ask them for the email address they signed up with and enter it in the CrowdView Account field in the friend form. Open the friend form by tapping the Friends icon and selecting one of your friends.';
+const HELP_PAST_STREAMS = 'This tab lists past video streams of linked friends. To link a friend, ask them for the email address they signed up with and enter it in the CrowdView Account field in the friend form. Open the friend form by tapping the Friends icon and selecting one of your friends.';
 
 const SERVER_ORIGIN = window.location.protocol === 'capacitor:'
   ? 'https://crowdview.tv'
