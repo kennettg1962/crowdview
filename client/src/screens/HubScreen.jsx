@@ -379,10 +379,14 @@ export default function HubScreen() {
 
         facesWithCrops.forEach(face => {
           const { boundingBox, status, friendName } = face;
-          const x = boundingBox.left   * canvas.width;
-          const y = boundingBox.top    * canvas.height;
-          const w = boundingBox.width  * canvas.width;
-          const h = boundingBox.height * canvas.height;
+          const bx = boundingBox.left   * canvas.width;
+          const by = boundingBox.top    * canvas.height;
+          const bw = boundingBox.width  * canvas.width;
+          const bh = boundingBox.height * canvas.height;
+          const x = Math.max(0, bx - bw * 0.05);
+          const y = Math.max(0, by - bh * 0.05);
+          const w = Math.min(canvas.width  - x, bw * 1.1);
+          const h = Math.min(canvas.height - y, bh * 1.1);
 
           const color = status === 'employee'   ? '#ffffff'
                       : status === 'known'      ? (face.tier?.color || '#22c55e')
@@ -520,10 +524,14 @@ export default function HubScreen() {
     const clickX = (e.clientX - rect.left) * scaleX;
     const clickY = (e.clientY - rect.top)  * scaleY;
     const hit = liveFaces.find(face => {
-      const x = face.boundingBox.left  * canvas.width;
-      const y = face.boundingBox.top   * canvas.height;
-      const w = face.boundingBox.width * canvas.width;
-      const h = face.boundingBox.height * canvas.height;
+      const bx = face.boundingBox.left  * canvas.width;
+      const by = face.boundingBox.top   * canvas.height;
+      const bw = face.boundingBox.width * canvas.width;
+      const bh = face.boundingBox.height * canvas.height;
+      const x = Math.max(0, bx - bw * 0.05);
+      const y = Math.max(0, by - bh * 0.05);
+      const w = Math.min(canvas.width  - x, bw * 1.1);
+      const h = Math.min(canvas.height - y, bh * 1.1);
       return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
     });
     setSelectedFace(hit || null);

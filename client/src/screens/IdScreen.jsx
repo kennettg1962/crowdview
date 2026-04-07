@@ -292,6 +292,10 @@ export default function IdScreen() {
               }, {});
               return faces.map((face, i) => {
               const { left, top, width, height } = face.boundingBox;
+              const drawLeft   = Math.max(0, left   - width  * 0.05);
+              const drawTop    = Math.max(0, top    - height * 0.05);
+              const drawWidth  = Math.min(1 - drawLeft, width  * 1.1);
+              const drawHeight = Math.min(1 - drawTop,  height * 1.1);
               const color = face.status === 'known' && face.tier?.color ? face.tier.color : (STATUS_COLORS[face.status]?.border || '#ffffff');
               const isHovered = hoveredFaceIndex === i;
               const tooltipAttrs = buildTooltip(face);
@@ -307,10 +311,10 @@ export default function IdScreen() {
                   title={face.friendName || 'Unknown — click to add as friend'}
                   style={{
                     position: 'absolute',
-                    left:   `${left   * 100}%`,
-                    top:    `${top    * 100}%`,
-                    width:  `${width  * 100}%`,
-                    height: `${height * 100}%`,
+                    left:   `${drawLeft   * 100}%`,
+                    top:    `${drawTop    * 100}%`,
+                    width:  `${drawWidth  * 100}%`,
+                    height: `${drawHeight * 100}%`,
                     borderColor: color,
                     borderWidth: 2,
                     borderStyle: 'solid',

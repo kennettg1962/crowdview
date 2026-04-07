@@ -237,10 +237,14 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         facesWithCrops.forEach(face => {
           const { boundingBox, status, friendName } = face;
-          const x = offsetX + boundingBox.left   * displayW;
-          const y = offsetY + boundingBox.top    * displayH;
-          const w =           boundingBox.width  * displayW;
-          const h =           boundingBox.height * displayH;
+          const bx = offsetX + boundingBox.left   * displayW;
+          const by = offsetY + boundingBox.top    * displayH;
+          const bw =           boundingBox.width  * displayW;
+          const bh =           boundingBox.height * displayH;
+          const x = Math.max(0, bx - bw * 0.05);
+          const y = Math.max(0, by - bh * 0.05);
+          const w = Math.min(canvas.width  - x, bw * 1.1);
+          const h = Math.min(canvas.height - y, bh * 1.1);
           const color = status === 'known' && face.tier?.color ? face.tier.color : (STATUS_COLORS[status] || '#ffffff');
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
@@ -296,10 +300,14 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
             const clickY = e.clientY - rect.top;
             const { displayW, displayH, offsetX, offsetY } = displayParamsRef.current;
             const hit = liveFaces.find(face => {
-              const x = offsetX + face.boundingBox.left  * displayW;
-              const y = offsetY + face.boundingBox.top   * displayH;
-              const w =           face.boundingBox.width * displayW;
-              const h =           face.boundingBox.height * displayH;
+              const bx = offsetX + face.boundingBox.left  * displayW;
+              const by = offsetY + face.boundingBox.top   * displayH;
+              const bw =           face.boundingBox.width * displayW;
+              const bh =           face.boundingBox.height * displayH;
+              const x = Math.max(0, bx - bw * 0.05);
+              const y = Math.max(0, by - bh * 0.05);
+              const w = bw * 1.1;
+              const h = bh * 1.1;
               return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
             });
             if (hit) setLiveFacePopup(hit);
