@@ -31,7 +31,7 @@ export default function HelpTip({ text }) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-50 w-64 bg-gray-900 border border-gray-600 rounded-lg p-3 text-gray-300 text-xs leading-relaxed shadow-xl"
+            className="fixed z-50 w-64 bg-gray-900 border border-gray-600 rounded-lg p-3 text-gray-300 text-xs leading-relaxed shadow-xl normal-case"
             style={{ top: pos.top, left: pos.left }}
           >
             {text}
