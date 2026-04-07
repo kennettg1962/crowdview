@@ -138,7 +138,7 @@ async function searchFace(buf) {
 
   // Return all candidates above a low floor — the route applies per-context thresholds
   return results
-    .filter(s => s.similarity >= 0.70)
+    .filter(s => s.similarity >= 0.65)
     .map(s => ({
       Similarity: s.similarity * 100,
       Face: {

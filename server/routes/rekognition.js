@@ -104,15 +104,15 @@ router.post('/identify', auth, async (req, res) => {
       const empPrefix = req.user.parentOrganizationId ? `org${req.user.parentOrganizationId}_emp` : null;
 
       const userMatches = matches.filter(m =>
-        orgPrefixes.some(p => m.Face.ExternalImageId.startsWith(p)) && m.Similarity >= 70
+        orgPrefixes.some(p => m.Face.ExternalImageId.startsWith(p)) && m.Similarity >= 65
       );
       const employeeMatches = empPrefix
-        ? matches.filter(m => m.Face.ExternalImageId.startsWith(empPrefix) && m.Similarity >= 70)
+        ? matches.filter(m => m.Face.ExternalImageId.startsWith(empPrefix) && m.Similarity >= 65)
         : [];
       const fofMatches = matches.filter(m =>
         !orgPrefixes.some(p => m.Face.ExternalImageId.startsWith(p)) &&
         (!empPrefix || !m.Face.ExternalImageId.startsWith(empPrefix)) &&
-        m.Similarity >= 72
+        m.Similarity >= 65
       );
       console.log(`[identify] userMatches: ${userMatches.length}, employeeMatches: ${employeeMatches.length}, fofMatches: ${fofMatches.length}`);
 
