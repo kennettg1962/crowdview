@@ -506,7 +506,7 @@ export default function HubScreen() {
         api.post('/api/media', fd).catch(console.error);
       }, 'image/jpeg', 0.92);
     }).catch(console.error);
-    showResult(dataUrl, { saveToLibrary: true });
+    showResult(dataUrl, { saveToLibrary: false });
   }, [captureMode, mediaStream, getCaptureFrame, showResult]);
 
   function handleStream() { if (isStreaming) startWhipStream(mediaStream); }
