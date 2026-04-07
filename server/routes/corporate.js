@@ -618,6 +618,8 @@ router.get('/friends/dashboard', async (req, res) => {
       `SELECT f.Friend_Id      AS friendId,
               f.Name_Txt       AS friendName,
               u.Name_Txt       AS ownerName,
+              t.Tier_Name_Txt  AS tierName,
+              t.Tier_Color_Txt AS tierColor,
               COUNT(DISTINCT CASE WHEN a.Attendance_Dt >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
                                   THEN a.Attendance_Dt END) AS weekCount,
               COUNT(DISTINCT CASE WHEN a.Attendance_Dt >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
@@ -627,8 +629,9 @@ router.get('/friends/dashboard', async (req, res) => {
          FROM Friend f
          JOIN User u ON u.User_Id = f.User_Id
          LEFT JOIN Friend_Attendance a ON a.Friend_Id = f.Friend_Id
+         LEFT JOIN Organization_Customer_Tier t ON t.Tier_Id = f.Customer_Tier_Id
         WHERE u.Parent_Organization_Id = ?
-        GROUP BY f.Friend_Id, f.Name_Txt, u.Name_Txt
+        GROUP BY f.Friend_Id, f.Name_Txt, u.Name_Txt, t.Tier_Name_Txt, t.Tier_Color_Txt
         ORDER BY f.Name_Txt ASC`,
       [req.user.parentOrganizationId]
     );
