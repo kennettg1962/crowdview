@@ -5,7 +5,8 @@ import AppHeader from '../components/AppHeader';
 import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import FriendFormPopup from '../components/FriendFormPopup';
-import { MovieCameraIcon, PlusIcon, DeleteIcon, XIcon, SettingsIcon } from '../components/Icons';
+import GroupPhotoModal from '../components/GroupPhotoModal';
+import { MovieCameraIcon, PlusIcon, DeleteIcon, XIcon, SettingsIcon, UsersIcon } from '../components/Icons';
 import AuthImage from '../components/AuthImage';
 import api from '../api/api';
 
@@ -29,7 +30,13 @@ export default function ManageFriendsScreen() {
   const [isNew, setIsNew] = useState(false);
   const [deletingFriend, setDeletingFriend] = useState(null);
   const [capturedFaceUrl, setCapturedFaceUrl] = useState(null);
-  const fileInputRef = useRef(null);
+  const fileInputRef      = useRef(null);
+  const groupPhotoRef     = useRef(null);
+
+  // Group photo state
+  const [groupPhotoFaces,    setGroupPhotoFaces]    = useState(null);
+  const [groupPhotoImageUrl, setGroupPhotoImageUrl] = useState(null);
+  const [groupPhotoLoading,  setGroupPhotoLoading]  = useState(false);
 
   // Tiers
   const [tiers, setTiers]             = useState([]);
@@ -118,6 +125,44 @@ export default function ManageFriendsScreen() {
 
   function handleAddNew() { fileInputRef.current?.click(); }
 
+  function handleGroupPhotoClick() { groupPhotoRef.current?.click(); }
+
+  async function handleGroupPhotoSelected(e) {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+
+    // Resize to max 1280px wide
+    const imageDataUrl = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxW = 1280;
+          const scale = Math.min(1, maxW / img.naturalWidth);
+          const canvas = document.createElement('canvas');
+          canvas.width  = Math.round(img.naturalWidth  * scale);
+          canvas.height = Math.round(img.naturalHeight * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    setGroupPhotoLoading(true);
+    try {
+      const res = await api.post('/api/rekognition/identify', { imageData: imageDataUrl });
+      setGroupPhotoImageUrl(imageDataUrl);
+      setGroupPhotoFaces(res.data.faces || []);
+    } catch (err) {
+      console.error('Group photo identify failed', err);
+    } finally {
+      setGroupPhotoLoading(false);
+    }
+  }
+
   async function handleFileSelected(e) {
     const file = e.target.files[0];
     e.target.value = '';
@@ -171,7 +216,8 @@ export default function ManageFriendsScreen() {
 
   return (
     <div className="bg-slate-700 min-h-screen flex flex-col">
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
+      <input ref={fileInputRef}   type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
+      <input ref={groupPhotoRef}  type="file" accept="image/*" className="hidden" onChange={handleGroupPhotoSelected} />
 
       <AppHeader
         left={
@@ -190,9 +236,17 @@ export default function ManageFriendsScreen() {
               </button>
             )}
             {activeTab === 'customers' && (
-              <button onClick={handleAddNew} title={`Add ${Noun}`} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
-                <PlusIcon className="w-[30px] h-[30px]" />
-              </button>
+              <>
+                <button onClick={handleGroupPhotoClick} disabled={groupPhotoLoading} title="Add from group photo"
+                  className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700 disabled:opacity-40">
+                  {groupPhotoLoading
+                    ? <div className="w-[26px] h-[26px] flex items-center justify-center"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400" /></div>
+                    : <UsersIcon className="w-[26px] h-[26px]" />}
+                </button>
+                <button onClick={handleAddNew} title={`Add ${Noun}`} className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-700">
+                  <PlusIcon className="w-[30px] h-[30px]" />
+                </button>
+              </>
             )}
           </div>
         }
@@ -396,6 +450,16 @@ export default function ManageFriendsScreen() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Group photo modal */}
+      {groupPhotoFaces && (
+        <GroupPhotoModal
+          faces={groupPhotoFaces}
+          imageDataUrl={groupPhotoImageUrl}
+          onClose={() => { setGroupPhotoFaces(null); setGroupPhotoImageUrl(null); }}
+          onDone={() => { setGroupPhotoFaces(null); setGroupPhotoImageUrl(null); loadFriends(); }}
+        />
       )}
 
       {/* Tier management modal */}
