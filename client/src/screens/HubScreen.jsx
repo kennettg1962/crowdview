@@ -129,11 +129,11 @@ export default function HubScreen() {
     if (autoConnectAttempted.current) return;
     autoConnectAttempted.current = true;
     try {
-      let videoConstraint = true;
+      let videoConstraint = { width: { ideal: 1920 }, height: { ideal: 1080 } };
       try {
         const profile = await api.get('/api/users/profile');
         if (profile.data.Last_Source_Device_Id) {
-          videoConstraint = { deviceId: { ideal: profile.data.Last_Source_Device_Id } };
+          videoConstraint = { deviceId: { ideal: profile.data.Last_Source_Device_Id }, width: { ideal: 1920 }, height: { ideal: 1080 } };
         }
       } catch { /* non-fatal */ }
       // Probe audio devices before requesting the full stream so we can ask for
@@ -212,7 +212,7 @@ export default function HubScreen() {
       // Carry existing audio tracks into the new stream
       const oldAudioTracks = mediaStream ? mediaStream.getAudioTracks() : [];
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: device.deviceId } },
+        video: { deviceId: { exact: device.deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
       });
       oldAudioTracks.forEach(t => newStream.addTrack(t));
       if (mediaStream) mediaStream.getVideoTracks().forEach(t => t.stop());
@@ -482,14 +482,18 @@ export default function HubScreen() {
 
   const handleId = useCallback(async () => {
     if (captureMode === 'phone' && (!videoRef.current || !mediaStream)) return;
-    const capture = await getCaptureFrame(1280, 0.82).catch(() => null);
+    // 1280px capture for face recognition (keeps network payload small)
+    const capture = await getCaptureFrame(1280).catch(() => null);
     if (!capture) return;
     const dataUrl = capture.toDataURL('image/jpeg', 0.82);
-    capture.toBlob(blob => {
-      const fd = new FormData();
-      fd.append('media', blob, 'photo.jpg');
-      api.post('/api/media', fd).catch(console.error);
-    }, 'image/jpeg', 0.82);
+    // Full native-resolution capture for library save
+    getCaptureFrame(9999).then(full => {
+      full.toBlob(blob => {
+        const fd = new FormData();
+        fd.append('media', blob, 'photo.jpg');
+        api.post('/api/media', fd).catch(console.error);
+      }, 'image/jpeg', 0.92);
+    }).catch(console.error);
     showResult(dataUrl, { saveToLibrary: true });
   }, [captureMode, mediaStream, getCaptureFrame, showResult]);
 
