@@ -51,14 +51,30 @@ router.post('/identify', auth, async (req, res) => {
     }
     const orgPrefixes = orgUserIds.map(id => `u${id}_`);
 
-    // Build friends-of-friends map (individual users only — not needed for corporate)
+    // Build friends-of-friends map (individual users only — not needed for corporate).
+    // Bi-directional: includes both users the current user has linked to (outgoing)
+    // AND users who have linked to the current user (incoming).
+    // Outgoing entries take precedence (they carry the user's own label for that person).
     const friendUserMap = {};
     if (!req.user.parentOrganizationId) {
-      const [linkedFriends] = await pool.execute(
+      // Incoming: users who added the current user as a linked friend
+      const [incomingLinks] = await pool.execute(
+        `SELECT f.User_Id AS linked_uid, u.Name_Txt AS display_name
+           FROM Friend f
+           JOIN User u ON u.User_Id = f.User_Id
+          WHERE f.Friend_User_Id = ?`,
+        [userId]
+      );
+      for (const row of incomingLinks) {
+        friendUserMap[row.linked_uid] = { name: row.display_name || 'a friend' };
+      }
+
+      // Outgoing: users the current user has explicitly linked to (overrides incoming if both)
+      const [outgoingLinks] = await pool.execute(
         'SELECT Friend_User_Id, Name_Txt FROM Friend WHERE User_Id = ? AND Friend_User_Id IS NOT NULL',
         [userId]
       );
-      for (const row of linkedFriends) {
+      for (const row of outgoingLinks) {
         friendUserMap[row.Friend_User_Id] = { name: row.Name_Txt };
       }
     }
