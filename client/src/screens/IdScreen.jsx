@@ -209,7 +209,7 @@ export default function IdScreen() {
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg text-sm flex-wrap justify-center">
                 <span className="text-gray-300 font-medium">{faces.length} face{faces.length !== 1 ? 's' : ''} found</span>
                 <span className="text-gray-600">·</span>
-                <span className="text-green-400">{faces.filter(f => f.status === 'known').length} friend{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
+                <span className="text-green-400">{faces.filter(f => f.status === 'known').length} {isCorporate ? 'customer' : 'friend'}{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
                 <span className="text-gray-600">·</span>
                 <span className="text-orange-400">{faces.filter(f => f.status === 'identified').length} identified</span>
                 <span className="text-gray-600">·</span>
@@ -238,7 +238,7 @@ export default function IdScreen() {
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 rounded-lg text-xs whitespace-nowrap">
                 <span className="text-white font-semibold">{faces.length} face{faces.length !== 1 ? 's' : ''}</span>
                 <span className="text-white/40">·</span>
-                <span className="text-green-400">{faces.filter(f => f.status === 'known').length} friend{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
+                <span className="text-green-400">{faces.filter(f => f.status === 'known').length} {isCorporate ? 'customer' : 'friend'}{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
                 <span className="text-white/40">·</span>
                 <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
               </div>
@@ -308,7 +308,7 @@ export default function IdScreen() {
                   onMouseLeave={() => setHoveredFaceIndex(null)}
                   onClick={() => { setContextMenu(null); handleFaceClick(face, i); }}
                   onContextMenu={e => handleFaceRightClick(e, face, i)}
-                  title={face.friendName || 'Unknown — click to add as friend'}
+                  title={face.friendName || `Unknown — click to add as ${isCorporate ? 'customer' : 'friend'}`}
                   style={{
                     position: 'absolute',
                     left:   `${drawLeft   * 100}%`,
@@ -348,7 +348,7 @@ export default function IdScreen() {
                         <p key={j} className="text-gray-300">{attr}</p>
                       ))}
                       <p className="text-gray-500 mt-1 italic">
-                        {face.status === 'known' ? 'Click to view / edit' : face.status === 'unknown' ? 'Click to add · Right-click to assign to existing friend' : 'Click to view'}
+                        {face.status === 'known' ? 'Click to view / edit' : face.status === 'employee' ? 'Click to view' : face.status === 'unknown' ? `Click to add · Right-click to assign to existing ${isCorporate ? 'customer' : 'friend'}` : 'Click to view'}
                       </p>
                     </div>
                   )}
@@ -384,7 +384,7 @@ export default function IdScreen() {
               onClick={handleAddPhotoToFriend}
               className="w-full px-4 py-2 text-sm text-white hover:bg-gray-700 text-left"
             >
-              Add photo to existing friend
+              Add photo to existing {isCorporate ? 'customer' : 'friend'}
             </button>
           </div>
         </>
