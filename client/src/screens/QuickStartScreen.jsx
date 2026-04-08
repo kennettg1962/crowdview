@@ -63,6 +63,37 @@ export default function QuickStartScreen() {
             </p>
           </div>
 
+          {/* How to Quick Start */}
+          <div className="bg-gray-800 rounded-xl p-5 space-y-3">
+            <h2 className="text-white font-semibold text-base">How to quick start</h2>
+            <ol className="space-y-2">
+              {[
+                'Sign up for a free trial using the free trial link on our website crowdview.tv.',
+                'Set up your front desk location (PC and outward-facing camera) and add a front desk user.',
+                'Seed the customer database with names and photos (optional).',
+                'Log in at your front desk using your front desk user account.',
+                'Use the Id icon or Live icon on the hub screen to identify customers as they approach the front desk.',
+                'For each unknown customer, click on the face photo that appears on the hub, add their name and status tier (optional).',
+                "That's it! Next time they are seen by a camera in our system they will be identified.",
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-gray-300">
+                  <span className="text-blue-400 font-semibold flex-shrink-0 w-4">{i + 1}.</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+            <div className="pt-1 space-y-2 border-t border-gray-700">
+              {[
+                'If you want to link our system to yours (e.g. to bring up customer schedules) contact us and we\'ll get it done.',
+                'If you want to track employees, go to the Employees tab and add a name and photo for each employee — they will be identified each time they are viewed by a camera.',
+                'If you want a back-office person to also view the front desk feed, add a back-office user and sign in with that account at another PC or laptop.',
+              ].map((note, i) => (
+                <p key={i} className="text-gray-400 text-sm leading-relaxed">{note}</p>
+              ))}
+            </div>
+            <p className="text-gray-500 text-sm">Check out the guide below for more information.</p>
+          </div>
+
           {/* Contents */}
           <div className="bg-gray-800 rounded-xl p-5">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-3">In this guide</p>
