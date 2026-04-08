@@ -73,7 +73,7 @@ export default function QuickStartScreen() {
                 'Seed the customer database with names and photos (optional).',
                 'Log in at your front desk using your front desk user account.',
                 'Use the Id icon or Live icon on the hub screen to identify customers as they approach the front desk.',
-                'For each unknown customer, click on the face photo that appears on the hub, add their name and status tier (optional).',
+                'For each unknown customer, click on the face photo that appears on the hub, add their name and status tier (optional), and Save.',
                 "That's it! Next time they are seen by a camera in our system they will be identified.",
               ].map((step, i) => (
                 <li key={i} className="flex items-start gap-2.5 text-sm text-gray-300">
