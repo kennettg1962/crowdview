@@ -398,7 +398,7 @@ export default function IdScreen() {
             const face = showAddPhotoPopup.face;
             setFaces(prev => prev.map(f =>
               f.faceId === face.faceId
-                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId, friendGroup: saved.group }
+                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId, friendGroup: saved.group, tier: saved.tier || null }
                 : f
             ));
           }}
@@ -414,7 +414,7 @@ export default function IdScreen() {
             if (!saved || !activeFace) return;
             setFaces(prev => prev.map(f =>
               f.faceId === activeFace.faceId
-                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId }
+                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId, tier: saved.tier || null }
                 : f
             ));
           }}

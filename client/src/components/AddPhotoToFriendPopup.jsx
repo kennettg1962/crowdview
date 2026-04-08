@@ -29,7 +29,8 @@ export default function AddPhotoToFriendPopup({ faceCrop, onClose, onSave }) {
       const formData = new FormData();
       formData.append('photo', blob, 'face.jpg');
       await api.post(`/api/friends/${friend.Friend_Id}/photos`, formData);
-      onSave({ friendId: friend.Friend_Id, name: friend.Name_Txt, group: friend.Friend_Group });
+      const tier = friend.Tier_Color ? { color: friend.Tier_Color, name: friend.Tier_Name } : null;
+      onSave({ friendId: friend.Friend_Id, name: friend.Name_Txt, group: friend.Friend_Group, tier });
       onClose();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add photo');

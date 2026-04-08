@@ -96,9 +96,11 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true);
     try {
+      const selectedTier = tierId ? tiers.find(t => t.tierId === tierId) : null;
+      const tierPayload = selectedTier ? { id: selectedTier.tierId, name: selectedTier.name, color: selectedTier.color } : null;
       if (friend?.Friend_Id) {
         await api.put(`/api/friends/${friend.Friend_Id}`, { name: name.trim(), note, group, tierId: tierId || null });
-        onSave && onSave({ name: name.trim(), friendId: friend.Friend_Id });
+        onSave && onSave({ name: name.trim(), friendId: friend.Friend_Id, tier: tierPayload });
       } else {
         const res = await api.post('/api/friends', { name: name.trim(), note, group, tierId: tierId || null });
         const newId = res.data?.friendId;
@@ -114,7 +116,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
             await api.post(`/api/friends/${newId}/photos`, formData);
           }
         }
-        onSave && onSave({ name: name.trim(), friendId: newId });
+        onSave && onSave({ name: name.trim(), friendId: newId, tier: tierPayload });
       }
       onClose();
     } catch (err) {
