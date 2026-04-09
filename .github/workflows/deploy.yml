@@ -71,5 +71,5 @@ jobs:
 
             # update crowdviewtv.com marketing site
             mkdir -p /var/www/crowdviewtv
-            cp /var/www/crowdview/marketing/index.html /var/www/crowdviewtv/index.html
+            cp -r /var/www/crowdview/marketing/. /var/www/crowdviewtv/
           EOF
