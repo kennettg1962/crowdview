@@ -11,10 +11,30 @@ const { detectActivity, deviceHeartbeat, DETECT_TTL, HEARTBEAT_TTL, sessionDetec
 // All routes require auth + operations role
 router.use(auth, operationsAdmin);
 
+const TOKENS_PER_CALL = 100;
+
+const TIER_ALLOTMENTS = {
+  trial:      1000,
+  starter:    20000,
+  growth:     60000,
+  pro:        175000,
+  enterprise: 9999999,
+};
+
 // ---------------------------------------------------------------------------
 // Shared helper: build device list for a given orgId (mirrors corporate dashboard)
 // ---------------------------------------------------------------------------
 async function buildOrgDashboard(orgId) {
+  // Fetch plan fields
+  const [orgRows] = await pool.execute(
+    `SELECT COALESCE(Plan_Tier_Txt, 'trial') AS Plan_Tier_Txt,
+            COALESCE(Token_Allotment_Int, 1000) AS Token_Allotment_Int,
+            Plan_Renews_Dt
+       FROM Organization WHERE Organization_Id = ?`,
+    [orgId]
+  );
+  const orgPlan = orgRows[0] || { Plan_Tier_Txt: 'trial', Token_Allotment_Int: 1000, Plan_Renews_Dt: null };
+
   const [users] = await pool.execute(
     `SELECT User_Id, Name_Txt, Email, Corporate_Admin_Fl,
             Detect_Month_Count, Detect_Month_Ref,
@@ -61,7 +81,15 @@ async function buildOrgDashboard(orgId) {
     };
   });
 
+  const monthRawCalls = devices.reduce((sum, d) => sum + d.monthCount, 0);
+  const tokensUsed    = Math.floor(monthRawCalls / TOKENS_PER_CALL);
+
   return {
+    planTier:      orgPlan.Plan_Tier_Txt,
+    allotment:     orgPlan.Token_Allotment_Int,
+    planRenewsDt:  orgPlan.Plan_Renews_Dt,
+    tokensUsed,
+    monthRawCalls,
     activeDetects: devices.filter(d => d.status === 'detecting').length,
     liveStreams:   liveUserIds.size,
     activeDevices: devices.filter(d => d.status !== 'offline').length,
@@ -75,18 +103,30 @@ async function buildOrgDashboard(orgId) {
 // ---------------------------------------------------------------------------
 router.get('/dashboard', async (req, res) => {
   try {
-    const [orgs] = await pool.execute(
-      'SELECT Organization_Id, Organization_Name_Txt FROM Organization ORDER BY Organization_Name_Txt'
+    const now      = new Date();
+    const monthRef = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    // Single query: org plan fields + org-level month raw call total
+    const [orgRows] = await pool.execute(
+      `SELECT o.Organization_Id,
+              o.Organization_Name_Txt,
+              COALESCE(o.Plan_Tier_Txt, 'trial')   AS Plan_Tier_Txt,
+              COALESCE(o.Token_Allotment_Int, 1000) AS Token_Allotment_Int,
+              COALESCE(SUM(CASE WHEN u.Detect_Month_Ref = ? THEN u.Detect_Month_Count ELSE 0 END), 0) AS Month_Raw_Calls
+         FROM Organization o
+         LEFT JOIN User u ON u.Parent_Organization_Id = o.Organization_Id
+        GROUP BY o.Organization_Id
+        ORDER BY o.Organization_Name_Txt`,
+      [monthRef]
     );
 
-    const summaries = await Promise.all(orgs.map(async org => {
+    const summaries = await Promise.all(orgRows.map(async org => {
       const orgId = org.Organization_Id;
 
       const [users] = await pool.execute(
         'SELECT User_Id FROM User WHERE Parent_Organization_Id = ?',
         [orgId]
       );
-
       const [streams] = await pool.execute(
         `SELECT s.User_Id FROM Stream s
            JOIN User u ON u.User_Id = s.User_Id
@@ -97,19 +137,24 @@ router.get('/dashboard', async (req, res) => {
 
       let activeDetects = 0;
       let activeDevices = 0;
-
       for (const u of users) {
         const detecting = detectActivity.has(u.User_Id)  && (Date.now() - detectActivity.get(u.User_Id))  < DETECT_TTL;
         const active    = deviceHeartbeat.has(u.User_Id) && (Date.now() - deviceHeartbeat.get(u.User_Id)) < HEARTBEAT_TTL;
         const streaming = liveUserIds.has(u.User_Id);
-
-        if (detecting)                           activeDetects++;
-        if (detecting || streaming || active)    activeDevices++;
+        if (detecting)                        activeDetects++;
+        if (detecting || streaming || active) activeDevices++;
       }
+
+      const monthRawCalls = Number(org.Month_Raw_Calls);
+      const tokensUsed    = Math.floor(monthRawCalls / TOKENS_PER_CALL);
 
       return {
         orgId:         orgId,
         orgName:       org.Organization_Name_Txt,
+        planTier:      org.Plan_Tier_Txt,
+        allotment:     org.Token_Allotment_Int,
+        tokensUsed,
+        monthRawCalls,
         activeDetects,
         liveStreams:   liveUserIds.size,
         activeDevices,
@@ -321,6 +366,32 @@ router.put('/orgs/:id', async (req, res) => {
     res.json({ message: 'Organization updated' });
   } catch (err) {
     console.error('ops update org error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/operations/orgs/:id/plan  — set plan tier + token allotment
+// ---------------------------------------------------------------------------
+router.put('/orgs/:id/plan', async (req, res) => {
+  const orgId = Number(req.params.id);
+  if (!orgId) return res.status(400).json({ error: 'Invalid orgId' });
+
+  const { planTier, tokenAllotment } = req.body;
+  if (!planTier) return res.status(400).json({ error: 'planTier required' });
+
+  const allotment = tokenAllotment != null
+    ? Number(tokenAllotment)
+    : (TIER_ALLOTMENTS[planTier] ?? 1000);
+
+  try {
+    await pool.execute(
+      'UPDATE Organization SET Plan_Tier_Txt = ?, Token_Allotment_Int = ? WHERE Organization_Id = ?',
+      [planTier, allotment, orgId]
+    );
+    res.json({ planTier, tokenAllotment: allotment });
+  } catch (err) {
+    console.error('ops update plan error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

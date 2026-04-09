@@ -14,6 +14,28 @@ const STATUS = {
   offline:   { label: 'Offline',   color: 'bg-gray-600',  text: 'text-gray-500' },
 };
 
+const TIER_CONFIG = {
+  trial:      { label: 'Trial',      bg: 'bg-gray-600',   text: 'text-gray-200'   },
+  starter:    { label: 'Starter',    bg: 'bg-blue-700',   text: 'text-blue-200'   },
+  growth:     { label: 'Growth',     bg: 'bg-green-700',  text: 'text-green-200'  },
+  pro:        { label: 'Pro',        bg: 'bg-purple-700', text: 'text-purple-200' },
+  enterprise: { label: 'Enterprise', bg: 'bg-amber-600',  text: 'text-amber-100'  },
+};
+
+function fmt(n) {
+  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k';
+  return String(n);
+}
+
+function TierBadge({ tier }) {
+  const t = TIER_CONFIG[tier] || TIER_CONFIG.trial;
+  return (
+    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${t.bg} ${t.text}`}>
+      {t.label}
+    </span>
+  );
+}
+
 function StatCard({ label, value, accent }) {
   return (
     <div className={`flex-1 bg-gray-800 rounded-xl px-4 py-3 flex flex-col items-center gap-1 border-t-2 ${accent}`}>
@@ -56,12 +78,14 @@ export default function OperationsDashboardScreen() {
   // Totals across all orgs
   const totals = orgs.reduce(
     (acc, org) => ({
-      activeDetects: acc.activeDetects + org.activeDetects,
-      liveStreams:   acc.liveStreams   + org.liveStreams,
-      activeDevices: acc.activeDevices + org.activeDevices,
-      totalUsers:    acc.totalUsers    + org.totalUsers,
+      activeDetects:  acc.activeDetects  + org.activeDetects,
+      liveStreams:    acc.liveStreams     + org.liveStreams,
+      activeDevices:  acc.activeDevices  + org.activeDevices,
+      totalUsers:     acc.totalUsers     + org.totalUsers,
+      tokensUsed:     acc.tokensUsed     + (org.tokensUsed     || 0),
+      monthRawCalls:  acc.monthRawCalls  + (org.monthRawCalls  || 0),
     }),
-    { activeDetects: 0, liveStreams: 0, activeDevices: 0, totalUsers: 0 }
+    { activeDetects: 0, liveStreams: 0, activeDevices: 0, totalUsers: 0, tokensUsed: 0, monthRawCalls: 0 }
   );
 
   const tabs = [
@@ -107,10 +131,14 @@ export default function OperationsDashboardScreen() {
           <>
             {/* Global summary counters */}
             <div className="flex gap-3">
-              <StatCard label="Total Live"      value={totals.activeDetects}  accent="border-green-500" />
-              <StatCard label="Total Streaming" value={totals.liveStreams}     accent="border-red-500"   />
-              <StatCard label="Total Active"    value={totals.activeDevices}  accent="border-blue-500"  />
-              <StatCard label="Total Users"     value={totals.totalUsers}     accent="border-gray-600"  />
+              <StatCard label="Total Live"      value={totals.activeDetects}            accent="border-green-500"  />
+              <StatCard label="Total Streaming" value={totals.liveStreams}              accent="border-red-500"    />
+              <StatCard label="Total Active"    value={totals.activeDevices}            accent="border-blue-500"   />
+              <StatCard label="Total Users"     value={totals.totalUsers}              accent="border-gray-600"   />
+            </div>
+            <div className="flex gap-3">
+              <StatCard label="Tokens This Month" value={fmt(totals.tokensUsed)}       accent="border-purple-500" />
+              <StatCard label="Raw Calls / Month"  value={fmt(totals.monthRawCalls)}   accent="border-gray-700"   />
             </div>
 
             {/* Last refresh */}
@@ -135,9 +163,28 @@ export default function OperationsDashboardScreen() {
                       onClick={() => navigate(`/operations/org/${org.orgId}`, { state: { orgName: org.orgName } })}
                       className="w-full flex items-center px-4 py-3 gap-3 hover:bg-gray-700/50 transition-colors text-left"
                     >
-                      {/* Org name */}
+                      {/* Org name + tier + token usage */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{org.orgName}</p>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <p className="text-sm font-semibold text-white truncate">{org.orgName}</p>
+                          <TierBadge tier={org.planTier} />
+                        </div>
+                        {org.allotment > 0 && (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 max-w-[120px] h-1 bg-gray-700 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  (org.tokensUsed / org.allotment) >= 0.9 ? 'bg-red-500'
+                                  : (org.tokensUsed / org.allotment) >= 0.7 ? 'bg-amber-400'
+                                  : 'bg-purple-500'}`}
+                                style={{ width: `${Math.min(100, Math.round((org.tokensUsed / org.allotment) * 100))}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                              {fmt(org.tokensUsed)} / {fmt(org.allotment)} tkns
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Mini stat pills */}

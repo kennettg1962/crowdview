@@ -14,6 +14,19 @@ const STATUS = {
   offline:   { label: 'Offline',   color: 'bg-gray-600',  text: 'text-gray-500' },
 };
 
+const TIER_CONFIG = {
+  trial:      { label: 'Trial',      bg: 'bg-gray-600',   text: 'text-gray-200',   allotment: 1000    },
+  starter:    { label: 'Starter',    bg: 'bg-blue-700',   text: 'text-blue-200',   allotment: 20000   },
+  growth:     { label: 'Growth',     bg: 'bg-green-700',  text: 'text-green-200',  allotment: 60000   },
+  pro:        { label: 'Pro',        bg: 'bg-purple-700', text: 'text-purple-200', allotment: 175000  },
+  enterprise: { label: 'Enterprise', bg: 'bg-amber-600',  text: 'text-amber-100',  allotment: 9999999 },
+};
+
+function fmt(n) {
+  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k';
+  return String(n);
+}
+
 function StatCard({ label, value, accent }) {
   return (
     <div className={`flex-1 bg-gray-800 rounded-xl px-4 py-3 flex flex-col items-center gap-1 border-t-2 ${accent}`}>
@@ -31,9 +44,12 @@ export default function OperationsOrgDetailScreen() {
   const Org     = orgSpelling.charAt(0).toUpperCase() + orgSpelling.slice(1);
   const orgName = location.state?.orgName || `${Org} ${orgId}`;
 
-  const [data, setData]       = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData]             = useState(null);
+  const [loading, setLoading]       = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [changingPlan, setChangingPlan] = useState(false);
+  const [selectedTier, setSelectedTier] = useState('');
+  const [planSaving, setPlanSaving]     = useState(false);
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -46,6 +62,20 @@ export default function OperationsOrgDetailScreen() {
       setLoading(false);
     }
   }, [orgId]);
+
+  async function savePlan() {
+    if (!selectedTier) return;
+    setPlanSaving(true);
+    try {
+      await api.put(`/api/operations/orgs/${orgId}/plan`, { planTier: selectedTier });
+      await fetchDashboard();
+      setChangingPlan(false);
+    } catch (err) {
+      console.error('plan update error:', err);
+    } finally {
+      setPlanSaving(false);
+    }
+  }
 
   useEffect(() => {
     fetchDashboard();
@@ -74,6 +104,75 @@ export default function OperationsOrgDetailScreen() {
           <p className="text-center text-gray-500 mt-12">Unable to load dashboard</p>
         ) : (
           <>
+            {/* Plan card */}
+            {(() => {
+              const tier = TIER_CONFIG[data.planTier] || TIER_CONFIG.trial;
+              const pct  = data.allotment > 0 ? Math.min(100, Math.round((data.tokensUsed / data.allotment) * 100)) : 0;
+              const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-400' : 'bg-purple-500';
+              return (
+                <div className="bg-gray-800 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-300">Plan</span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${tier.bg} ${tier.text}`}>
+                        {tier.label}
+                      </span>
+                    </div>
+                    {!changingPlan ? (
+                      <button
+                        onClick={() => { setSelectedTier(data.planTier); setChangingPlan(true); }}
+                        className="text-xs text-blue-400 hover:text-blue-300"
+                      >
+                        Change plan
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={selectedTier}
+                          onChange={e => setSelectedTier(e.target.value)}
+                          className="bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-600 focus:outline-none"
+                        >
+                          {Object.entries(TIER_CONFIG).map(([key, t]) => (
+                            <option key={key} value={key}>{t.label}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={savePlan}
+                          disabled={planSaving}
+                          className="text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-2 py-1 rounded"
+                        >
+                          {planSaving ? '…' : 'Save'}
+                        </button>
+                        <button
+                          onClick={() => setChangingPlan(false)}
+                          className="text-xs text-gray-400 hover:text-gray-200"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Token usage */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>Tokens this month</span>
+                      <span className="text-white font-medium">
+                        {data.tokensUsed.toLocaleString()} / {data.allotment.toLocaleString()}
+                        <span className="text-gray-500 ml-1">({pct}%)</span>
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="text-[11px] text-gray-500">
+                      {data.monthRawCalls.toLocaleString()} raw calls · 1 token = 100 calls
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Summary counters */}
             <div className="flex gap-3">
               <StatCard label="Live"       value={data.activeDetects}  accent="border-green-500" />

@@ -9,6 +9,10 @@ const alterations = [
   { table: 'User',         column: 'Email_Verified_Fl',         definition: "CHAR(1) DEFAULT 'N'" },
   { table: 'User',         column: 'Email_Verify_Token_Txt',    definition: 'VARCHAR(255) NULL' },
   { table: 'User',         column: 'Email_Verify_Expires_Dt',   definition: 'DATETIME NULL' },
+  // Plan / billing fields on Organization
+  { table: 'Organization', column: 'Plan_Tier_Txt',             definition: "VARCHAR(20) DEFAULT 'trial'" },
+  { table: 'Organization', column: 'Token_Allotment_Int',       definition: 'INT DEFAULT 1000' },
+  { table: 'Organization', column: 'Plan_Renews_Dt',            definition: 'DATE NULL' },
 ];
 
 (async () => {

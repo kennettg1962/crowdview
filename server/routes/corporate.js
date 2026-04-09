@@ -171,6 +171,16 @@ router.get('/dashboard', async (req, res) => {
   try {
     const orgId = req.user.parentOrganizationId;
 
+    // Org plan fields
+    const [orgRows] = await pool.execute(
+      `SELECT COALESCE(Plan_Tier_Txt, 'trial') AS Plan_Tier_Txt,
+              COALESCE(Token_Allotment_Int, 1000) AS Token_Allotment_Int,
+              Plan_Renews_Dt
+         FROM Organization WHERE Organization_Id = ?`,
+      [orgId]
+    );
+    const orgPlan = orgRows[0] || { Plan_Tier_Txt: 'trial', Token_Allotment_Int: 1000, Plan_Renews_Dt: null };
+
     // All users in the org (include detect counters)
     const [users] = await pool.execute(
       `SELECT User_Id, Name_Txt, Email, Corporate_Admin_Fl,
@@ -221,7 +231,15 @@ router.get('/dashboard', async (req, res) => {
       };
     });
 
+    const monthRawCalls = devices.reduce((sum, d) => sum + d.monthCount, 0);
+    const tokensUsed    = Math.floor(monthRawCalls / 100);
+
     res.json({
+      planTier:      orgPlan.Plan_Tier_Txt,
+      allotment:     orgPlan.Token_Allotment_Int,
+      planRenewsDt:  orgPlan.Plan_Renews_Dt,
+      tokensUsed,
+      monthRawCalls,
       activeDetects:  devices.filter(d => d.status === 'detecting').length,
       liveStreams:    liveUserIds.size,
       activeDevices:  devices.filter(d => d.status !== 'offline').length,

@@ -14,6 +14,14 @@ const STATUS = {
   offline:   { label: 'Offline',    color: 'bg-gray-600',   text: 'text-gray-500'  },
 };
 
+const TIER_CONFIG = {
+  trial:      { label: 'Trial',      bg: 'bg-gray-600',   text: 'text-gray-200'   },
+  starter:    { label: 'Starter',    bg: 'bg-blue-700',   text: 'text-blue-200'   },
+  growth:     { label: 'Growth',     bg: 'bg-green-700',  text: 'text-green-200'  },
+  pro:        { label: 'Pro',        bg: 'bg-purple-700', text: 'text-purple-200' },
+  enterprise: { label: 'Enterprise', bg: 'bg-amber-600',  text: 'text-amber-100'  },
+};
+
 function StatCard({ label, value, accent }) {
   return (
     <div className={`flex-1 bg-gray-800 rounded-xl px-4 py-3 flex flex-col items-center gap-1 border-t-2 ${accent}`}>
@@ -97,11 +105,41 @@ export default function CorporateDashboardScreen() {
           <>
             {/* Summary counters */}
             <div className="flex gap-3">
-              <StatCard label="Live"        value={data.activeDetects}  accent="border-green-500" />
+              <StatCard label="Live"       value={data.activeDetects}  accent="border-green-500" />
               <StatCard label="Streaming"  value={data.liveStreams}     accent="border-red-500"   />
               <StatCard label="Active"     value={data.activeDevices}  accent="border-blue-500"  />
               <StatCard label="Users"      value={data.totalUsers}     accent="border-gray-600"  />
             </div>
+
+            {/* Token usage panel */}
+            {(() => {
+              const tier = TIER_CONFIG[data.planTier] || TIER_CONFIG.trial;
+              const pct  = data.allotment > 0 ? Math.min(100, Math.round((data.tokensUsed / data.allotment) * 100)) : 0;
+              const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-400' : 'bg-purple-500';
+              return (
+                <div className="bg-gray-800 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-gray-300">Face Detection Usage</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${tier.bg} ${tier.text}`}>
+                      {tier.label}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>Tokens this month</span>
+                    <span className="text-white font-medium">
+                      {(data.tokensUsed || 0).toLocaleString()} / {(data.allotment || 0).toLocaleString()}
+                      <span className="text-gray-500 ml-1">({pct}%)</span>
+                    </span>
+                  </div>
+                  <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    {(data.monthRawCalls || 0).toLocaleString()} raw detection calls this month · 1 token = 100 calls
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* Last refresh */}
             {lastRefresh && (
