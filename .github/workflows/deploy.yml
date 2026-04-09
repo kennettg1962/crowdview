@@ -68,4 +68,8 @@ jobs:
 
             # save pm2 state (so it restarts on reboot)
             pm2 save
+
+            # update crowdviewtv.com marketing site
+            mkdir -p /var/www/crowdviewtv
+            cp /var/www/crowdview/marketing/index.html /var/www/crowdviewtv/index.html
           EOF
