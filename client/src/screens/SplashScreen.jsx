@@ -74,9 +74,8 @@ export default function SplashScreen() {
     if (password !== confirmPassword) { setError('Passwords do not match'); return; }
     setLoading(true); setError('');
     try {
-      const res = await api.post('/api/auth/signup', { email, password, name });
-      login({ userId: res.data.userId, email: res.data.email, name: res.data.name, parentOrganizationId: null, corporateAdminFl: 'N' }, res.data.token);
-      navigate('/hub', { replace: true });
+      await api.post('/api/auth/signup', { email, password, name });
+      navigate('/verify-email?pending=1', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Sign up failed. Please try again.');
     } finally {

@@ -194,12 +194,37 @@ router.post('/signup', async (req, res) => {
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
   try {
     const hash = await bcrypt.hash(password, 10);
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const [result] = await pool.execute(
-      "INSERT INTO User (Email, Password_Hash, Name_Txt, Email_Verified_Fl) VALUES (?, ?, ?, 'Y')",
-      [email.toLowerCase(), hash, name || '']
+      "INSERT INTO User (Email, Password_Hash, Name_Txt, Email_Verified_Fl, Email_Verify_Token_Txt, Email_Verify_Expires_Dt) VALUES (?, ?, ?, 'N', ?, ?)",
+      [email.toLowerCase(), hash, name || '', verifyToken, verifyExpires]
     );
-    const token = jwt.sign({ userId: result.insertId, email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_INDIVIDUAL });
-    res.status(201).json({ token, userId: result.insertId, email, name: name || '' });
+    const clientUrl = process.env.CLIENT_URL || 'https://crowdview.tv';
+    const verifyUrl = `${clientUrl}/verify-email?token=${verifyToken}`;
+    try {
+      await sendMail({
+        to: email,
+        subject: 'CrowdView – Verify your email address',
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:auto;">
+            <h2 style="color:#0052ff;">Welcome to CrowdView!</h2>
+            <p>Hi ${name || ''},</p>
+            <p>Please verify your email address to activate your account:</p>
+            <p style="margin:24px 0;">
+              <a href="${verifyUrl}"
+                 style="background:#0052ff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">
+                Verify my email
+              </a>
+            </p>
+            <p style="color:#666;font-size:13px;">This link expires in 24 hours.</p>
+          </div>
+        `
+      });
+    } catch (emailErr) {
+      console.error('Signup verification email failed:', emailErr.message);
+    }
+    res.status(201).json({ message: 'Account created. Please check your email to verify your address.' });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Email already registered' });
     console.error(err);
