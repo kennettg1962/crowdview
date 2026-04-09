@@ -37,6 +37,17 @@ const alterations = [
         console.log(`ℹ️  ${table}.${column} already exists, skipping`);
       }
     }
+    // Mark all pre-existing users (no pending verify token) as verified.
+    // Covers everyone created before the email-verification system was introduced.
+    const [fix] = await conn.execute(
+      `UPDATE User SET Email_Verified_Fl = 'Y'
+        WHERE (Email_Verified_Fl IS NULL OR Email_Verified_Fl = 'N')
+          AND Email_Verify_Token_Txt IS NULL`
+    );
+    if (fix.affectedRows > 0) {
+      console.log(`✅ Verified ${fix.affectedRows} pre-existing user(s)`);
+    }
+
     console.log('✅ DB migration complete');
   } finally {
     await conn.end();

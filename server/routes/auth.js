@@ -137,6 +137,56 @@ router.get('/verify-email', async (req, res) => {
   }
 });
 
+// POST /api/auth/resend-verification
+router.post('/resend-verification', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  try {
+    const [rows] = await pool.execute(
+      "SELECT User_Id, Name_Txt FROM User WHERE Email = ? AND Email_Verified_Fl = 'N'",
+      [email.toLowerCase()]
+    );
+    // Always respond with success to prevent enumeration
+    if (!rows.length) return res.json({ message: 'If that email is awaiting verification, a new link has been sent.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await pool.execute(
+      'UPDATE User SET Email_Verify_Token_Txt = ?, Email_Verify_Expires_Dt = ? WHERE User_Id = ?',
+      [token, expires, rows[0].User_Id]
+    );
+
+    const clientUrl = process.env.CLIENT_URL || 'https://crowdview.tv';
+    const verifyUrl = `${clientUrl}/verify-email?token=${token}`;
+    try {
+      await sendMail({
+        to: email,
+        subject: 'CrowdView – Verify your email address',
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:auto;">
+            <h2 style="color:#0052ff;">Verify your email</h2>
+            <p>Hi ${rows[0].Name_Txt || ''},</p>
+            <p>Here is your new verification link:</p>
+            <p style="margin:24px 0;">
+              <a href="${verifyUrl}"
+                 style="background:#0052ff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">
+                Verify my email
+              </a>
+            </p>
+            <p style="color:#666;font-size:13px;">This link expires in 24 hours.</p>
+          </div>
+        `
+      });
+    } catch (emailErr) {
+      console.error('Resend verification email failed:', emailErr.message);
+    }
+    res.json({ message: 'If that email is awaiting verification, a new link has been sent.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   const { email, password, name } = req.body;
@@ -145,7 +195,7 @@ router.post('/signup', async (req, res) => {
   try {
     const hash = await bcrypt.hash(password, 10);
     const [result] = await pool.execute(
-      'INSERT INTO User (Email, Password_Hash, Name_Txt) VALUES (?, ?, ?)',
+      "INSERT INTO User (Email, Password_Hash, Name_Txt, Email_Verified_Fl) VALUES (?, ?, ?, 'Y')",
       [email.toLowerCase(), hash, name || '']
     );
     const token = jwt.sign({ userId: result.insertId, email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_INDIVIDUAL });

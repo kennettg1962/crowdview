@@ -18,6 +18,8 @@ export default function SplashScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showResend, setShowResend] = useState(false);
+  const [resending, setResending] = useState(false);
 
   React.useEffect(() => {
     if (isAuthenticated) navigate(isOperations ? '/operations/dashboard' : '/hub', { replace: true });
@@ -29,7 +31,22 @@ export default function SplashScreen() {
     setSuccess('');
     setPassword('');
     setConfirmPassword('');
+    setShowResend(false);
   };
+
+  async function handleResend() {
+    setResending(true);
+    try {
+      await api.post('/api/auth/resend-verification', { email });
+      setError('');
+      setShowResend(false);
+      setSuccess('Verification email sent — please check your inbox.');
+    } catch {
+      // silent — endpoint always returns 200
+    } finally {
+      setResending(false);
+    }
+  }
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -41,7 +58,9 @@ export default function SplashScreen() {
       login({ userId, email: userEmail, name: userName, lastSourceDeviceId, connectLastDevice, parentOrganizationId: parentOrganizationId || null, corporateAdminFl: corporateAdminFl || 'N', orgCountry: orgCountry || null }, token);
       navigate(corporateAdminFl === 'O' ? '/operations/dashboard' : '/hub', { replace: true });
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
+      const msg = err.response?.data?.error || 'Login failed. Please check your credentials.';
+      setError(msg);
+      setShowResend(err.response?.status === 403 && msg.includes('verify'));
     } finally {
       setLoading(false);
     }
@@ -123,7 +142,22 @@ export default function SplashScreen() {
                 Forgotten Password?
               </button>
             </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            {error && (
+              <div>
+                <p className="text-red-500 text-sm">{error}</p>
+                {showResend && (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resending}
+                    className="mt-1 text-blue-600 hover:text-blue-700 text-sm font-medium disabled:opacity-50"
+                  >
+                    {resending ? 'Sending…' : 'Resend verification email'}
+                  </button>
+                )}
+              </div>
+            )}
+            {success && <p className="text-green-600 text-sm">{success}</p>}
             <button
               type="submit"
               disabled={loading}
