@@ -60,7 +60,7 @@ function FloatButton({ icon: Icon, label, onClick, disabled, className = '', hel
   );
 }
 
-function FaceTile({ face, onView }) {
+function FaceTile({ face, onView, onRemove }) {
   const tierColor = face.status === 'known' && face.tier?.color ? face.tier.color : null;
   const accentClass = tierColor ? ''
                     : face.status === 'known'      ? 'border-green-500'
@@ -68,12 +68,23 @@ function FaceTile({ face, onView }) {
                     : face.status === 'employee'   ? 'border-white'
                     :                                'border-red-500';
   return (
-    <div className={`flex items-center gap-3 p-3 bg-gray-800 rounded-lg border-l-2 ${accentClass}`}
+    <div className={`relative flex items-center gap-3 p-3 bg-gray-800 rounded-lg border-l-2 ${accentClass}`}
          style={tierColor ? { borderLeftColor: tierColor } : undefined}>
+      {/* Dismiss button */}
+      <button
+        onClick={onRemove}
+        title="Dismiss"
+        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-400 hover:text-white flex items-center justify-center transition-colors"
+      >
+        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
       {face.cropDataUrl && (
         <img src={face.cropDataUrl} alt={face.friendName || 'Face'} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-600" />
       )}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pr-2">
         <p className="text-sm font-semibold text-white truncate">{face.friendName || 'Unknown'}</p>
         {face.note && <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{face.note}</p>}
       </div>
@@ -812,6 +823,7 @@ export default function HubScreen() {
                     key={face.friendId || face.employeeId || face.faceId || i}
                     face={face}
                     onView={() => setLiveFacePopup(face)}
+                    onRemove={() => setRecognizedFaces(prev => prev.filter((_, idx) => idx !== i))}
                   />
                 ))
               )}
