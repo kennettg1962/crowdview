@@ -586,16 +586,16 @@
       nav { padding: 0 24px; }
       .nav-links { display: none; }
       section { padding: 72px 24px; }
-      .hero { padding: 72px 24px 60px; }
       .features-grid { grid-template-columns: 1fr; }
       .steps { grid-template-columns: 1fr; }
       .steps::before { display: none; }
       .use-cases-grid { grid-template-columns: 1fr; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .hero-screen-body { grid-template-columns: 1fr; padding: 24px; }
       .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
       .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
       .cta-banner { padding: 48px 24px; }
+      #about .container > div { grid-template-columns: 1fr !important; }
+      #about .container > div > div:last-child { order: -1; }
     }
 
     @media (max-width: 576px) {
@@ -622,52 +622,53 @@
 </nav>
 
 <!-- ── HERO ── -->
-<section class="section-light" style="padding-bottom: 0;">
-  <div class="hero">
-    <div class="hero-badge"><div class="dot"></div>Real-time face recognition · Now available</div>
-    <h1 class="display">Know your customers<br><em>before they reach the door</em></h1>
-    <p class="hero-sub">CrowdView identifies faces in real time from any camera-equipped device — no hardware, no installation, just your browser.</p>
-    <div class="hero-actions">
-      <a href="https://crowdview.tv" class="btn btn-primary btn-lg">Start free trial</a>
-      <a href="/quickstart" class="btn btn-ghost btn-lg">Read the guide</a>
-    </div>
-  </div>
+<section class="section-light" id="about">
+  <div class="container">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:center;">
 
-  <!-- Browser mockup -->
-  <div style="padding: 0 48px 0; max-width: 1000px; margin: 48px auto 0;">
-    <div class="hero-visual">
-      <div class="hero-screen-bar">
-        <div class="dot-red"></div>
-        <div class="dot-amber"></div>
-        <div class="dot-green"></div>
-        <div class="url-bar">crowdview.tv/hub</div>
+      <!-- Left: text -->
+      <div>
+        <div class="hero-badge"><div class="dot"></div>Real-time face recognition · Now available</div>
+        <h1 class="display" style="font-size:clamp(36px,4.5vw,60px); margin-bottom:24px;">
+          Facial Recognition<br>applied to help <em>YOU</em>
+        </h1>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px; margin-bottom:40px;">
+          <li style="display:flex; align-items:flex-start; gap:12px;">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+              <svg width="11" height="8" viewBox="0 0 11 8" fill="none"><path d="M1 4l3 3 6-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span style="font-size:17px;color:var(--muted);line-height:1.55;">With strategic placement of cameras you can identify and check-in customers before they even get to a front desk.</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:12px;">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+              <svg width="11" height="8" viewBox="0 0 11 8" fill="none"><path d="M1 4l3 3 6-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span style="font-size:17px;color:var(--muted);line-height:1.55;">All you need is a PC or laptop with a forward-facing camera or webcam.</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:12px;">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+              <svg width="11" height="8" viewBox="0 0 11 8" fill="none"><path d="M1 4l3 3 6-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span style="font-size:17px;color:var(--muted);line-height:1.55;">Set up additional cameras as needed — no limit on devices.</span>
+          </li>
+          <li style="display:flex; align-items:flex-start; gap:12px;">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+              <svg width="11" height="8" viewBox="0 0 11 8" fill="none"><path d="M1 4l3 3 6-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span style="font-size:17px;color:var(--muted);line-height:1.55;">Wearable glasses for hands-free mobile recognition on the move.</span>
+          </li>
+        </ul>
+        <div class="hero-actions" style="justify-content:flex-start;">
+          <a href="https://crowdview.tv" class="btn btn-primary btn-lg">Start free trial</a>
+          <a href="/quickstart" class="btn btn-ghost btn-lg">Read the guide</a>
+        </div>
       </div>
-      <div class="hero-screen-body">
-        <div class="face-card" style="border-color:#a855f7;">
-          <div class="face-card-avatar">👤</div>
-          <div class="face-card-name">Graham Kennett</div>
-          <div class="face-card-tier" style="background:#a855f720;color:#a855f7;">VIP</div>
-          <div class="face-card-note">Member since 2023 · Table preference: window</div>
-        </div>
-        <div class="face-card" style="border-color:#f59e0b;">
-          <div class="face-card-avatar">👤</div>
-          <div class="face-card-name">Jessica Chen</div>
-          <div class="face-card-tier" style="background:#f59e0b20;color:#f59e0b;">Gold</div>
-          <div class="face-card-note">Allergies: nuts · Prefers sparkling water</div>
-        </div>
-        <div class="face-card" style="border-color:#9ca3af;">
-          <div class="face-card-avatar">👤</div>
-          <div class="face-card-name">Andrew Park</div>
-          <div class="face-card-tier" style="background:#9ca3af20;color:#9ca3af;">Silver</div>
-          <div class="face-card-note">Regular Thursday lunch · Loyalty points: 840</div>
-        </div>
-        <div class="face-card" style="border-color:#ef4444;">
-          <div class="face-card-avatar">❓</div>
-          <div class="face-card-name" style="color:#9ba3b0;">Unknown visitor</div>
-          <div class="face-card-tier" style="background:#ef444420;color:#ef4444;">New</div>
-          <div class="face-card-note">Click to add as customer</div>
-        </div>
+
+      <!-- Right: screenshot -->
+      <div style="border-radius:20px; overflow:hidden; border:1px solid var(--border); box-shadow:0 24px 64px rgba(0,0,0,0.10);">
+        <img src="hero.png" alt="CrowdView identifying faces in real time" style="width:100%; display:block;" />
       </div>
+
     </div>
   </div>
 </section>
