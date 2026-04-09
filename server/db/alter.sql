@@ -26,6 +26,11 @@ CREATE TABLE IF NOT EXISTS Stream (
 ALTER TABLE Stream ADD COLUMN Recording_File_Txt VARCHAR(500) NULL;
 ALTER TABLE Stream ADD COLUMN IF NOT EXISTS Encoding_Fl CHAR(1) DEFAULT 'N';
 
+-- Email verification (trial / self-signup flow)
+ALTER TABLE User ADD COLUMN IF NOT EXISTS Email_Verified_Fl CHAR(1) DEFAULT 'N';
+ALTER TABLE User ADD COLUMN IF NOT EXISTS Email_Verify_Token_Txt VARCHAR(255) NULL;
+ALTER TABLE User ADD COLUMN IF NOT EXISTS Email_Verify_Expires_Dt DATETIME NULL;
+
 -- Detection-call counters per user (session count is in-memory only)
 ALTER TABLE User ADD COLUMN IF NOT EXISTS Detect_Month_Count INT DEFAULT 0;
 ALTER TABLE User ADD COLUMN IF NOT EXISTS Detect_Month_Ref   CHAR(7) DEFAULT NULL;

@@ -11,6 +11,132 @@ const JWT_SECRET = process.env.JWT_SECRET || 'crowdview_secret';
 const JWT_EXPIRES_INDIVIDUAL = process.env.JWT_EXPIRES_IN || '7d';
 const JWT_EXPIRES_CORPORATE  = process.env.JWT_EXPIRES_IN_CORPORATE || '1d';
 
+// ── Shared email helper ──────────────────────────────────────────────────────
+async function sendMail({ to, subject, html }) {
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    });
+    await transporter.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, html });
+  } else {
+    console.log(`[Email] No SMTP configured. Would send to ${to}:\n${subject}`);
+  }
+}
+
+// POST /api/auth/register  — trial / self-signup (creates org + admin user)
+router.post('/register', async (req, res) => {
+  const {
+    organizationName, addressLn1, city, state, zipCd, country,
+    contactName, contactEmail, contactPhone,
+    password, confirmPassword
+  } = req.body;
+
+  if (!organizationName || !contactName || !contactEmail || !password) {
+    return res.status(400).json({ error: 'Organization name, contact name, email and password are required' });
+  }
+  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (password !== confirmPassword) return res.status(400).json({ error: 'Passwords do not match' });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Create organization
+    const [orgResult] = await conn.execute(
+      `INSERT INTO Organization
+         (Organization_Name_Txt, Contact_Address_Multi_Line_Txt, Contact_City_Txt,
+          Contact_State_Txt, Contact_Zip_Txt, Contact_Country_Txt,
+          Contact_Name_Txt, Contact_Email_Txt, Contact_Phone_Txt,
+          Created_At, Updated_At)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [
+        organizationName, addressLn1 || '', city || '', state || '',
+        zipCd || '', country || '',
+        contactName, contactEmail.toLowerCase(), contactPhone || ''
+      ]
+    );
+    const orgId = orgResult.insertId;
+
+    // Create admin user
+    const hash = await bcrypt.hash(password, 10);
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    const [userResult] = await conn.execute(
+      `INSERT INTO User
+         (Email, Password_Hash, Name_Txt, Parent_Organization_Id,
+          Corporate_Admin_Fl, Email_Verified_Fl, Email_Verify_Token_Txt, Email_Verify_Expires_Dt)
+       VALUES (?, ?, ?, ?, 'Y', 'N', ?, ?)`,
+      [contactEmail.toLowerCase(), hash, contactName, orgId, verifyToken, verifyExpires]
+    );
+
+    await conn.commit();
+
+    // Send verification email
+    const clientUrl = process.env.CLIENT_URL || 'https://crowdview.tv';
+    const verifyUrl = `${clientUrl}/verify-email?token=${verifyToken}`;
+    try {
+      await sendMail({
+        to: contactEmail,
+        subject: 'CrowdView – Verify your email address',
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:auto;">
+            <h2 style="color:#0052ff;">Welcome to CrowdView, ${contactName}!</h2>
+            <p>Your organisation <strong>${organizationName}</strong> has been created.</p>
+            <p>Please verify your email address to activate your account:</p>
+            <p style="margin:24px 0;">
+              <a href="${verifyUrl}"
+                 style="background:#0052ff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">
+                Verify my email
+              </a>
+            </p>
+            <p style="color:#666;font-size:13px;">This link expires in 24 hours. If you did not sign up for CrowdView, you can safely ignore this email.</p>
+          </div>
+        `
+      });
+    } catch (emailErr) {
+      console.error('Verification email failed:', emailErr.message);
+    }
+
+    res.status(201).json({ message: 'Account created. Please check your email to verify your address.' });
+  } catch (err) {
+    await conn.rollback();
+    if (err.code === 'ER_DUP_ENTRY') {
+      if (err.message.includes('Organization_Name')) return res.status(409).json({ error: 'An organisation with that name already exists' });
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    conn.release();
+  }
+});
+
+// GET /api/auth/verify-email?token=xxx
+router.get('/verify-email', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: 'Token required' });
+  try {
+    const [rows] = await pool.execute(
+      'SELECT User_Id FROM User WHERE Email_Verify_Token_Txt = ? AND Email_Verify_Expires_Dt > NOW()',
+      [token]
+    );
+    if (!rows.length) return res.status(400).json({ error: 'Invalid or expired verification link.' });
+    await pool.execute(
+      'UPDATE User SET Email_Verified_Fl = \'Y\', Email_Verify_Token_Txt = NULL, Email_Verify_Expires_Dt = NULL WHERE User_Id = ?',
+      [rows[0].User_Id]
+    );
+    res.json({ message: 'Email verified successfully. You can now log in.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   const { email, password, name } = req.body;
@@ -41,6 +167,11 @@ router.post('/login', async (req, res) => {
     const user = rows[0];
     const match = await bcrypt.compare(password, user.Password_Hash);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+
+    // Block unverified self-signup accounts (Email_Verified_Fl = 'N' only set by /register)
+    if (user.Email_Verified_Fl === 'N') {
+      return res.status(403).json({ error: 'Please verify your email address before logging in. Check your inbox for a verification link.' });
+    }
 
     // Fetch org country for spelling localisation (organisation vs organization)
     let orgCountry = null;
