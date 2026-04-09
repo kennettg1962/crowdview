@@ -840,10 +840,104 @@
     <p>Start your free trial today — no credit card required, no hardware to buy.</p>
     <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
       <a href="https://crowdview.tv" class="btn btn-white btn-xl">Start free trial</a>
-      <a href="mailto:hello@crowdview.tv" class="btn btn-outline-white btn-xl">Contact us</a>
+      <a href="#contact" class="btn btn-outline-white btn-xl">Contact us</a>
     </div>
   </div>
 </section>
+
+<!-- ── CONTACT ── -->
+<section class="section-gray" id="contact">
+  <div class="container" style="max-width:640px;">
+    <div class="section-label" style="text-align:center;">Contact Us</div>
+    <h2 class="section-heading" style="text-align:center; margin-bottom:12px;">Get in touch</h2>
+    <p style="text-align:center; color:var(--muted); font-size:17px; line-height:1.6; margin-bottom:40px;">
+      Have a question or want to see a demo? Drop us a message and we'll get back to you within one business day.
+    </p>
+
+    <!-- success / error banners -->
+    <div id="contact-success" style="display:none; background:#d1fae5; border:1px solid #6ee7b7; color:#065f46; border-radius:12px; padding:16px 20px; margin-bottom:24px; font-size:15px; text-align:center;">
+      Thanks! We'll be in touch soon.
+    </div>
+    <div id="contact-error" style="display:none; background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; border-radius:12px; padding:16px 20px; margin-bottom:24px; font-size:15px; text-align:center;">
+      Something went wrong — please try again or email <a href="mailto:contact@crowdviewtv.com" style="color:#991b1b; text-decoration:underline;">contact@crowdviewtv.com</a> directly.
+    </div>
+
+    <form id="contact-form" style="display:flex; flex-direction:column; gap:18px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label for="cf-name" style="font-size:14px; font-weight:600; color:var(--dark);">Full name</label>
+          <input id="cf-name" name="name" type="text" required placeholder="Jane Smith"
+            style="border:1.5px solid #d1d5db; border-radius:10px; padding:12px 14px; font-size:15px; outline:none; background:#fff; transition:border-color .15s;"
+            onfocus="this.style.borderColor='#0052ff'" onblur="this.style.borderColor='#d1d5db'">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label for="cf-email" style="font-size:14px; font-weight:600; color:var(--dark);">Email address</label>
+          <input id="cf-email" name="email" type="email" required placeholder="jane@company.com"
+            style="border:1.5px solid #d1d5db; border-radius:10px; padding:12px 14px; font-size:15px; outline:none; background:#fff; transition:border-color .15s;"
+            onfocus="this.style.borderColor='#0052ff'" onblur="this.style.borderColor='#d1d5db'">
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <label for="cf-company" style="font-size:14px; font-weight:600; color:var(--dark);">Company <span style="font-weight:400; color:var(--muted);">(optional)</span></label>
+        <input id="cf-company" name="company" type="text" placeholder="Acme Corp"
+          style="border:1.5px solid #d1d5db; border-radius:10px; padding:12px 14px; font-size:15px; outline:none; background:#fff; transition:border-color .15s;"
+          onfocus="this.style.borderColor='#0052ff'" onblur="this.style.borderColor='#d1d5db'">
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <label for="cf-message" style="font-size:14px; font-weight:600; color:var(--dark);">Message</label>
+        <textarea id="cf-message" name="message" required rows="5" placeholder="Tell us about your use case..."
+          style="border:1.5px solid #d1d5db; border-radius:10px; padding:12px 14px; font-size:15px; outline:none; background:#fff; resize:vertical; font-family:inherit; transition:border-color .15s;"
+          onfocus="this.style.borderColor='#0052ff'" onblur="this.style.borderColor='#d1d5db'"></textarea>
+      </div>
+      <button type="submit" id="contact-submit" class="btn btn-primary" style="align-self:flex-start; padding:14px 36px; font-size:16px;">
+        Send message
+      </button>
+    </form>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var FORM_ENDPOINT = 'https://formspree.io/f/YOUR_FORM_ID'; // ← replace with your Formspree form ID
+
+    document.getElementById('contact-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = document.getElementById('contact-submit');
+      var successEl = document.getElementById('contact-success');
+      var errorEl = document.getElementById('contact-error');
+      successEl.style.display = 'none';
+      errorEl.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+
+      var data = {
+        name: document.getElementById('cf-name').value,
+        email: document.getElementById('cf-email').value,
+        company: document.getElementById('cf-company').value,
+        message: document.getElementById('cf-message').value,
+      };
+
+      try {
+        var res = await fetch(FORM_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (res.ok) {
+          successEl.style.display = 'block';
+          document.getElementById('contact-form').reset();
+        } else {
+          throw new Error('non-ok');
+        }
+      } catch (_) {
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send message';
+      }
+    });
+  })();
+</script>
 
 <!-- ── FOOTER ── -->
 <footer>
