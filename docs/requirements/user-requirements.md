@@ -4,6 +4,18 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 
 ---
 
+## 2026-04-09
+
+### [2026-04-09] "For Individuals" marketing page — `#marketing #personal`
+- Create `marketing/personal.html` targeting individual users (not businesses)
+- Messaging: personal networking, social events, family gatherings, face blindness/prosopagnosia accessibility
+- Same design system as `index.html` (Coinbase-style, #0052ff, Inter font)
+- Add individual pricing tiers: Trial (free/200tkn), Personal ($5.99/500tkn), Plus ($12.99/1500tkn), Power ($24.99/5000tkn)
+- Add "For Business | For Individuals" toggle to nav on both pages
+- Contact form using same Formspree endpoint (xlgokkrr)
+
+---
+
 ## 2026-03-25
 
 ### [2026-03-25] Fix Capacitor iOS startup crash — `#ios #capacitor #bug`
