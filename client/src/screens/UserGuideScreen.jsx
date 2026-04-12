@@ -10,6 +10,7 @@ const SECTIONS = [
   { id: 'library',   label: 'Library' },
   { id: 'employees', label: 'Employees' },
   { id: 'platforms', label: 'Web vs Mobile vs Wearables' },
+  { id: 'glasses',   label: 'INMO Air 3 AR Glasses' },
 ];
 
 export default function UserGuideScreen() {
@@ -329,14 +330,16 @@ export default function UserGuideScreen() {
               ))}
             </div>
 
-            <H3>Wearables (Smart Glasses)</H3>
-            <P>Connect smart glasses to your phone or tablet and use the glasses camera as the CrowdView input source. The Hub Screen displays detection results on your device while the glasses provide a hands-free first-person view.</P>
+            <H3>Wearables (INMO Air 3 AR Glasses)</H3>
+            <P>The CrowdView AR app runs directly on the INMO Air 3 glasses. Launch it from the <strong>AR</strong> button on the Hub Screen of your Android phone — your session transfers automatically. The glasses camera scans the crowd and overlays coloured bounding boxes and names directly in your field of view, completely hands-free.</P>
             <div className="mt-2 space-y-1">
               {[
-                'Hands-free face detection and identification',
-                'Ideal for hospitality, events, and security staff on the floor',
-                'Results displayed on paired device (phone or tablet)',
-                'Switch sources instantly via the Source button',
+                'Full face detection and identification overlaid in AR',
+                'Entirely hands-free — full voice command set',
+                'Add and update contacts by voice without touching a screen',
+                'Pause and resume overlay on demand',
+                'Cycle through detected faces by voice',
+                'Compatible with INMO Air 3 only',
               ].map(f => (
                 <div key={f} className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-green-400 rounded-full flex-shrink-0" />
@@ -344,6 +347,7 @@ export default function UserGuideScreen() {
                 </div>
               ))}
             </div>
+            <P className="mt-2">See the <button onClick={() => scrollTo('glasses')} className="text-blue-400 hover:text-blue-300 underline">INMO Air 3 AR Glasses</button> section below for the full voice command reference.</P>
 
             <H3>Platform Feature Summary</H3>
             <div className="mt-3 overflow-x-auto">
@@ -366,7 +370,7 @@ export default function UserGuideScreen() {
                     ['Employee Management',   '✓', '✗', '✗'],
                     ['Library',               '✓', '✓', '✗'],
                     ['Dashboard',             '✓', '✓', '✗'],
-                    ['Voice Commands',        '✓', '✗', '✗'],
+                    ['Voice Commands',        '✓', '✗', '✓'],
                     ['Group Photo Import',    '✓', '✓', '✗'],
                   ].map(([feat, web, mob, glass]) => (
                     <tr key={feat}>
@@ -381,6 +385,110 @@ export default function UserGuideScreen() {
             </div>
 
             <Tip>For the best image quality and recognition accuracy, use a device with a high-resolution camera (12 MP or better) and ensure good, even lighting — avoid positioning cameras directly facing bright windows or light sources.</Tip>
+          </Section>
+
+          {/* ── 8 ── INMO Air 3 AR Glasses */}
+          <Section id="glasses" number="8" title="INMO Air 3 AR Glasses">
+            <P>The CrowdView AR app runs natively on the INMO Air 3 glasses and is controlled entirely by voice — no touchscreen required. It is a separate app from the main CrowdView phone app and must be installed on the glasses separately.</P>
+
+            <H3>Getting Started</H3>
+            <Steps>
+              <Step n="1">Install the CrowdViewAR app on your INMO Air 3 glasses.</Step>
+              <Step n="2">Open the CrowdView app on your paired Android phone and log in.</Step>
+              <Step n="3">On the Hub Screen, tap the blue <strong>AR</strong> button (glasses icon, top-left panel).</Step>
+              <Step n="4">Your session transfers automatically to the glasses — no separate login needed.</Step>
+              <Step n="5">Point the glasses camera at a crowd. Face detection begins immediately.</Step>
+            </Steps>
+
+            <H3>What You See</H3>
+            <P>Detected faces are outlined with coloured bounding boxes overlaid directly on your field of view. Each box is labelled with the person's name (or "Unknown" if not recognised). Box colour follows the same convention as the phone app:</P>
+            <div className="mt-2 space-y-1.5">
+              {[
+                ['bg-green-500',  'Green',  'Known contact'],
+                ['bg-orange-400', 'Orange', 'Identified via linked account'],
+                ['bg-white',      'White',  'Employee (corporate)'],
+                ['bg-red-500',    'Red',    'Unknown — not in database'],
+              ].map(([dot, label, desc]) => (
+                <div key={label} className="flex items-start gap-2.5">
+                  <div className={`w-3 h-3 rounded-full flex-shrink-0 mt-0.5 ${dot}`} />
+                  <span className="text-white text-sm font-medium w-20 flex-shrink-0">{label}</span>
+                  <span className="text-gray-400 text-sm">— {desc}</span>
+                </div>
+              ))}
+            </div>
+            <P>The selected face (after saying <strong>next</strong> or <strong>prev</strong>) is highlighted with a thicker outline, a subtle colour fill, and a ▶ prefix on its label.</P>
+
+            <H3>Voice Commands — Scanning</H3>
+            <div className="mt-2 space-y-2">
+              {[
+                ['scan',            'Capture the current frame and identify all faces in it.'],
+                ['pause',           'Hide the overlay and stop sending frames to the server. Says "Paused."'],
+                ['resume / unpause','Restore the overlay and resume scanning. Re-draws the last known faces instantly. Says "Resuming."'],
+                ['stop',            'Full stop — clears all overlays and face memory.'],
+              ].map(([cmd, desc]) => (
+                <div key={cmd} className="flex items-start gap-3">
+                  <code className="bg-gray-700 text-blue-300 text-xs font-mono px-2 py-0.5 rounded flex-shrink-0 mt-0.5 whitespace-nowrap">{cmd}</code>
+                  <p className="text-gray-300 text-sm">{desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <H3>Voice Commands — Cycling Faces</H3>
+            <P>After a scan you can step through each detected face one at a time. The glasses speak the name and status of each face as you land on it.</P>
+            <div className="mt-2 space-y-2">
+              {[
+                ['next',       'Move to the next detected face. Speaks its name and status.'],
+                ['prev / previous', 'Move back to the previous face.'],
+                ['clear',      'Deselect the current face.'],
+              ].map(([cmd, desc]) => (
+                <div key={cmd} className="flex items-start gap-3">
+                  <code className="bg-gray-700 text-blue-300 text-xs font-mono px-2 py-0.5 rounded flex-shrink-0 mt-0.5 whitespace-nowrap">{cmd}</code>
+                  <p className="text-gray-300 text-sm">{desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <H3>Voice Commands — Adding a Contact</H3>
+            <P>Two ways to add an unknown face as a new contact:</P>
+            <div className="mt-2 space-y-2 mb-3">
+              {[
+                ['add',                      'If a face is selected (via next/prev), starts the add flow for that face directly.'],
+                ['add unknown N',            'Starts the add flow for unknown face number N (1-based). Works without a selection.'],
+                ['add unknown N, Name, Group, save', 'Single-shot: adds the face in one command without a multi-turn conversation.'],
+              ].map(([cmd, desc]) => (
+                <div key={cmd} className="flex items-start gap-3">
+                  <code className="bg-gray-700 text-blue-300 text-xs font-mono px-2 py-0.5 rounded flex-shrink-0 mt-0.5 whitespace-nowrap">{cmd}</code>
+                  <p className="text-gray-300 text-sm">{desc}</p>
+                </div>
+              ))}
+            </div>
+            <P>Multi-turn add flow (after saying <strong>add</strong> or <strong>add unknown N</strong>):</P>
+            <Steps>
+              <Step n="1">Glasses ask: <em>"What's their name?"</em> — say the name.</Step>
+              <Step n="2">Glasses ask: <em>"What group?"</em> — say the group (e.g. "Family", "Work").</Step>
+              <Step n="3">Glasses confirm: <em>"Save [Name] to [Group]?"</em> — say <strong>save</strong> or <strong>yes</strong> to confirm, <strong>cancel</strong> or <strong>no</strong> to abort.</Step>
+            </Steps>
+
+            <H3>Voice Commands — Updating a Contact</H3>
+            <div className="mt-2 space-y-2">
+              {[
+                ['update Name, group NewGroup, save', 'Change the group for a known contact.'],
+                ['update Name, note New note text, save', 'Update the note for a known contact.'],
+              ].map(([cmd, desc]) => (
+                <div key={cmd} className="flex items-start gap-3">
+                  <code className="bg-gray-700 text-blue-300 text-xs font-mono px-2 py-0.5 rounded flex-shrink-0 mt-0.5 whitespace-nowrap">{cmd}</code>
+                  <p className="text-gray-300 text-sm">{desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <H3>Corporate Mode</H3>
+            <P>If you are logged in as a corporate user the AR app detects this automatically. Voice prompts adjust accordingly — the glasses will say <em>"What's the customer's name?"</em> and <em>"What department?"</em> instead of the individual-mode equivalents. Employee faces are outlined in white and cannot be added as contacts.</P>
+
+            <H3>Connectivity</H3>
+            <P>The glasses connect to the CrowdView server over WiFi 6. On a golf course or any location without a dedicated WiFi network, use your phone as a mobile hotspot — the glasses connect to it as a standard WiFi client with no additional configuration.</P>
+
+            <Tip>Say <strong>next</strong> after a scan to quickly hear who is in front of you before deciding whether to add anyone — it's faster than reading the overlay labels at a glance.</Tip>
           </Section>
 
           <div className="text-center pb-4">
