@@ -421,7 +421,8 @@ export default function UserGuideScreen() {
             <H3>Voice Commands — Scanning</H3>
             <div className="mt-2 space-y-2">
               {[
-                ['scan',            'Capture the current frame and identify all faces in it.'],
+                ['scan',            'Capture the current frame and identify all faces. Scanning continues automatically afterwards.'],
+                ['snap',            'Capture a still frame and identify all faces, then auto-pause. The overlay holds so you can review, step through, and add/update contacts without the display refreshing. Say "resume" when done.'],
                 ['pause',           'Hide the overlay and stop sending frames to the server. Says "Paused."'],
                 ['resume / unpause','Restore the overlay and resume scanning. Re-draws the last known faces instantly. Says "Resuming."'],
                 ['stop',            'Full stop — clears all overlays and face memory.'],
