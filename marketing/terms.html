@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — CrowdView</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230052ff'/%3E%3Cpath d='M8 20 L8 8 L20 8' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M44 8 L56 8 L56 20' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M8 44 L8 56 L20 56' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M44 56 L56 56 L56 44' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='32' cy='26' r='9' fill='none' stroke='white' stroke-width='3'/%3E%3Cpath d='M14 52 Q14 40 32 40 Q50 40 50 52' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:       #0052ff;
+      --blue-hover: #578bfa;
+      --blue-link:  #0667d0;
+      --dark:       #0a0b0d;
+      --dark-card:  #282b31;
+      --white:      #ffffff;
+      --gray-surf:  #eef0f3;
+      --border:     rgba(91,97,110,0.2);
+      --text:       #0a0b0d;
+      --muted:      #5b616e;
+      --font:       'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--white);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ──────────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 48px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+    .nav-logo span { color: var(--blue); }
+
+    .nav-right { display: flex; align-items: center; gap: 24px; }
+    .nav-right a {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .nav-right a:hover { color: var(--text); }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--blue);
+      color: var(--white);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 9px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--blue-hover); }
+
+    /* ── HERO ─────────────────────────────────────────────── */
+    .page-hero {
+      background: var(--dark);
+      padding: 72px 48px 56px;
+      text-align: center;
+    }
+    .page-hero .label {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--blue-hover);
+      margin-bottom: 16px;
+    }
+    .page-hero h1 {
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .page-hero p {
+      font-size: 16px;
+      color: #9ba3b0;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ── CONTENT ──────────────────────────────────────────── */
+    .content-wrap {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 64px 48px 96px;
+    }
+
+    .effective-date {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tos-section {
+      margin-bottom: 40px;
+    }
+
+    .tos-section h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 12px;
+    }
+
+    .tos-section p {
+      font-size: 15px;
+      color: #3a3f4a;
+      margin-bottom: 10px;
+    }
+
+    .tos-section ul, .tos-section ol {
+      padding-left: 22px;
+      margin: 10px 0 10px;
+    }
+
+    .tos-section li {
+      font-size: 15px;
+      color: #3a3f4a;
+      margin-bottom: 6px;
+    }
+
+    .tos-section strong { color: var(--dark); }
+
+    .callout {
+      background: var(--gray-surf);
+      border-left: 4px solid var(--blue);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    footer {
+      background: var(--dark);
+      color: #9ba3b0;
+      padding: 56px 48px 32px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px;
+      margin-bottom: 48px;
+    }
+
+    .footer-brand .nav-logo { color: var(--white); }
+    .footer-brand p {
+      margin-top: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 240px;
+    }
+
+    .footer-col h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+
+    .footer-col a {
+      font-size: 14px;
+      color: #9ba3b0;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-col a:hover { color: var(--white); }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .footer-bottom a { color: #9ba3b0; text-decoration: none; }
+    .footer-bottom a:hover { color: var(--white); }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 24px; }
+      .page-hero { padding: 56px 24px 40px; }
+      .content-wrap { padding: 40px 24px 72px; }
+      .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+      .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+      footer { padding: 40px 24px 24px; }
+    }
+
+    @media (max-width: 480px) {
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a href="index.html" class="nav-logo">Crowd<span>View</span></a>
+  <div class="nav-right">
+    <a href="index.html">Business</a>
+    <a href="personal.html">Personal</a>
+    <a href="https://crowdview.tv" class="btn-primary">Sign in</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="page-hero">
+  <span class="label">Legal</span>
+  <h1>Terms of Service</h1>
+  <p>Please read these terms carefully before using CrowdView. By creating an account or using the Service you agree to be bound by them.</p>
+</div>
+
+<!-- ── CONTENT ── -->
+<div class="content-wrap">
+
+  <p class="effective-date">Effective date: April 12, 2026 &nbsp;·&nbsp; Last updated: April 12, 2026</p>
+
+  <div class="tos-section">
+    <h2>1. Who We Are</h2>
+    <p>CrowdView ("<strong>we</strong>", "<strong>us</strong>", or "<strong>our</strong>") operates the CrowdView application and website at <strong>crowdview.tv</strong> (the "<strong>Service</strong>"). These Terms of Service ("<strong>Terms</strong>") govern your access to and use of the Service.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>2. Eligibility</h2>
+    <p>You must be at least 18 years old to use the Service. By creating an account you represent that you meet this requirement and that all information you provide is accurate and complete.</p>
+    <p>Corporate accounts are provisioned by CrowdView administrators only. There is no self-service organisation sign-up.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>3. Your Account</h2>
+    <p>You are responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. Notify us immediately at the contact address below if you believe your account has been compromised.</p>
+    <p>You may not share your account with others or create accounts on behalf of third parties without our written consent.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>4. Acceptable Use</h2>
+    <p>You agree to use the Service only for lawful purposes and in accordance with these Terms. You must not:</p>
+    <ul>
+      <li>Use the Service to identify individuals without their knowledge or consent in contexts where such identification would violate applicable law.</li>
+      <li>Enroll face photographs of individuals who have not consented to being identified through the Service.</li>
+      <li>Use the Service to harass, stalk, intimidate, or harm any person.</li>
+      <li>Attempt to circumvent any security or access control measures.</li>
+      <li>Reverse engineer, decompile, or attempt to extract source code from the Service.</li>
+      <li>Use automated scripts, bots, or other non-human means to access the Service except through our published APIs.</li>
+      <li>Resell or sublicense access to the Service without our written consent.</li>
+    </ul>
+  </div>
+
+  <div class="tos-section">
+    <h2>5. Face Recognition and Biometric Data</h2>
+    <p>The Service uses face recognition technology. By uploading face photographs you acknowledge and agree that:</p>
+    <ul>
+      <li>You have obtained any consent required by applicable law from the individuals whose faces you upload.</li>
+      <li>Face photographs and associated recognition data are stored on our servers and used solely to provide recognition results to you or your organisation. They are not sold, licensed, or shared with third parties.</li>
+      <li>You may delete any face photograph at any time. Deletion removes the associated recognition data from our systems.</li>
+      <li>We do not use your face data to train general-purpose AI models.</li>
+    </ul>
+    <div class="callout">
+      <strong>Note on biometric laws:</strong> Some jurisdictions (e.g. Illinois BIPA, Texas CUBI, Washington My Health MY Data Act) impose specific requirements around the collection and use of biometric identifiers. You are solely responsible for ensuring your use of the Service complies with any such laws applicable to you and the individuals you enroll.
+    </div>
+  </div>
+
+  <div class="tos-section">
+    <h2>6. Content and Data Ownership</h2>
+    <p>You retain ownership of all photographs, videos, and other content you upload to the Service ("<strong>Your Content</strong>"). By uploading Your Content you grant us a limited, non-exclusive licence to store and process it solely for the purpose of providing the Service to you.</p>
+    <p>We do not claim any ownership rights in Your Content. We will not access, use, or disclose Your Content except as necessary to operate the Service or as required by law.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>7. Data Retention and Storage Limits</h2>
+    <p>The Service applies the following limits to keep storage manageable:</p>
+    <ul>
+      <li><strong>Media library</strong> — the 20 most recent photos and video clips are retained per account. Older items are automatically deleted when new ones are uploaded.</li>
+      <li><strong>Stream history (corporate)</strong> — past stream records are capped at 200 per organisation. Older records are deleted automatically when the cap is exceeded.</li>
+      <li><strong>Video uploads</strong> — individual video clips are limited to 50 MB.</li>
+    </ul>
+    <p>We reserve the right to adjust these limits with reasonable notice.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>8. Live Streaming</h2>
+    <p>The Service includes a live-streaming feature that allows you to broadcast your camera feed to friends or organisation members on the platform. You are solely responsible for the content of your streams and must not broadcast content that is unlawful, obscene, defamatory, or infringes third-party rights.</p>
+    <p>Stream keys are unique to your account and must be kept confidential. You must not share your stream key with unauthorised parties.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>9. AR Glasses Compatibility</h2>
+    <p>The AR glasses experience within CrowdView is currently compatible with the <strong>INMO Air 3</strong> only. Use of the AR feature with any other device is not supported and may produce unexpected results. We make no warranty that the AR feature will be available for any other device or that compatibility will be extended in the future.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>10. Third-Party Services</h2>
+    <p>The Service may integrate with or link to third-party services (including face recognition infrastructure and live-streaming relay servers). We are not responsible for the availability, accuracy, or practices of any third-party service. Your use of third-party services is governed by their own terms and privacy policies.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>11. Availability and Changes</h2>
+    <p>We aim to keep the Service available at all times but make no guarantee of uptime. We may modify, suspend, or discontinue the Service (or any part of it) at any time with or without notice.</p>
+    <p>We may update these Terms from time to time. Material changes will be communicated by updating the "Last updated" date above. Continued use of the Service after changes take effect constitutes acceptance of the revised Terms.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>12. Disclaimer of Warranties</h2>
+    <p>The Service is provided "<strong>as is</strong>" and "<strong>as available</strong>" without warranties of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement.</p>
+    <p>We do not warrant that face recognition results will be accurate, complete, or error-free. Recognition technology has known limitations and should not be relied upon as the sole means of identification in any critical context.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>13. Limitation of Liability</h2>
+    <p>To the fullest extent permitted by applicable law, CrowdView and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, goodwill, or other intangible losses, arising out of or in connection with your use of the Service.</p>
+    <p>Our total aggregate liability to you for any claim arising out of or relating to these Terms or the Service shall not exceed the greater of (a) the amount you paid us in the twelve months preceding the claim or (b) USD $50.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>14. Indemnification</h2>
+    <p>You agree to indemnify, defend, and hold harmless CrowdView and its operators from and against any claims, liabilities, damages, losses, and expenses (including reasonable legal fees) arising out of or in any way connected with your access to or use of the Service, your violation of these Terms, or your violation of any rights of another person or entity.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>15. Termination</h2>
+    <p>We may suspend or terminate your account at any time if we reasonably believe you have violated these Terms or applicable law. You may delete your account at any time by contacting us at the address below. Upon termination, your right to use the Service ceases immediately and we will delete your data in accordance with our Privacy Policy.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>16. Governing Law</h2>
+    <p>These Terms are governed by the laws of the State of Connecticut, United States, without regard to its conflict-of-law provisions. Any disputes arising under these Terms shall be resolved exclusively in the state or federal courts located in Connecticut, and you consent to personal jurisdiction in those courts.</p>
+  </div>
+
+  <div class="tos-section">
+    <h2>17. Contact</h2>
+    <p>Questions about these Terms? Contact us at:</p>
+    <p style="margin-top:8px;"><strong>CrowdView</strong><br>
+    <a href="mailto:support@crowdview.tv" style="color:var(--blue-link);">support@crowdview.tv</a><br>
+    crowdview.tv</p>
+  </div>
+
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="index.html" class="nav-logo">Crowd<span>View</span></a>
+      <p>Real-time face recognition for individuals and businesses. Put a name to every face — every time.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <ul>
+        <li><a href="index.html">For Business</a></li>
+        <li><a href="personal.html">For Individuals</a></li>
+        <li><a href="https://crowdview.tv">Sign in</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Docs</h4>
+      <ul>
+        <li><a href="https://crowdview.tv/quickstart">Quick start</a></li>
+        <li><a href="https://crowdview.tv/guide">User guide</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="https://crowdview.tv/privacy">Privacy policy</a></li>
+        <li><a href="terms.html">Terms of service</a></li>
+        <li><a href="index.html#contact">Contact us</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 CrowdView. All rights reserved.</span>
+    <span style="color:#5b616e; font-size:13px;">🕶 AR glasses compatible: INMO Air 3 only</span>
+    <div style="display:flex; gap:24px;">
+      <a href="https://crowdview.tv/privacy">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="index.html#contact">Contact</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
