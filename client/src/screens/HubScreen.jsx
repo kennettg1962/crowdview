@@ -14,7 +14,7 @@ import {
   FriendsIcon, LibraryIcon, BackIcon,
   IdIcon, ActionIcon, CutIcon, MicIcon,
   MovieCameraIcon, StreamIcon, StopCircleIcon, VideoOffIcon, LiveScanIcon, FlipCameraIcon,
-  HomeIcon, BroadcastIcon, UserProfileIcon, LogoutIcon, UsersIcon,
+  HomeIcon, BroadcastIcon, UserProfileIcon, LogoutIcon, UsersIcon, GlassesIcon,
 } from '../components/Icons';
 import api from '../api/api';
 import HelpTip from '../components/HelpTip';
@@ -523,6 +523,14 @@ export default function HubScreen() {
   function handleStream() { if (isStreaming) startWhipStream(mediaStream); }
   function handleStopStream() { stopWhipStream(); }
 
+  function launchArGlasses() {
+    const token = sessionStorage.getItem('cv_token');
+    if (!token) return;
+    // Opens the CrowdViewAR Unity app on the paired Android glasses.
+    // Android intercepts the custom scheme and routes it via Intent to the Unity app.
+    window.open(`inmocrowdview://auth?token=${encodeURIComponent(token)}`);
+  }
+
   useVoiceCommands({
     screen: 'hub',
     commands: {
@@ -685,6 +693,12 @@ export default function HubScreen() {
               )}
             </>
           )}
+          {isNative && (
+            <>
+              <div className="mx-3 border-t border-slate-600" />
+              <SideButton icon={GlassesIcon} label="AR Glasses" onClick={launchArGlasses} className="text-blue-300 hover:bg-slate-600" />
+            </>
+          )}
         </div>
 
         {/* Video column — full width on mobile, percentage on desktop */}
@@ -748,6 +762,12 @@ export default function HubScreen() {
               <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-lg animate-pulse" helpText={HELP_LIVE} />
             ) : (
               <FloatButton icon={LiveScanIcon} label="Live" onClick={() => { setLiveScan(true); setLiveScanInitializing(true); }} disabled={!canId} className="text-white hover:bg-white/20" helpText={HELP_LIVE} />
+            )}
+            {isNative && (
+              <>
+                <div className="border-l border-white/20 my-1" />
+                <FloatButton icon={GlassesIcon} label="AR" onClick={launchArGlasses} className="text-blue-300 hover:bg-white/20" />
+              </>
             )}
           </div>
 
