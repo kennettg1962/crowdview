@@ -864,17 +864,6 @@ export default function HubScreen() {
             ) : (
               <FloatButton icon={LiveScanIcon} label="Live" onClick={startLiveScan} disabled={!canId || (!isCorporate && subscription?.canUseLive === false)} className="text-white hover:bg-white/20" helpText={HELP_LIVE} />
             )}
-            {(isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
-              <>
-                <div className="border-l border-white/20 my-1" />
-                <FloatButton
-                  icon={MicIcon}
-                  label="Meta"
-                  onClick={() => setIsMetaMode(m => !m)}
-                  className={isMetaMode ? 'text-white bg-purple-700 hover:bg-purple-600 rounded-lg animate-pulse' : 'text-purple-300 hover:bg-white/20'}
-                />
-              </>
-            )}
           </div>
 
           {/* Mobile — top-right: Action/Cut + Stream (horizontal), friend bubbles below */}
@@ -923,11 +912,22 @@ export default function HubScreen() {
             <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
           </div>
 
-          {/* Mobile — bottom-right: AR Glasses (Plus/Power/Corporate only, native only) */}
-          {isNative && (isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
-            <div className={`${showMob} absolute right-3 z-20 bg-black/35 rounded-xl p-1.5`}
+          {/* Mobile — bottom-right: AR Glasses + Meta voice (Plus/Power/Corporate only) */}
+          {(isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
+            <div className={`${showMob} absolute right-3 z-20 bg-black/35 rounded-xl p-1.5 gap-0.5`}
                  style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
-              <FloatButton icon={GlassesIcon} label="AR" onClick={launchArGlasses} className="text-blue-300 hover:bg-white/20" />
+              {isNative && (
+                <>
+                  <FloatButton icon={GlassesIcon} label="AR" onClick={launchArGlasses} className="text-blue-300 hover:bg-white/20" />
+                  <div className="border-l border-white/20 my-1" />
+                </>
+              )}
+              <FloatButton
+                icon={MicIcon}
+                label="Meta"
+                onClick={() => setIsMetaMode(m => !m)}
+                className={isMetaMode ? 'text-white bg-purple-700 hover:bg-purple-600 rounded-lg animate-pulse' : 'text-purple-300 hover:bg-white/20'}
+              />
             </div>
           )}
         </div>
