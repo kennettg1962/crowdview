@@ -20,8 +20,11 @@ export default function useVoiceCommands({ screen, commands = {} }) {
       GlassesSDK.speak(text);
       return;
     }
-    // WKWebView's SpeechSynthesis conflicts with the active mic session
-    if (window.location.protocol === 'capacitor:') return;
+    // WKWebView (iOS Capacitor) SpeechSynthesis conflicts with the active mic session.
+    // Android Capacitor WebView handles it fine — only block on iOS.
+    const isCapacitor = window.location.protocol === 'capacitor:';
+    const isIOS = isCapacitor && window.Capacitor?.getPlatform() === 'ios';
+    if (isIOS) return;
     if (!window.speechSynthesis) return;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate   = 1.1;

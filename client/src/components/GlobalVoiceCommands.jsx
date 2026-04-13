@@ -37,6 +37,24 @@ export default function GlobalVoiceCommands() {
       if (transcript.includes('snap') || transcript.includes('scan')) {
         sp('Scanning'); cmds.scan?.(); return;
       }
+      // Live scan on/off
+      if (transcript === 'live' || transcript.includes('start live')) {
+        cmds.live?.(); return;
+      }
+      if (transcript.includes('stop live') || transcript.includes('stop scan')) {
+        cmds.stop?.(); return;
+      }
+      // Face cycling in live mode
+      if (transcript === 'next') {
+        cmds.next?.(); return;
+      }
+      if (transcript === 'previous' || transcript === 'prev') {
+        cmds.prev?.(); return;
+      }
+      // "who" / "who's there" — speak detected face names
+      if (transcript.includes('who')) {
+        cmds.who?.(); return;
+      }
 
     } else if (screen === 'id') {
       if (transcript === 'prev' || transcript === 'previous') {
@@ -94,8 +112,8 @@ export default function GlobalVoiceCommands() {
       return;
     }
 
-    // end: only when a stream is active or connecting
-    if (transcript === 'end') {
+    // end / stop stream: only when a stream is active or connecting
+    if (transcript === 'end' || transcript.includes('stop stream')) {
       if (isStreamingOutRef.current || isStreamingConnRef.current) {
         stopWhipStreamRef.current();
       }

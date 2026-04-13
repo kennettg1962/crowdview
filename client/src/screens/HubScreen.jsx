@@ -18,6 +18,7 @@ import {
 } from '../components/Icons';
 import api from '../api/api';
 import HelpTip from '../components/HelpTip';
+import MetaGlassesDisplay from '../services/MetaGlassesDisplay';
 
 const HELP_LIVE   = 'Clicking the Live button continuously scans the camera to identify faces in real-time. Click on an identified face to add this person as a friend. See the Quick Start guide for more details.';
 const HELP_ID     = 'Clicking the Id button will identify faces based on the single frame of the video screen that was present when the icon was clicked. Click on an identified face to add this person as a friend.';
@@ -126,7 +127,9 @@ export default function HubScreen() {
   const [liveScan, setLiveScan] = useState(false);
   const [liveScanInitializing, setLiveScanInitializing] = useState(false);
   const [subscription, setSubscription] = useState(null); // { canUseLive, minutesRemaining, tier, ... }
+  const [isMetaMode, setIsMetaMode] = useState(false);   // Meta AI glasses voice mode
   const [liveFaces, setLiveFaces] = useState([]);
+  const [liveFaceVoiceIdx, setLiveFaceVoiceIdx] = useState(-1); // face cycling in Meta mode
   const [selectedFace, setSelectedFace] = useState(null);
   const [liveFacePopup, setLiveFacePopup] = useState(null);
   const [recognizedFaces, setRecognizedFaces] = useState([]); // corporate live mode tiles
@@ -418,6 +421,9 @@ export default function HubScreen() {
         });
         setLiveFaces(facesWithCrops);
 
+        // Meta glasses — send overlay data to display stub (no-op until Meta SDK available)
+        if (isMetaMode) MetaGlassesDisplay.sendOverlay(facesWithCrops);
+
         // Corporate live mode: accumulate tiles efficiently.
         // faceLastSeenRef stores { friendId: timestamp } — updated every cycle
         // without triggering a re-render. setRecognizedFaces is called only when
@@ -581,12 +587,46 @@ export default function HubScreen() {
     window.open(`inmocrowdview://auth?token=${encodeURIComponent(token)}`);
   }
 
-  useVoiceCommands({
+  // ── Meta glasses voice commands ───────────────────────────────────────────
+  // Face cycling for live mode via voice ("next" / "previous" / "who")
+  const { speak } = useVoiceCommands({
     screen: 'hub',
     commands: {
       scan: handleId,
+      ...(isMetaMode ? {
+        live: startLiveScan,
+        stop: stopLiveScan,
+        next: () => {
+          if (!liveFaces.length) { speak('No faces detected.'); return; }
+          setLiveFaceVoiceIdx(prev => {
+            const idx = (prev + 1) % liveFaces.length;
+            const f = liveFaces[idx];
+            speak(f.friendName ? `Face ${idx + 1}: ${f.friendName}` : `Face ${idx + 1}: unknown`);
+            return idx;
+          });
+        },
+        prev: () => {
+          if (!liveFaces.length) { speak('No faces detected.'); return; }
+          setLiveFaceVoiceIdx(prev => {
+            const idx = (prev - 1 + liveFaces.length) % liveFaces.length;
+            const f = liveFaces[idx];
+            speak(f.friendName ? `Face ${idx + 1}: ${f.friendName}` : `Face ${idx + 1}: unknown`);
+            return idx;
+          });
+        },
+        who: () => {
+          if (!liveFaces.length) { speak('No faces detected.'); return; }
+          const names = liveFaces.map((f, i) => f.friendName || `unknown ${i + 1}`).join(', ');
+          speak(names);
+        },
+      } : {}),
     },
   });
+
+  // Reset voice face index when live scan stops
+  useEffect(() => {
+    if (!liveScan) setLiveFaceVoiceIdx(-1);
+  }, [liveScan]);
 
   const canId = isStreaming;
   const corporateLiveMode = isCorporate && liveScan;
@@ -749,6 +789,17 @@ export default function HubScreen() {
               <SideButton icon={GlassesIcon} label="AR Glasses" onClick={launchArGlasses} className="text-blue-300 hover:bg-slate-600" />
             </>
           )}
+          {(isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
+            <>
+              <div className="mx-3 border-t border-slate-600" />
+              <SideButton
+                icon={MicIcon}
+                label="Meta Voice"
+                onClick={() => setIsMetaMode(m => !m)}
+                className={isMetaMode ? 'text-white bg-purple-700 hover:bg-purple-600 rounded-xl animate-pulse' : 'text-purple-300 hover:bg-slate-600'}
+              />
+            </>
+          )}
         </div>
 
         {/* Video column — full width on mobile, percentage on desktop */}
@@ -812,6 +863,17 @@ export default function HubScreen() {
               <FloatButton icon={LiveScanIcon} label="Live" onClick={stopLiveScan} className="text-white bg-green-700 hover:bg-green-600 rounded-lg animate-pulse" helpText={HELP_LIVE} />
             ) : (
               <FloatButton icon={LiveScanIcon} label="Live" onClick={startLiveScan} disabled={!canId || (!isCorporate && subscription?.canUseLive === false)} className="text-white hover:bg-white/20" helpText={HELP_LIVE} />
+            )}
+            {(isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
+              <>
+                <div className="border-l border-white/20 my-1" />
+                <FloatButton
+                  icon={MicIcon}
+                  label="Meta"
+                  onClick={() => setIsMetaMode(m => !m)}
+                  className={isMetaMode ? 'text-white bg-purple-700 hover:bg-purple-600 rounded-lg animate-pulse' : 'text-purple-300 hover:bg-white/20'}
+                />
+              </>
             )}
           </div>
 
