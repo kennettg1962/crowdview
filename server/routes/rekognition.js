@@ -10,7 +10,7 @@ const { detectActivity, sessionDetectCount, pendingDetectFlush } = require('../a
 
 // POST /api/rekognition/identify
 router.post('/identify', auth, async (req, res) => {
-  const { imageData } = req.body;
+  const { imageData, detectionType } = req.body;
   if (!imageData) return res.status(400).json({ error: 'imageData required' });
 
   // Record live-scan activity and increment counters for the corporate dashboard
@@ -18,6 +18,13 @@ router.post('/identify', auth, async (req, res) => {
   detectActivity.set(uid, Date.now());
   sessionDetectCount.set(uid, (sessionDetectCount.get(uid) || 0) + 1);
   pendingDetectFlush.set(uid, (pendingDetectFlush.get(uid) || 0) + 1);
+
+  // Log detection call for analytics (fire-and-forget)
+  const dtype = ['id', 'live', 'snap'].includes(detectionType) ? detectionType : 'live';
+  pool.execute(
+    'INSERT INTO Detection_Call_Log (User_Id, Detection_Type_Txt) VALUES (?, ?)',
+    [uid, dtype]
+  ).catch(err => console.error('[detect-log]', err.message));
 
   try {
     // Decode base64 → Buffer (strip optional data URI prefix)

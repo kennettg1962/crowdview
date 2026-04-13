@@ -8,8 +8,9 @@ Living specification of technical decisions, data contracts, and system behaviou
 
 | Layer | Technology | Scope |
 |-------|-----------|-------|
-| Frontend | React 18, Vite 5, Tailwind CSS v4, React Router v6 | All platforms |
-| Native wrapper | Capacitor 6 | iOS, Android, future wearables |
+| Frontend | React 18, Vite 5, Tailwind CSS v4, React Router v6 | Web, desktop, account management |
+| Native wrapper | Capacitor 6 | iOS, Android phones (non-AR screens) |
+| AR layer | Unity (C#), AR Foundation, URP | INMO Air 3, iOS (ARKit), Android (ARCore) |
 | Backend | Node.js, Express | Server |
 | Database | MySQL (LONGBLOB for binary data) | Server |
 | Streaming | MediaMTX v1.16.3 (WHIP ingest, HLS output) | Server |
@@ -18,10 +19,25 @@ Living specification of technical decisions, data contracts, and system behaviou
 | File Uploads | multer (memoryStorage) | Server |
 | HTTP Client | Axios | All platforms |
 | Video Playback | HLS.js | All platforms |
-| Speech Recognition | Browser `SpeechRecognition` / `webkitSpeechRecognition` — single session owned by `GlobalVoiceCommands`; single-shot restart loop on WKWebView (iOS) | All platforms |
+| Speech Recognition | Browser `SpeechRecognition` / `webkitSpeechRecognition` — single session owned by `GlobalVoiceCommands`; single-shot restart loop on WKWebView (iOS) | Web/Capacitor platforms |
 | Process Manager | PM2 | Server |
 | Reverse Proxy | nginx | Server |
 | CI/CD | GitHub Actions (SSH deploy on push to `main`) | Server |
+
+### Dual-layer mobile architecture
+
+The mobile/wearable strategy uses two complementary layers:
+
+**Layer 1 — React/Capacitor** handles all traditional UI screens (login, friends list, library, settings, profile). Ships to iOS and Android phones using the existing codebase with no AR dependency.
+
+**Layer 2 — Unity AR** handles the live camera + face overlay screen and the golf topographic green overlay. Ships to:
+- INMO Air 3 wearable (via INMO SDK, AR Foundation)
+- iPhone / iPad (via ARKit + AR Foundation)
+- Android phone (via ARCore + AR Foundation)
+
+Unity calls the existing CrowdView Express API (`/api/rekognition/identify`) for face data — no server changes required. The Unity app deep-links back to the React/Capacitor app for account management screens.
+
+This avoids rebuilding traditional UI in Unity (which is painful) while giving a single AR codebase across all camera-equipped platforms.
 
 ### Capacitor Architecture
 
@@ -35,6 +51,38 @@ Capacitor wraps the existing React/Vite web app in a native iOS (WKWebView) and 
 `@capacitor-community/speech-recognition` was evaluated but abandoned — SPM incompatibility on iOS. The app uses the browser `webkitSpeechRecognition` API on all platforms including WKWebView, with a single-shot restart loop to avoid the WKWebView continuous-mode loop bug.
 
 Capacitor is detected via `window.location.protocol === 'capacitor:'`. TTS (`SpeechSynthesis`) is skipped on Capacitor to avoid audio session conflict with the active mic.
+
+### Evaluated & Rejected Wearable Platforms
+
+| Device | Reason Rejected |
+|--------|----------------|
+| **Brilliant Labs Halo** ($299–349) | Bluetooth-only (no WiFi) — cannot make real-time API calls. 20° peripheral monocular display — unsuitable for face bounding box overlays or green topo lines. Camera feed not exposed to developers (feeds internal AI pipeline only). |
+| **Rokid AR Lite** ($749) | No confirmed Unity support — Java/Kotlin only, requiring a full SDK rebuild. Separate Station 2 compute module (180g extra) undermines the hands-free wearable story. FOV (50°) and battery (5hrs) are superior to INMO Air 3 — worth revisiting if Rokid confirms Unity support and integrates compute into the glasses. |
+| **Snap Spectacles Gen 5** ($99/month dev program) | Best display architecture evaluated (46° FOV, 4-camera array incl. IR depth, 37 PPD) but: 45-minute battery (unusable for golf/events), 226g weight (3× INMO), TypeScript/JS only (no Unity — proprietary Lens Studio toolchain), US developer program only. Worth revisiting if battery and weight improve in next gen. |
+| **RayNeo X3 Pro** ($1,099–$1,299) | Dedicated depth/SLAM camera alongside colour camera is genuinely useful for green topo anchoring. Rejected: ~40-minute real-world battery (worse than INMO), 640×480 display (far below INMO's 1080p), 4GB RAM vs 8GB (insufficient for face recognition pipelines), 30° FOV (narrower than INMO). Note: RayNeo Air series (Air 4 Pro etc.) are display-only passive screens with no camera/processor — not development platforms. |
+| **Meta Ray-Ban** | No HUD display at all — camera capture only. AR overlays not accessible to third parties. |
+
+### Unity AR Architecture
+
+The Unity AR layer is a separate project targeting the AR camera/overlay experience only.
+
+| Component | Detail |
+|-----------|--------|
+| Unity version | 2022 LTS |
+| Render pipeline | Universal Render Pipeline (URP) |
+| AR framework | AR Foundation 5.x |
+| iOS backend | ARKit |
+| Android backend | ARCore |
+| INMO Air 3 backend | INMO SDK (github.com/INMOXR/air3-unity-sdk) |
+| Face data | POST frames to `crowdview.tv/api/rekognition/identify` → render overlays as spatial anchors |
+| Topo data | Pre-loaded GeoJSON per hole → converted to Unity mesh → SLAM-anchored to green surface |
+| Ball tracking | Roboflow inference API — viable for putts/chips (30–60fps); full drive tracking deferred (needs 120fps+) |
+| Voice | 4-mic array (INMO Air 3) / device mic (phone) → trigger scan commands |
+| Auth | JWT passed from Capacitor/web layer via deep link on launch |
+| Connectivity (field) | Phone cellular hotspot → Air 3 connects as WiFi client. No deep pairing or companion SDK required. Phone acts purely as an internet bridge. |
+| Voice (Air 3) | Android SpeechRecognizer API via Unity Android plugin. 4-mic array on Air 3. Structured command parser: "Add Unknown N, [name], [group/tier], save" split on commas. Conversational fallback for multi-turn flow. |
+| Auth (Air 3) | JWT deep-linked from phone Capacitor app to Unity app on launch (`inmocrowdview://auth?token=<JWT>`). Stored in Android SharedPreferences. Same JWT payload used to detect individual vs corporate mode (`parentOrganizationId`). |
+| Friend add (Air 3) | POST /api/friends + POST /api/friends/:id/photos — existing endpoints, no server changes. Face crop extracted from bounding box at time of voice command. |
 
 ---
 
@@ -692,3 +740,59 @@ OAU NavBar now includes an Employees tab between Streams and Users:
 | Attendance_Date | DATE | |
 | Created_At | TIMESTAMP | default NOW() |
 | UNIQUE KEY | (Organization_Employee_Id, Attendance_Date) | Enforces one record per employee per day |
+
+
+---
+
+## Subscription & Billing Tables (added 2026-04-12)
+
+### `User_Subscription`
+| Column | Type | Notes |
+|--------|------|-------|
+| Subscription_Id | BIGINT PK auto-increment | |
+| User_Id | BIGINT FK → User UNIQUE | One row per user |
+| Tier_Txt | VARCHAR(20) | 'trial' \| 'lite' \| 'personal' \| 'plus' \| 'power' |
+| Period_Start_Dt | DATE | Start of current billing period |
+| Live_Minutes_Alloc_Int | INT | Allocated live minutes; -1 = unlimited |
+| Live_Minutes_Used_Int | INT | Minutes consumed this period |
+| Live_Minutes_Topup_Int | INT | Top-up minutes purchased this period |
+| Trial_Started_At | DATETIME | Timestamp when trial began |
+| Created_At / Updated_At | TIMESTAMP | Managed by MySQL |
+
+### `Live_Session_Log`
+| Column | Type | Notes |
+|--------|------|-------|
+| Session_Id | BIGINT PK auto-increment | |
+| User_Id | BIGINT FK → User | |
+| Started_At | DATETIME | When Live button was turned on |
+| Ended_At | DATETIME | Nullable; set when Live turned off |
+| Duration_Seconds_Int | INT | Nullable; computed at session end |
+
+### `Subscription_History`
+| Column | Type | Notes |
+|--------|------|-------|
+| History_Id | BIGINT PK auto-increment | |
+| User_Id | BIGINT FK → User | |
+| Tier_Txt | VARCHAR(20) | Tier that was active during this period |
+| Period_Start_Dt / Period_End_Dt | DATE | Closed period bounds |
+| Live_Minutes_Alloc_Int | INT | Minutes allocated for this period |
+| Live_Minutes_Used_Int | INT | Minutes consumed in this period |
+| Topup_Minutes_Int | INT | Top-up minutes purchased in this period |
+
+### `Detection_Call_Log`
+| Column | Type | Notes |
+|--------|------|-------|
+| Call_Id | BIGINT PK auto-increment | |
+| User_Id | BIGINT FK → User | |
+| Detection_Type_Txt | VARCHAR(10) | 'id' \| 'live' \| 'snap' |
+| Called_At | TIMESTAMP | default NOW() |
+
+### API Endpoints
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| /api/subscription/status | GET | required | Returns current tier, minutesRemaining, canUseLive, trialDaysLeft |
+| /api/subscription/live/start | POST | required | Opens a Live_Session_Log row; returns sessionId |
+| /api/subscription/live/end | POST | required | Closes the session, debits used minutes |
+| /api/subscription/history | GET | required | Returns last 24 closed periods |
+| /api/subscription/topup | POST | required | Credits 1,200 minutes (payment stub) |
+| /api/rekognition/identify | POST | required | Now accepts optional `detectionType` ('live'\|'id'\|'snap') and logs to Detection_Call_Log |

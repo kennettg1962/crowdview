@@ -7,6 +7,7 @@ const pool = require('../db/connection');
 require('dotenv').config();
 
 const { sessionDetectCount } = require('../activity');
+const { provisionTrial }    = require('./subscription');
 const JWT_SECRET = process.env.JWT_SECRET || 'crowdview_secret';
 const JWT_EXPIRES_INDIVIDUAL = process.env.JWT_EXPIRES_IN || '7d';
 const JWT_EXPIRES_CORPORATE  = process.env.JWT_EXPIRES_IN_CORPORATE || '1d';
@@ -224,6 +225,9 @@ router.post('/signup', async (req, res) => {
     } catch (emailErr) {
       console.error('Signup verification email failed:', emailErr.message);
     }
+    // Provision 30-day trial subscription for new individual accounts
+    await provisionTrial(result.insertId).catch(e =>
+      console.error('provisionTrial failed:', e.message));
     res.status(201).json({ message: 'Account created. Please check your email to verify your address.' });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Email already registered' });

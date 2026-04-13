@@ -4,6 +4,48 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 
 ---
 
+## 2026-04-11
+
+### [2026-04-11] RayNeo X3 Pro — evaluated as alternative wearable — `#wearables #hardware`
+- Evaluated RayNeo X3 Pro ($1,099–$1,299) against INMO Air 3
+- Note: RayNeo Air series (Air 4 Pro etc.) are passive display-only devices — not development platforms
+- Strengths: Dedicated depth/SLAM camera alongside colour camera (useful for green topo mesh anchoring), Unity ARDK supported
+- Rejected: ~40-minute real-world battery (worse than INMO), 640×480 display (vs INMO 1080p), 4GB RAM (vs 8GB), 30° FOV (vs 36°)
+
+### [2026-04-11] Snap Spectacles Gen 5 — evaluated as alternative wearable — `#wearables #hardware`
+- Evaluated Snap Spectacles Gen 5 ($99/month developer program) against INMO Air 3
+- Strengths: Best display of all evaluated options (46° FOV, 4-camera array with IR depth, 37 PPD), native hand tracking, AR-native Lens Studio toolchain, OpenAI integration
+- Rejected: 45-minute battery (unusable for golf/events), 226g weight (3× INMO), TypeScript/JS only (no Unity), US developer program only, subscription cost
+- Flag for future re-evaluation if next gen improves battery and weight significantly
+
+### [2026-04-11] INMO Air 3 — face recognition + friend/customer management on wearable — `#wearables #ar #unity`
+- Voice-driven friend/customer add on glasses: structured voice command flow replacing all form UI
+  - Individual: "Add Unknown 1, Fred, Family, save" → POST /api/friends + photo upload
+  - Corporate: "Add Unknown 1, Jane Smith, Gold, save" → POST customer record + photo
+  - Update: "Update Fred, group Colleagues, save"
+- Individual and corporate modes both required on Air 3 (same JWT-based detection as web app)
+- Next phase after face recognition PoC: golf green topographic overlay + shot tracking
+
+### [2026-04-11] Rokid AR Lite — evaluated as alternative wearable — `#wearables #hardware`
+- Evaluated Rokid AR Lite ($749) against INMO Air 3
+- Strengths: 50° FOV (vs 36°), 5hr battery (vs ~1hr), lower price
+- Rejected: No confirmed Unity support (Java/Kotlin only = full SDK rebuild); separate Station 2 compute module (180g extra) undermines hands-free wearable story
+- Flag for future re-evaluation if Rokid confirms Unity support and integrates compute into glasses
+
+### [2026-04-11] Brilliant Labs Halo — evaluated as alternative wearable — `#wearables #hardware`
+- Evaluated Halo ($299–349) as a lower-cost alternative to INMO Air 3
+- Rejected: Bluetooth-only (no WiFi = no real-time API calls), 20° peripheral monocular display (unsuitable for AR overlays), camera not exposed as a raw feed to developers
+- INMO Air 3 confirmed as the target wearable platform
+
+### [2026-04-11] INMO Air 3 wearable — research & Unity PoC planning — `#wearables #ar #golf`
+- Researched INMO Air 3 AR glasses as the target wearable platform for CrowdView
+- Key specs confirmed: Snapdragon spatial compute, 1080p Micro OLED, 36° FOV, 16MP camera, WiFi 6, Android 14, 78g, ~1hr active battery
+- SDK: Unity only (C# + Android 14). No official Android SDK. Capacitor/React app cannot run natively.
+- SDK capabilities confirmed: camera frame access (ARCameraManager), AR Foundation face detection, 6DoF SLAM spatial anchors, 4-mic array, Ring 3 hand tracking
+- Golf topographic PoC explored: QGIS + CT LiDAR tiles for Sterling Farms GC; 1m resolution insufficient for putting green contours (need ≤0.3m). OpenTopography identified as next data source to check.
+- Two ball-tracking approaches considered: Roboflow inference API (pre-trained golf ball model) vs OpenCV background subtraction. Roboflow preferred for PoC. Ball tracking at drive speed requires 120fps+ — wearable camera not suited; putts trackable at 30-60fps.
+- Decision: Unity PoC on INMO Air 3 to be scoped as next wearable milestone.
+
 ## 2026-04-09
 
 ### [2026-04-09] "For Individuals" marketing page — `#marketing #personal`
@@ -249,3 +291,22 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 - Customers can be assigned a tier in the FriendForm (corporate only) — shown as a colored badge on customer list rows.
 - When a customer is identified (status='known'), the bounding box color reflects their tier color (instead of the default green). Applied across HubScreen, StreamsScreen, and IdScreen.
 - Employee bounding box color changed from black to white to distinguish from unknown (red).
+
+---
+
+## 2026-04-12
+
+### [2026-04-12] Replace token-based pricing with live-minutes billing model — `#pricing #subscription #billing`
+- Token model was confusing; replaced with time-based live-scanning billing.
+- Tiers: Trial (free, 30 days, 10 hrs), Lite ($2.99/mo, instant Id only, no live), Personal ($5.99/mo, 10 hrs), Plus ($19.99/mo, 120 hrs), Power ($49.99/mo, unlimited).
+- Top-up packs: 20 hrs for $5, purchasable at any time.
+- Live usage visible in the user menu (slide-out panel).
+- Instant Id snaps are always free on all paid plans.
+- `marketing/personal.html` pricing section updated to reflect new tiers.
+
+### [2026-04-12] Subscription backend infrastructure — `#subscription #backend #database`
+- New DB tables: User_Subscription, Live_Session_Log, Subscription_History, Detection_Call_Log.
+- New server routes: GET /api/subscription/status, POST /live/start, POST /live/end, GET /history, POST /topup.
+- Trial auto-provisions on signup; drops to Lite behaviour after 30 days.
+- Corporate accounts bypass all limits (tier: 'corporate', canUseLive: true).
+- Detection call logging added to /api/rekognition/identify (fire-and-forget, type: live/id/snap).

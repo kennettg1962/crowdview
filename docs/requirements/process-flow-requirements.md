@@ -1,6 +1,6 @@
 # Process Flow Requirements
 
-Living specification ordered by screen. Detailed enough to produce wireframes. Last updated: 2026-04-06.
+Living specification ordered by screen. Detailed enough to produce wireframes. Last updated: 2026-04-11.
 
 ---
 
@@ -612,7 +612,12 @@ cropped face data URL (padded 12%)
 
 ### MenuSlideout (individual users only)
 - Slides in from left
-- Items: Profile (→ `/profile`), About, Contact, Logout
+- Items: Profile (→ `/profile`), Subscription panel, About, Contact, Logout
+- **Subscription panel** (fetched from `/api/subscription/status` when menu opens):
+  - Shows tier name (e.g. "Personal Plan") and trial days remaining badge (if on trial)
+  - Progress bar: live minutes used vs total this period (green when minutes remain, red when exhausted)
+  - If no minutes remain: "No live minutes remaining. Top-up to continue." in red
+  - Power plan shows "Unlimited live minutes" in green
 - Logout clears session and navigates to `/`
 
 ### Tabs — Corporate users (non-OAU)
@@ -829,6 +834,130 @@ cropped face data URL (padded 12%)
 ### Validation
 - Name required
 - API errors shown inline
+
+---
+
+---
+
+## INMO Air 3 — Unity AR Experience (Wearable)
+
+The Unity app on the Air 3 covers the AR camera experience only. All data management UI (login, friends list, library, settings) remains on the phone via React/Capacitor. The glasses connect to the phone's cellular hotspot for internet access.
+
+### Air 3 Scene 1 — Live Scan (always-on AR overlay)
+
+**Layout:** Full camera passthrough. Face overlays rendered as 2D quads positioned at bounding box coordinates over the live feed.
+
+**Overlay per face:**
+- Coloured border rectangle: green = known friend/customer, orange = identified, red/numbered = unknown (Unknown 1, Unknown 2…), white = employee (corporate)
+- Name label at bottom of box (friend name, or "Unknown N")
+- Tier colour replaces green for corporate known customers (same logic as web app)
+
+**Voice commands (always listening via 4-mic array):**
+| Command | Action |
+|---------|--------|
+| "Scan" | Trigger a fresh identify call on current frame |
+| "Add Unknown [N]" | Enter add-friend voice flow for that face |
+| "Update [name]" | Enter update-friend voice flow for named face |
+| "Stop" | Pause live scan overlay |
+
+**Mode detection:** JWT `parentOrganizationId` present → corporate mode (customers + employees). Absent → individual mode (friends).
+
+---
+
+### Air 3 Scene 2 — Snap / ID (single frame identification)
+
+**Trigger:** Voice command "Scan" or physical gesture (tap Ring 3 controller).
+
+**Flow:**
+1. Capture single frame from camera
+2. POST to `/api/rekognition/identify`
+3. Display spinner overlay ("Identifying…")
+4. On response: render face overlays (same colour coding as live scan)
+5. Summary label in top centre: "N faces — N friends — N unknown"
+
+**Individual mode labels:** friend / identified / unknown
+**Corporate mode labels:** customer / identified / employee / unknown
+
+---
+
+### Air 3 Voice Flow — Add Friend / Customer (Individual)
+
+Triggered by: "Add Unknown [N]"
+
+```
+User: "Add Unknown 1"
+Glasses: "Adding Unknown 1. What's their name?"
+User: "[name]"                         e.g. "Fred"
+Glasses: "Fred. What group?"
+User: "[group]"                        e.g. "Family"
+Glasses: "Saving Fred to Family…"
+  → POST /api/friends { name, group }
+  → POST /api/friends/:id/photos (face crop from bounding box)
+Glasses: "Fred saved." 
+  → overlay updates: "Unknown 1" → "Fred", border turns green
+```
+
+**Single-shot alternative:** "Add Unknown 1, Fred, Family, save"
+Parser splits on commas: [target, name, group, confirm]
+
+---
+
+### Air 3 Voice Flow — Add Customer (Corporate)
+
+Same flow as individual but creates a customer record scoped to the organisation. Group field replaced by Tier:
+
+```
+User: "Add Unknown 1"
+Glasses: "Adding Unknown 1. What's their name?"
+User: "Jane Smith"
+Glasses: "Jane Smith. What tier?"
+User: "Gold"
+Glasses: "Saving Jane Smith, Gold tier…"
+  → POST /api/friends { name, group: 'Gold' }   [group stores tier label]
+  → POST /api/friends/:id/photos
+Glasses: "Jane Smith saved."
+  → overlay updates: border turns Gold tier colour
+```
+
+---
+
+### Air 3 Voice Flow — Update Friend / Customer
+
+```
+User: "Update Fred"
+Glasses: "Updating Fred. What would you like to change? Name or group?"
+User: "Group, Colleagues"
+Glasses: "Updating Fred's group to Colleagues…"
+  → PATCH /api/friends/:id { group: 'Colleagues' }
+Glasses: "Done."
+```
+
+Single-shot: "Update Fred, group Colleagues, save"
+
+---
+
+### Air 3 — Auth Flow
+
+1. User logs in on phone via React/Capacitor app
+2. Phone deep-links JWT to Air 3 Unity app on launch (`inmocrowdview://auth?token=<JWT>`)
+3. Unity app stores JWT in Android SharedPreferences
+4. All API calls attach `Authorization: Bearer <JWT>` header
+5. On 401: Unity prompts "Please log in on your phone"
+
+---
+
+### Air 3 — Corporate vs Individual Mode Detection
+
+Same as web app: Unity reads JWT payload, checks `parentOrganizationId`. If present → corporate mode labels and scoping. If absent → individual mode. No separate login flow needed.
+
+---
+
+### Roadmap — Golf Scenes (Phase 2, post face recognition PoC)
+
+| Scene | Description |
+|-------|-------------|
+| Green Overlay | Pre-loaded GeoJSON contour data per hole → Unity mesh → SLAM-anchored to putting surface. Slope/break lines rendered over live camera view. |
+| Shot Tracking | Roboflow inference API called on live frames to detect golf ball. Trajectory arc rendered as AR overlay. Viable for putts and chip shots (30–60fps). Drive tracking deferred (needs 120fps+). |
 
 ---
 

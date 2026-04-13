@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { XIcon } from './Icons';
+import api from '../api/api';
 
 function AccordionItem({ title, content }) {
   const [open, setOpen] = useState(false);
@@ -24,8 +25,14 @@ function AccordionItem({ title, content }) {
 }
 
 export default function MenuSlideout() {
-  const { slideoutOpen, setSlideoutOpen, logout } = useApp();
+  const { slideoutOpen, setSlideoutOpen, logout, isCorporate } = useApp();
   const navigate = useNavigate();
+  const [sub, setSub] = useState(null);
+
+  useEffect(() => {
+    if (!slideoutOpen || isCorporate) return;
+    api.get('/api/subscription/status').then(r => setSub(r.data)).catch(() => {});
+  }, [slideoutOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const close = () => setSlideoutOpen(false);
 
@@ -74,6 +81,45 @@ export default function MenuSlideout() {
           >
             Update Profile
           </button>
+
+          {/* Subscription / live-minutes panel */}
+          {isCorporate ? (
+            <div className="px-4 py-3 border-b border-gray-700 bg-gray-800">
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Plan</p>
+              <p className="text-white font-semibold text-sm">Corporate — Unlimited live</p>
+            </div>
+          ) : sub ? (
+            <div className="px-4 py-3 border-b border-gray-700 bg-gray-800">
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Subscription</p>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-gray-300 text-sm capitalize">{sub.tier === 'trial' ? 'Free Trial' : sub.tier.charAt(0).toUpperCase() + sub.tier.slice(1)} Plan</span>
+                {sub.trialDaysLeft !== null && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${sub.trialDaysLeft <= 5 ? 'bg-red-900 text-red-300' : 'bg-blue-900 text-blue-300'}`}>
+                    {sub.trialDaysLeft}d left
+                  </span>
+                )}
+              </div>
+              {sub.isUnlimited ? (
+                <p className="text-green-400 text-sm font-medium">Unlimited live minutes</p>
+              ) : (
+                <>
+                  <div className="flex justify-between text-xs text-gray-400 mb-1">
+                    <span>Live minutes this period</span>
+                    <span>{sub.minutesUsed} / {sub.minutesTotal} min</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-1.5">
+                    <div
+                      className={`h-1.5 rounded-full transition-all ${sub.canUseLive ? 'bg-green-500' : 'bg-red-500'}`}
+                      style={{ width: sub.minutesTotal > 0 ? `${Math.min(100, (sub.minutesUsed / sub.minutesTotal) * 100)}%` : '100%' }}
+                    />
+                  </div>
+                  {!sub.canUseLive && (
+                    <p className="text-red-400 text-xs mt-1">No live minutes remaining. Top-up to continue.</p>
+                  )}
+                </>
+              )}
+            </div>
+          ) : null}
 
           <AccordionItem
             title="About"

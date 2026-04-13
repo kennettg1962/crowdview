@@ -119,7 +119,7 @@ export default function IdScreen() {
       }).catch(() => {});
     }
     try {
-      const res = await api.post('/api/rekognition/identify', { imageData: photoDataUrl });
+      const res = await api.post('/api/rekognition/identify', { imageData: photoDataUrl, detectionType: 'id' });
       setFaces(res.data.faces || []);
     } catch (err) {
       console.error('Identification failed', err);

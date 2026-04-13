@@ -117,6 +117,7 @@ export default function HubScreen() {
   const autoConnectAttempted = useRef(false);
   const scanInFlightRef = useRef(false);
   const liveScanActiveRef = useRef(false);
+  const liveSessionIdRef = useRef(null);
   const [liveStreams, setLiveStreams] = useState([]);
   const [isRecordingAction, setIsRecordingAction] = useState(false);
   const [cameraFlash, setCameraFlash] = useState(false);
@@ -124,6 +125,7 @@ export default function HubScreen() {
   const [permissionError, setPermissionError] = useState(null);
   const [liveScan, setLiveScan] = useState(false);
   const [liveScanInitializing, setLiveScanInitializing] = useState(false);
+  const [subscription, setSubscription] = useState(null); // { canUseLive, minutesRemaining, tier, ... }
   const [liveFaces, setLiveFaces] = useState([]);
   const [selectedFace, setSelectedFace] = useState(null);
   const [liveFacePopup, setLiveFacePopup] = useState(null);
@@ -287,6 +289,54 @@ export default function HubScreen() {
     }
   }
 
+  // ── Subscription status ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (isCorporate) return; // corporate accounts have unlimited live
+    api.get('/api/subscription/status').then(r => setSubscription(r.data)).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // End any open live session on unmount (navigate away without clicking Live off)
+  useEffect(() => {
+    return () => {
+      const sid = liveSessionIdRef.current;
+      if (sid) {
+        liveSessionIdRef.current = null;
+        api.post('/api/subscription/live/end', { sessionId: sid })
+           .then(r => { /* session closed */ })
+           .catch(() => {});
+      }
+    };
+  }, []);
+
+  async function startLiveScan() {
+    if (!isCorporate) {
+      try {
+        const r = await api.post('/api/subscription/live/start');
+        liveSessionIdRef.current = r.data.sessionId;
+        setSubscription(prev => ({ ...prev, canUseLive: r.data.canUseLive, minutesRemaining: r.data.minutesRemaining, isUnlimited: r.data.isUnlimited }));
+      } catch (err) {
+        if (err.response?.status === 403) return; // no live minutes — button stays off
+      }
+    }
+    setLiveScan(true);
+    setLiveScanInitializing(true);
+  }
+
+  function stopLiveScan() {
+    setLiveScan(false);
+    const sid = liveSessionIdRef.current;
+    if (sid) {
+      liveSessionIdRef.current = null;
+      api.post('/api/subscription/live/end', { sessionId: sid })
+         .then(r => {
+           if (r.data.minutesRemaining !== undefined) {
+             setSubscription(prev => ({ ...prev, minutesRemaining: r.data.minutesRemaining }));
+           }
+         })
+         .catch(() => {});
+    }
+  }
+
   // ── Heartbeat while camera active — feeds the corporate dashboard ─────────
   useEffect(() => {
     if (!isStreaming) return;
@@ -347,7 +397,7 @@ export default function HubScreen() {
 
       scanInFlightRef.current = true;
       try {
-        const res = await api.post('/api/rekognition/identify', { imageData: dataUrl });
+        const res = await api.post('/api/rekognition/identify', { imageData: dataUrl, detectionType: 'live' });
         if (!liveScanActiveRef.current) return; // toggled off while in flight
         const { faces } = res.data;
 
@@ -449,7 +499,7 @@ export default function HubScreen() {
       if (isStreamingOut) stopWhipStream();
       const rec = actionRecorderRef.current;
       if (rec && rec.state !== 'inactive') rec.stop();
-      setLiveScan(false);
+      stopLiveScan();
     }
   }, [isStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -620,7 +670,7 @@ export default function HubScreen() {
       {/* ── Desktop header — normal flow ── */}
       <header className={`${showDesk} bg-slate-700 px-6 py-3 items-center justify-between`}>
         {corporateLiveMode ? (
-          <button onClick={() => setLiveScan(false)} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
+          <button onClick={stopLiveScan} className="flex flex-col items-center gap-1 text-white hover:text-slate-300 transition-colors">
             <BackIcon className="w-9 h-9" />
             <span className="text-xs font-medium">Back</span>
           </button>
@@ -677,9 +727,9 @@ export default function HubScreen() {
         {/* Desktop left sidebar (hidden on mobile, hidden in corporate live mode) */}
         <div className={`${corporateLiveMode ? 'hidden' : showDesk} w-[15%] bg-slate-700 rounded-l-xl flex-col`}>
           {liveScan ? (
-            <SideButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-xl animate-pulse" helpText={HELP_LIVE} />
+            <SideButton icon={LiveScanIcon} label="Live" onClick={stopLiveScan} className="text-white bg-green-700 hover:bg-green-600 rounded-xl animate-pulse" helpText={HELP_LIVE} />
           ) : (
-            <SideButton icon={LiveScanIcon} label="Live" onClick={() => { setLiveScan(true); setLiveScanInitializing(true); }} disabled={!canId} className="text-white hover:bg-slate-600" helpText={HELP_LIVE} />
+            <SideButton icon={LiveScanIcon} label="Live" onClick={startLiveScan} disabled={!canId || (!isCorporate && subscription?.canUseLive === false)} className="text-white hover:bg-slate-600" helpText={HELP_LIVE} />
           )}
           <div className="mx-3 border-t border-slate-600" />
           <SideButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-slate-600" helpText={HELP_ID} />
@@ -759,9 +809,9 @@ export default function HubScreen() {
             <FloatButton icon={IdIcon} label="Id" onClick={handleId} disabled={!canId} className="text-white hover:bg-white/20" helpText={HELP_ID} />
             <div className="border-l border-white/20 my-1" />
             {liveScan ? (
-              <FloatButton icon={LiveScanIcon} label="Live" onClick={() => setLiveScan(false)} className="text-white bg-green-700 hover:bg-green-600 rounded-lg animate-pulse" helpText={HELP_LIVE} />
+              <FloatButton icon={LiveScanIcon} label="Live" onClick={stopLiveScan} className="text-white bg-green-700 hover:bg-green-600 rounded-lg animate-pulse" helpText={HELP_LIVE} />
             ) : (
-              <FloatButton icon={LiveScanIcon} label="Live" onClick={() => { setLiveScan(true); setLiveScanInitializing(true); }} disabled={!canId} className="text-white hover:bg-white/20" helpText={HELP_LIVE} />
+              <FloatButton icon={LiveScanIcon} label="Live" onClick={startLiveScan} disabled={!canId || (!isCorporate && subscription?.canUseLive === false)} className="text-white hover:bg-white/20" helpText={HELP_LIVE} />
             )}
             {isNative && (
               <>
