@@ -523,6 +523,25 @@
       background-position: center;
     }
 
+    .pricing-features li.feature-wearable {
+      text-align: left;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .pricing-features li.feature-wearable::before {
+      background: transparent;
+      background-image: none;
+      content: '🕶';
+      font-size: 15px;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      margin-top: 0;
+    }
+
     .pricing-featured-badge {
       display: inline-block;
       background: var(--blue);
@@ -918,7 +937,7 @@
         <div class="pricing-price"><sup>$</sup>5<sub>.99/mo</sub></div>
         <div class="pricing-desc">~2–3 typical events per month</div>
         <ul class="pricing-features">
-          <li>10 hrs live scanning / month</li>
+          <li>10 hrs live scanning</li>
           <li>Unlimited instant Id snaps</li>
           <li>Unlimited enrolments</li>
           <li>Notes &amp; photo library</li>
@@ -934,12 +953,12 @@
         <div class="pricing-price"><sup>$</sup>19<sub>.99/mo</sub></div>
         <div class="pricing-desc">For frequent networkers &amp; daily use</div>
         <ul class="pricing-features">
-          <li>120 hrs live scanning / month</li>
+          <li>120 hrs live scanning</li>
           <li>Unlimited instant Id snaps</li>
           <li>Unlimited enrolments</li>
           <li>Notes &amp; photo library</li>
           <li>Web &amp; mobile app</li>
-          <li>Wearable (AR glasses) support</li>
+          <li class="feature-wearable">Wearable (AR glasses) support</li>
           <li>Voice commands</li>
         </ul>
         <a href="https://crowdview.tv/index.html" class="btn btn-primary" style="text-align:center;">Get started</a>
@@ -956,7 +975,7 @@
           <li>Unlimited enrolments</li>
           <li>Notes &amp; photo library</li>
           <li>Web &amp; mobile app</li>
-          <li>Wearable (AR glasses) support</li>
+          <li class="feature-wearable">Wearable (AR glasses) support</li>
           <li>Voice commands</li>
           <li>Priority support</li>
         </ul>
