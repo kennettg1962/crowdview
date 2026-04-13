@@ -743,7 +743,7 @@ export default function HubScreen() {
               )}
             </>
           )}
-          {isNative && (
+          {isNative && (isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
             <>
               <div className="mx-3 border-t border-slate-600" />
               <SideButton icon={GlassesIcon} label="AR Glasses" onClick={launchArGlasses} className="text-blue-300 hover:bg-slate-600" />
@@ -813,12 +813,6 @@ export default function HubScreen() {
             ) : (
               <FloatButton icon={LiveScanIcon} label="Live" onClick={startLiveScan} disabled={!canId || (!isCorporate && subscription?.canUseLive === false)} className="text-white hover:bg-white/20" helpText={HELP_LIVE} />
             )}
-            {isNative && (
-              <>
-                <div className="border-l border-white/20 my-1" />
-                <FloatButton icon={GlassesIcon} label="AR" onClick={launchArGlasses} className="text-blue-300 hover:bg-white/20" />
-              </>
-            )}
           </div>
 
           {/* Mobile — top-right: Action/Cut + Stream (horizontal), friend bubbles below */}
@@ -866,6 +860,14 @@ export default function HubScreen() {
                style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
             <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
           </div>
+
+          {/* Mobile — bottom-right: AR Glasses (Plus/Power/Corporate only, native only) */}
+          {isNative && (isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
+            <div className={`${showMob} absolute right-3 z-20 bg-black/35 rounded-xl p-1.5`}
+                 style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
+              <FloatButton icon={GlassesIcon} label="AR" onClick={launchArGlasses} className="text-blue-300 hover:bg-white/20" />
+            </div>
+          )}
         </div>
 
         {/* Face detail panel — desktop only, non-corporate, slides in when a bounding box is clicked */}
