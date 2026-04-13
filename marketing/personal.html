@@ -395,9 +395,45 @@
     /* ── PRICING ─────────────────────────────────────────── */
     .pricing-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 16px;
-      margin-top: 56px;
+      margin-top: 40px;
+    }
+
+    .trial-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      background: linear-gradient(135deg, #0052ff12 0%, #578bfa10 100%);
+      border: 1.5px solid rgba(0,82,255,0.18);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-top: 40px;
+      text-align: left;
+    }
+    .trial-banner-icon {
+      font-size: 36px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .trial-banner h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 6px;
+    }
+    .trial-banner p {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+    .trial-banner .trial-cta {
+      margin-top: 16px;
+      display: inline-block;
+    }
+    @media (max-width: 640px) {
+      .trial-banner { flex-direction: column; gap: 12px; padding: 20px; }
     }
 
     .pricing-card {
@@ -849,22 +885,18 @@
     <p style="margin-top:20px; font-size:18px; color:var(--muted); max-width:560px; margin-left:auto; margin-right:auto; line-height:1.6;">
       Plans are billed monthly by <strong>live scanning time</strong> — the minutes your camera actively scans faces. Instant Id snaps (single-frame captures) are always free on any paid plan.
     </p>
-    <div class="pricing-grid">
 
-      <!-- Trial -->
-      <div class="pricing-card">
-        <div class="pricing-tier-name">Trial</div>
-        <div class="pricing-price">Free</div>
-        <div class="pricing-desc">30 days · No credit card required</div>
-        <ul class="pricing-features">
-          <li>10 hrs live scanning</li>
-          <li>Unlimited instant Id snaps</li>
-          <li>Unlimited enrolments</li>
-          <li>Notes &amp; photo library</li>
-          <li>Web app (Chrome)</li>
-        </ul>
-        <a href="https://crowdview.tv/index.html" class="btn btn-outline-blue" style="text-align:center;">Start free trial</a>
+    <!-- Free trial callout -->
+    <div class="trial-banner">
+      <div class="trial-banner-icon">🎁</div>
+      <div>
+        <h3>Try CrowdView free for 30 days</h3>
+        <p>Every new account starts with a full <strong>Personal plan experience</strong> — 10 hours of live scanning, unlimited instant Id snaps, mobile app access, and your full contact library — at no cost and with no credit card required. You can upgrade to a different plan at any time during or after your trial.</p>
+        <a href="https://crowdview.tv/index.html" class="btn btn-primary trial-cta">Start your free trial</a>
       </div>
+    </div>
+
+    <div class="pricing-grid">
 
       <!-- Lite -->
       <div class="pricing-card">
@@ -875,7 +907,7 @@
           <li>Unlimited instant Id snaps</li>
           <li>Unlimited enrolments</li>
           <li>Notes &amp; photo library</li>
-          <li>Web app (Chrome)</li>
+          <li>Web &amp; mobile app</li>
         </ul>
         <a href="https://crowdview.tv/index.html" class="btn btn-outline-blue" style="text-align:center;">Get started</a>
       </div>
@@ -890,7 +922,7 @@
           <li>Unlimited instant Id snaps</li>
           <li>Unlimited enrolments</li>
           <li>Notes &amp; photo library</li>
-          <li>Web app (Chrome)</li>
+          <li>Web &amp; mobile app</li>
         </ul>
         <a href="https://crowdview.tv/index.html" class="btn btn-outline-blue" style="text-align:center;">Get started</a>
       </div>
@@ -906,7 +938,8 @@
           <li>Unlimited instant Id snaps</li>
           <li>Unlimited enrolments</li>
           <li>Notes &amp; photo library</li>
-          <li>Mobile &amp; wearable support</li>
+          <li>Web &amp; mobile app</li>
+          <li>Wearable (AR glasses) support</li>
           <li>Voice commands</li>
         </ul>
         <a href="https://crowdview.tv/index.html" class="btn btn-primary" style="text-align:center;">Get started</a>
@@ -922,7 +955,8 @@
           <li>Unlimited instant Id snaps</li>
           <li>Unlimited enrolments</li>
           <li>Notes &amp; photo library</li>
-          <li>Mobile &amp; wearable support</li>
+          <li>Web &amp; mobile app</li>
+          <li>Wearable (AR glasses) support</li>
           <li>Voice commands</li>
           <li>Priority support</li>
         </ul>
