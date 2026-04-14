@@ -4,10 +4,10 @@
 
 ## Pages
 
-- [For Individuals](https://crowdview.tv/personal.html): Personal pricing, features, and smart glasses support for individual users.
-- [For Business](https://crowdview.tv/): Corporate product — real-time face recognition dashboard for staff, visitor, and VIP identification.
-- [Terms of Service](https://crowdview.tv/terms.html): Legal terms governing use of the CrowdView platform.
-- [Privacy Policy](https://crowdview.tv/privacy): How CrowdView handles personal and biometric data.
+- [For Individuals](https://crowdviewtv.com/personal.html): Personal pricing, features, and smart glasses support for individual users.
+- [For Business](https://crowdviewtv.com/): Corporate product — real-time face recognition dashboard for staff, visitor, and VIP identification.
+- [Terms of Service](https://crowdviewtv.com/terms.html): Legal terms governing use of the CrowdView platform.
+- [Privacy Policy](https://crowdviewtv.com/privacy): How CrowdView handles personal and biometric data.
 
 ## Product summary
 
@@ -54,4 +54,4 @@ CrowdView Corporate is a separate offering for organisations. It provides a shar
 - Biometric data is processed in accordance with GDPR, CCPA, and BIPA (see Terms of Service and Privacy Policy).
 - The technology stack is React (web/mobile), Node.js/Express (API), MySQL, and AWS Rekognition (face matching).
 - Smart glasses connect via Bluetooth LE to the iOS or Android app.
-- CrowdView is available at: https://crowdview.tv
+- CrowdView is available at: https://crowdviewtv.com

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://crowdview.tv/sitemap.xml
+Sitemap: https://crowdviewtv.com/sitemap.xml
