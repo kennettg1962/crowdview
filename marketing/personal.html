@@ -273,6 +273,10 @@
       gap: 20px;
       margin-top: 56px;
     }
+    /* Centre the lone tile in the last row */
+    .features-grid > .feature-card:last-child:nth-child(3n+1) {
+      grid-column: 2;
+    }
 
     .feature-card {
       background: #1a1d22;
@@ -865,6 +869,11 @@
     <div class="section-label">Features</div>
     <h2 class="section-heading">Your personal<br>face memory</h2>
     <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📡</div>
+        <h3>Live streaming</h3>
+        <p>Share your live camera feed with your friends group in one tap. Anyone following you can tune in from the Streams screen and see exactly what you're seeing — ideal for events, venues, and busy social settings.</p>
+      </div>
       <div class="feature-card">
         <div class="feature-icon">🧠</div>
         <h3>Instant recall</h3>
