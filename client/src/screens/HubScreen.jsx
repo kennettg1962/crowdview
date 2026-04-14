@@ -19,6 +19,7 @@ import {
 import api from '../api/api';
 import HelpTip from '../components/HelpTip';
 import MetaGlassesDisplay from '../services/MetaGlassesDisplay';
+import HaloSDK from '../services/HaloSDK';
 
 const HELP_LIVE   = 'Clicking the Live button continuously scans the camera to identify faces in real-time. Click on an identified face to add this person as a friend. See the Quick Start guide for more details.';
 const HELP_ID     = 'Clicking the Id button will identify faces based on the single frame of the video screen that was present when the icon was clicked. Click on an identified face to add this person as a friend.';
@@ -130,6 +131,9 @@ export default function HubScreen() {
   const [isMetaMode, setIsMetaMode] = useState(false);   // Meta AI glasses voice mode
   const [inmoEnabled, setInmoEnabled] = useState(false); // user opted in to INMO Air 3
   const [metaEnabled, setMetaEnabled] = useState(false); // user opted in to Meta glasses
+  const [haloEnabled, setHaloEnabled] = useState(false); // user opted in to Brilliant Labs Halo
+  const [haloMode, setHaloMode] = useState(false);       // Halo BLE active
+  const haloScanInFlightRef = useRef(false);
   const [liveFaces, setLiveFaces] = useState([]);
   const [liveFaceVoiceIdx, setLiveFaceVoiceIdx] = useState(-1); // face cycling in Meta mode
   const [selectedFace, setSelectedFace] = useState(null);
@@ -167,6 +171,7 @@ export default function HubScreen() {
         }
         setInmoEnabled(profile.data.Inmo_Air3_Enabled_Fl === 'Y');
         setMetaEnabled(profile.data.Meta_Glasses_Enabled_Fl === 'Y');
+        setHaloEnabled(profile.data.Halo_Enabled_Fl === 'Y');
       } catch { /* non-fatal */ }
       // Probe audio devices before requesting the full stream so we can ask for
       // the built-in mic by exact deviceId. Without this, Continuity Camera
@@ -343,6 +348,72 @@ export default function HubScreen() {
          .catch(() => {});
     }
   }
+
+  // ── Halo glasses — connect / capture / display ────────────────────────────
+
+  async function toggleHaloMode() {
+    if (haloMode) {
+      setHaloMode(false);
+      try { HaloSDK.showStatus('Disconnected'); } catch (_) {}
+      HaloSDK.disconnect().catch(() => {});
+    } else {
+      setHaloMode(true);
+      try {
+        await HaloSDK.connect();
+        HaloSDK.showStatus('CrowdView Ready');
+      } catch (err) {
+        console.error('[Halo] connect failed:', err);
+        setHaloMode(false);
+      }
+    }
+  }
+
+  async function identifyFromHaloPhoto(photoUrl) {
+    if (haloScanInFlightRef.current) return;
+    haloScanInFlightRef.current = true;
+    HaloSDK.showStatus('Scanning...');
+    try {
+      // Convert BLE blob URL to dataURL for rekognition
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = photoUrl; });
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width; canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      URL.revokeObjectURL(photoUrl);
+
+      const result = await api.post('/api/rekognition/identify', { imageData: dataUrl, detectionType: 'snap' });
+      const { faces } = result.data;
+      if (faces.length > 0) {
+        HaloSDK.displayFaceList(faces);
+        const top = faces[0];
+        try { speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(top.friendName || 'Unknown'), { volume: 1 })); } catch (_) {}
+        navigate('/id', { state: { photoDataUrl: dataUrl, saveToLibrary: false, prefetchedFaces: faces } });
+      } else {
+        HaloSDK.showStatus('No faces found');
+      }
+    } catch (err) {
+      console.error('[Halo] identify error:', err);
+      HaloSDK.showStatus('Error');
+    } finally {
+      haloScanInFlightRef.current = false;
+    }
+  }
+
+  // Register tap + photo handlers while Halo mode is active
+  useEffect(() => {
+    if (!haloMode) return;
+    const onTap   = () => HaloSDK.triggerCapture();
+    const onPhoto = (url) => identifyFromHaloPhoto(url);
+    HaloSDK.onTap(onTap);
+    HaloSDK.onPhoto(onPhoto);
+    return () => { HaloSDK.offTap(onTap); HaloSDK.offPhoto(onPhoto); };
+  }, [haloMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Disconnect Halo cleanly on unmount
+  useEffect(() => {
+    return () => { if (HaloSDK.connected) HaloSDK.disconnect().catch(() => {}); };
+  }, []);
 
   // ── Heartbeat while camera active — feeds the corporate dashboard ─────────
   useEffect(() => {
@@ -804,6 +875,17 @@ export default function HubScreen() {
               />
             </>
           )}
+          {isNative && haloEnabled && (isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
+            <>
+              <div className="mx-3 border-t border-slate-600" />
+              <SideButton
+                icon={GlassesIcon}
+                label="Halo"
+                onClick={toggleHaloMode}
+                className={haloMode ? 'text-white bg-cyan-700 hover:bg-cyan-600 rounded-xl animate-pulse' : 'text-cyan-300 hover:bg-slate-600'}
+              />
+            </>
+          )}
         </div>
 
         {/* Video column — full width on mobile, percentage on desktop */}
@@ -916,23 +998,34 @@ export default function HubScreen() {
             <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
           </div>
 
-          {/* Mobile — bottom-right: AR Glasses + Meta voice (Plus/Power/Corporate only, device flag required) */}
+          {/* Mobile — bottom-right: AR Glasses + Meta voice + Halo (Plus/Power/Corporate only, device flag required) */}
           {(isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') &&
-           (inmoEnabled || metaEnabled) && (
+           (inmoEnabled || metaEnabled || (isNative && haloEnabled)) && (
             <div className={`${showMob} absolute right-3 z-20 bg-black/35 rounded-xl p-1.5 gap-0.5`}
                  style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
               {isNative && inmoEnabled && (
                 <>
                   <FloatButton icon={GlassesIcon} label="AR" onClick={launchArGlasses} className="text-blue-300 hover:bg-white/20" />
-                  {metaEnabled && <div className="border-l border-white/20 my-1" />}
+                  {(metaEnabled || haloEnabled) && <div className="border-l border-white/20 my-1" />}
                 </>
               )}
               {metaEnabled && (
+                <>
+                  <FloatButton
+                    icon={MicIcon}
+                    label="Meta"
+                    onClick={() => setIsMetaMode(m => !m)}
+                    className={isMetaMode ? 'text-white bg-purple-700 hover:bg-purple-600 rounded-lg animate-pulse' : 'text-purple-300 hover:bg-white/20'}
+                  />
+                  {isNative && haloEnabled && <div className="border-l border-white/20 my-1" />}
+                </>
+              )}
+              {isNative && haloEnabled && (
                 <FloatButton
-                  icon={MicIcon}
-                  label="Meta"
-                  onClick={() => setIsMetaMode(m => !m)}
-                  className={isMetaMode ? 'text-white bg-purple-700 hover:bg-purple-600 rounded-lg animate-pulse' : 'text-purple-300 hover:bg-white/20'}
+                  icon={GlassesIcon}
+                  label="Halo"
+                  onClick={toggleHaloMode}
+                  className={haloMode ? 'text-white bg-cyan-700 hover:bg-cyan-600 rounded-lg animate-pulse' : 'text-cyan-300 hover:bg-white/20'}
                 />
               )}
             </div>

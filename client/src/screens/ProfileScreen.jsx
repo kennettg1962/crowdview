@@ -17,6 +17,7 @@ export default function ProfileScreen() {
   const [connectLastDevice, setConnectLastDevice] = useState('N');
   const [inmoEnabled, setInmoEnabled] = useState(false);
   const [metaEnabled, setMetaEnabled] = useState(false);
+  const [haloEnabled, setHaloEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -37,6 +38,7 @@ export default function ProfileScreen() {
       setConnectLastDevice(res.data.Connect_Last_Used_Device_After_Login_Fl || 'N');
       setInmoEnabled(res.data.Inmo_Air3_Enabled_Fl === 'Y');
       setMetaEnabled(res.data.Meta_Glasses_Enabled_Fl === 'Y');
+      setHaloEnabled(res.data.Halo_Enabled_Fl === 'Y');
     } catch (err) {
       console.error('Failed to load profile', err);
     } finally {
@@ -62,7 +64,7 @@ export default function ProfileScreen() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true); setErrors({}); setSuccess('');
     try {
-      const payload = { name: name.trim(), connectLastDevice, inmoAir3Enabled: inmoEnabled, metaGlassesEnabled: metaEnabled };
+      const payload = { name: name.trim(), connectLastDevice, inmoAir3Enabled: inmoEnabled, metaGlassesEnabled: metaEnabled, haloEnabled };
       if (password) payload.password = password;
       await api.put('/api/users/profile', payload);
       setUser(prev => ({ ...prev, name: name.trim() }));
@@ -209,6 +211,21 @@ export default function ProfileScreen() {
                       className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors focus:outline-none ${metaEnabled ? 'bg-purple-600' : 'bg-gray-600'}`}
                     >
                       <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${metaEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  {/* Brilliant Labs Halo toggle */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="text-gray-300 text-sm font-medium">Brilliant Labs Halo</p>
+                      <p className="text-gray-500 text-xs mt-0.5">Enables the Halo button in the Hub. Connects via Bluetooth — tap the glasses frame to capture and identify faces, with results overlaid on the lens display.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setHaloEnabled(v => !v); markDirty(); }}
+                      className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors focus:outline-none ${haloEnabled ? 'bg-cyan-600' : 'bg-gray-600'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${haloEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   </div>
                 </div>

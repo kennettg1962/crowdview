@@ -53,5 +53,9 @@
 	<string>CrowdView needs microphone access for audio streaming and voice commands</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>CrowdView uses speech recognition for hands-free voice commands</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>CrowdView uses Bluetooth to connect to Halo AR glasses for hands-free face identification</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>CrowdView uses Bluetooth to connect to Halo AR glasses for hands-free face identification</string>
 </dict>
 </plist>
