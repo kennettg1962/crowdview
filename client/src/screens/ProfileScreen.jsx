@@ -15,6 +15,8 @@ export default function ProfileScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [connectLastDevice, setConnectLastDevice] = useState('N');
+  const [inmoEnabled, setInmoEnabled] = useState(false);
+  const [metaEnabled, setMetaEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -33,6 +35,8 @@ export default function ProfileScreen() {
       const res = await api.get('/api/users/profile');
       setName(res.data.Name_Txt || '');
       setConnectLastDevice(res.data.Connect_Last_Used_Device_After_Login_Fl || 'N');
+      setInmoEnabled(res.data.Inmo_Air3_Enabled_Fl === 'Y');
+      setMetaEnabled(res.data.Meta_Glasses_Enabled_Fl === 'Y');
     } catch (err) {
       console.error('Failed to load profile', err);
     } finally {
@@ -58,7 +62,7 @@ export default function ProfileScreen() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true); setErrors({}); setSuccess('');
     try {
-      const payload = { name: name.trim(), connectLastDevice };
+      const payload = { name: name.trim(), connectLastDevice, inmoAir3Enabled: inmoEnabled, metaGlassesEnabled: metaEnabled };
       if (password) payload.password = password;
       await api.put('/api/users/profile', payload);
       setUser(prev => ({ ...prev, name: name.trim() }));
@@ -169,6 +173,46 @@ export default function ProfileScreen() {
                   <option value="N">No</option>
                 </select>
               </div>
+
+              {/* Connected Devices */}
+              {!isCorporate && (
+                <div className="border-t border-gray-700 pt-5 space-y-4">
+                  <h3 className="text-gray-300 text-sm font-semibold">Connected Devices</h3>
+                  <p className="text-gray-500 text-xs leading-relaxed">
+                    Enable the devices you use with CrowdView. Device buttons only appear in the Hub once enabled here. Available on Plus and Power plans.
+                  </p>
+
+                  {/* INMO Air 3 toggle */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="text-gray-300 text-sm font-medium">INMO Air 3 AR Glasses</p>
+                      <p className="text-gray-500 text-xs mt-0.5">Enables the AR glasses button in the Hub for hands-free face identification with an overlay on the lens display.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setInmoEnabled(v => !v); markDirty(); }}
+                      className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors focus:outline-none ${inmoEnabled ? 'bg-blue-600' : 'bg-gray-600'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${inmoEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  {/* Meta AI Glasses toggle */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="text-gray-300 text-sm font-medium">Meta AI Glasses</p>
+                      <p className="text-gray-500 text-xs mt-0.5">Enables the Meta voice button in the Hub. Uses the glasses microphone and speakers for voice commands and audio feedback via Bluetooth.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setMetaEnabled(v => !v); markDirty(); }}
+                      className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors focus:outline-none ${metaEnabled ? 'bg-purple-600' : 'bg-gray-600'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${metaEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {errors.general && <p className="text-red-400 text-sm">{errors.general}</p>}
               {success && <p className="text-green-400 text-sm">{success}</p>}

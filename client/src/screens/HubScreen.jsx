@@ -128,6 +128,8 @@ export default function HubScreen() {
   const [liveScanInitializing, setLiveScanInitializing] = useState(false);
   const [subscription, setSubscription] = useState(null); // { canUseLive, minutesRemaining, tier, ... }
   const [isMetaMode, setIsMetaMode] = useState(false);   // Meta AI glasses voice mode
+  const [inmoEnabled, setInmoEnabled] = useState(false); // user opted in to INMO Air 3
+  const [metaEnabled, setMetaEnabled] = useState(false); // user opted in to Meta glasses
   const [liveFaces, setLiveFaces] = useState([]);
   const [liveFaceVoiceIdx, setLiveFaceVoiceIdx] = useState(-1); // face cycling in Meta mode
   const [selectedFace, setSelectedFace] = useState(null);
@@ -163,6 +165,8 @@ export default function HubScreen() {
         if (profile.data.Last_Source_Device_Id) {
           videoConstraint = { deviceId: { ideal: profile.data.Last_Source_Device_Id }, width: { ideal: 1920 }, height: { ideal: 1080 } };
         }
+        setInmoEnabled(profile.data.Inmo_Air3_Enabled_Fl === 'Y');
+        setMetaEnabled(profile.data.Meta_Glasses_Enabled_Fl === 'Y');
       } catch { /* non-fatal */ }
       // Probe audio devices before requesting the full stream so we can ask for
       // the built-in mic by exact deviceId. Without this, Continuity Camera
@@ -783,13 +787,13 @@ export default function HubScreen() {
               )}
             </>
           )}
-          {isNative && (isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
+          {isNative && inmoEnabled && (isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
             <>
               <div className="mx-3 border-t border-slate-600" />
               <SideButton icon={GlassesIcon} label="AR Glasses" onClick={launchArGlasses} className="text-blue-300 hover:bg-slate-600" />
             </>
           )}
-          {(isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
+          {metaEnabled && (isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
             <>
               <div className="mx-3 border-t border-slate-600" />
               <SideButton
@@ -912,22 +916,25 @@ export default function HubScreen() {
             <FloatButton icon={FlipCameraIcon} label="Flip" onClick={flipCamera} disabled={!isStreaming} className="text-white hover:bg-white/20" />
           </div>
 
-          {/* Mobile — bottom-right: AR Glasses + Meta voice (Plus/Power/Corporate only) */}
-          {(isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') && (
+          {/* Mobile — bottom-right: AR Glasses + Meta voice (Plus/Power/Corporate only, device flag required) */}
+          {(isCorporate || subscription?.tier === 'plus' || subscription?.tier === 'power') &&
+           (inmoEnabled || metaEnabled) && (
             <div className={`${showMob} absolute right-3 z-20 bg-black/35 rounded-xl p-1.5 gap-0.5`}
                  style={{ bottom: 'calc(env(safe-area-inset-bottom) + 68px)' }}>
-              {isNative && (
+              {isNative && inmoEnabled && (
                 <>
                   <FloatButton icon={GlassesIcon} label="AR" onClick={launchArGlasses} className="text-blue-300 hover:bg-white/20" />
-                  <div className="border-l border-white/20 my-1" />
+                  {metaEnabled && <div className="border-l border-white/20 my-1" />}
                 </>
               )}
-              <FloatButton
-                icon={MicIcon}
-                label="Meta"
-                onClick={() => setIsMetaMode(m => !m)}
-                className={isMetaMode ? 'text-white bg-purple-700 hover:bg-purple-600 rounded-lg animate-pulse' : 'text-purple-300 hover:bg-white/20'}
-              />
+              {metaEnabled && (
+                <FloatButton
+                  icon={MicIcon}
+                  label="Meta"
+                  onClick={() => setIsMetaMode(m => !m)}
+                  className={isMetaMode ? 'text-white bg-purple-700 hover:bg-purple-600 rounded-lg animate-pulse' : 'text-purple-300 hover:bg-white/20'}
+                />
+              )}
             </div>
           )}
         </div>

@@ -9,7 +9,7 @@ const { deviceHeartbeat } = require('../activity');
 router.get('/profile', auth, async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT User_Id, Email, Name_Txt, Last_Source_Device_Id, Connect_Last_Used_Device_After_Login_Fl, User_Level FROM User WHERE User_Id = ?',
+      'SELECT User_Id, Email, Name_Txt, Last_Source_Device_Id, Connect_Last_Used_Device_After_Login_Fl, User_Level, Inmo_Air3_Enabled_Fl, Meta_Glasses_Enabled_Fl FROM User WHERE User_Id = ?',
       [req.user.userId]
     );
     if (!rows.length) return res.status(404).json({ error: 'User not found' });
@@ -22,7 +22,7 @@ router.get('/profile', auth, async (req, res) => {
 
 // PUT /api/users/profile
 router.put('/profile', auth, async (req, res) => {
-  const { name, password, connectLastDevice, lastSourceDeviceId } = req.body;
+  const { name, password, connectLastDevice, lastSourceDeviceId, inmoAir3Enabled, metaGlassesEnabled } = req.body;
   try {
     let passwordHash;
     if (password) {
@@ -34,6 +34,8 @@ router.put('/profile', auth, async (req, res) => {
     if (passwordHash) { fields.push('Password_Hash = ?'); values.push(passwordHash); }
     if (connectLastDevice !== undefined) { fields.push('Connect_Last_Used_Device_After_Login_Fl = ?'); values.push(connectLastDevice); }
     if (lastSourceDeviceId !== undefined) { fields.push('Last_Source_Device_Id = ?'); values.push(lastSourceDeviceId); }
+    if (inmoAir3Enabled !== undefined) { fields.push('Inmo_Air3_Enabled_Fl = ?'); values.push(inmoAir3Enabled ? 'Y' : 'N'); }
+    if (metaGlassesEnabled !== undefined) { fields.push('Meta_Glasses_Enabled_Fl = ?'); values.push(metaGlassesEnabled ? 'Y' : 'N'); }
 
     if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
 
