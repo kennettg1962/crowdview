@@ -160,7 +160,7 @@ export default function IdScreen() {
   function buildTooltip(face) {
     const a = face.attributes || {};
     const attrs = [
-      face.friendGroup ? `Tier: ${face.friendGroup}` : null,
+      face.tier?.name ? `Tier: ${face.tier.name}` : null,
       a.ageRange   ? `Age: ${a.ageRange}`   : null,
       a.gender     ? a.gender               : null,
       a.emotion    ? a.emotion              : null,
