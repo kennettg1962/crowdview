@@ -310,3 +310,7 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 - Trial auto-provisions on signup; drops to Lite behaviour after 30 days.
 - Corporate accounts bypass all limits (tier: 'corporate', canUseLive: true).
 - Detection call logging added to /api/rekognition/identify (fire-and-forget, type: live/id/snap).
+
+### [2026-04-13] Use "Tier" instead of "Group" in bounding box tooltip — `#ui #corporate #idscreen`
+- In the IdScreen bounding box tooltip, the label for `friendGroup` was changed from "Group:" to "Tier:" to match the subscription tier terminology used elsewhere in the product.
+- Change applies to IdScreen's `buildTooltip()` function.
