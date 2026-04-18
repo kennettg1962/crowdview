@@ -281,8 +281,6 @@ export default function IdScreen() {
                   <span className="text-gray-600">·</span>
                   <span className="text-green-400">{faces.filter(f => f.status === 'known').length} {isCorporate ? 'customer' : 'friend'}{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
                   <span className="text-gray-600">·</span>
-                  <span className="text-orange-400">{faces.filter(f => f.status === 'identified').length} identified</span>
-                  <span className="text-gray-600">·</span>
                   <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
                 </div>
               )}
