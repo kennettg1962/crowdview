@@ -5,7 +5,7 @@ import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import FriendFormPopup from '../components/FriendFormPopup';
 import AddPhotoToFriendPopup from '../components/AddPhotoToFriendPopup';
-import { MovieCameraIcon, FriendsIcon, BackIcon } from '../components/Icons';
+import { MovieCameraIcon, FriendsIcon, BackIcon, UserProfileIcon } from '../components/Icons';
 import useVoiceCommands from '../hooks/useVoiceCommands';
 import useGlassesPresentation from '../hooks/useGlassesPresentation';
 import { useApp } from '../context/AppContext';
@@ -39,6 +39,48 @@ function cropFace(photoDataUrl, box) {
   });
 }
 
+function FaceTile({ face, crop, displayName, onOpen, onDismiss }) {
+  const tierColor = face.tier?.color || null;
+  const accentClass = tierColor ? ''
+    : face.status === 'known'      ? 'border-green-500'
+    : face.status === 'identified' ? 'border-orange-500'
+    : face.status === 'employee'   ? 'border-white'
+    :                                'border-red-500';
+  return (
+    <div
+      className={`relative flex items-center gap-3 p-3 bg-gray-800 rounded-lg border-l-2 ${accentClass}`}
+      style={tierColor ? { borderLeftColor: tierColor } : undefined}
+    >
+      <button
+        onClick={onDismiss}
+        title="Dismiss"
+        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-400 hover:text-white flex items-center justify-center transition-colors"
+      >
+        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      {crop && (
+        <img src={crop} alt={displayName} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-600" />
+      )}
+      <div className="flex-1 min-w-0 pr-2">
+        <p className="text-sm font-semibold text-white truncate">{displayName}</p>
+        {face.tier?.name && (
+          <p className="text-xs font-medium mt-0.5 truncate" style={{ color: tierColor || '#9ca3af' }}>
+            {face.tier.name}
+          </p>
+        )}
+        {face.note && <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{face.note}</p>}
+      </div>
+      {face.friendId && (
+        <button onClick={onOpen} title="View" className="flex-shrink-0 p-1.5 text-gray-400 hover:text-white transition-colors">
+          <UserProfileIcon className="w-8 h-8" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function IdScreen() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,6 +96,8 @@ export default function IdScreen() {
   const [contextMenu, setContextMenu] = useState(null); // { x, y, face, index }
   const [showAddPhotoPopup, setShowAddPhotoPopup] = useState(null); // { face, faceCrop }
   const [imgStyle, setImgStyle] = useState(null); // {width, height} in px for rendered image
+  const [faceCrops, setFaceCrops] = useState({});   // index → dataUrl
+  const [dismissedFaces, setDismissedFaces] = useState(new Set()); // dismissed tile indices
   const photoContainerRef = useRef(null);
   const photoDataUrl = location.state?.photoDataUrl;
   const saveToLibrary = location.state?.saveToLibrary ?? false;
@@ -82,6 +126,18 @@ export default function IdScreen() {
   useEffect(() => {
     if (photoDataUrl) identifyFaces();
   }, [photoDataUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Crop each face for the tile panel when identification completes
+  useEffect(() => {
+    if (!faces.length || !photoDataUrl) return;
+    setDismissedFaces(new Set());
+    setFaceCrops({});
+    faces.forEach((face, i) => {
+      cropFace(photoDataUrl, face.boundingBox).then(crop => {
+        setFaceCrops(prev => ({ ...prev, [i]: crop }));
+      });
+    });
+  }, [faces]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function calcImgStyle(img) {
     const container = photoContainerRef.current;
@@ -174,6 +230,17 @@ export default function IdScreen() {
     return attrs;
   }
 
+  // Derive unknown face labels once — used by both bounding boxes and tile panel
+  const unknownLabels = (() => {
+    let count = 0;
+    return faces.reduce((acc, f, i) => {
+      if (f.status === 'unknown') acc[i] = ++count;
+      return acc;
+    }, {});
+  })();
+
+  const visibleTiles = faces.filter((_, i) => !dismissedFaces.has(i));
+
   return (
     <div className="min-h-screen md:h-screen bg-slate-700 flex flex-col overflow-hidden">
       {/* Header */}
@@ -191,182 +258,231 @@ export default function IdScreen() {
         }
       />
 
-      {/* Main: photo with bounding box overlays */}
-      <main className="flex-1 flex flex-col items-center overflow-hidden min-h-0">
+      {/* Main: photo column + right tile panel */}
+      <main className="flex-1 flex overflow-hidden min-h-0">
 
-        {/* Summary row: Back button left, message centered — desktop only */}
-        <div className="hidden md:flex w-full items-center px-3 py-1.5">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm flex-shrink-0"
-          >
-            <BackIcon className="w-6 h-6" />
-            <span>Back</span>
-          </button>
+        {/* Left: photo + bounding boxes */}
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
 
-          <div className="flex-1 flex justify-center">
-            {!loading && faces.length > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg text-sm flex-wrap justify-center">
-                <span className="text-gray-300 font-medium">{faces.length} face{faces.length !== 1 ? 's' : ''} found</span>
-                <span className="text-gray-600">·</span>
-                <span className="text-green-400">{faces.filter(f => f.status === 'known').length} {isCorporate ? 'customer' : 'friend'}{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
-                <span className="text-gray-600">·</span>
-                <span className="text-orange-400">{faces.filter(f => f.status === 'identified').length} identified</span>
-                <span className="text-gray-600">·</span>
-                <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
-              </div>
-            )}
-            {!loading && identifyError && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-red-900/50 border border-red-700 rounded-lg">
-                <span className="text-sm text-red-400">{identifyError}</span>
-                <button onClick={identifyFaces} className="text-sm text-white bg-red-700 hover:bg-red-600 px-2 py-0.5 rounded">Retry</button>
-              </div>
-            )}
-            {!loading && !identifyError && faces.length === 0 && (
-              <span className="px-3 py-1.5 bg-gray-800 rounded-lg text-sm text-gray-400">No faces detected</span>
-            )}
-          </div>
-
-          {/* Right spacer to balance the Back button */}
-          <div className="flex-shrink-0" style={{ width: '72px' }} />
-        </div>
-
-        {/* Mobile: identification message above photo */}
-        {photoDataUrl && (
-          <div className="md:hidden w-full flex justify-center pointer-events-none px-3 py-1.5">
-            {!loading && faces.length > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 rounded-lg text-xs whitespace-nowrap">
-                <span className="text-white font-semibold">{faces.length} face{faces.length !== 1 ? 's' : ''}</span>
-                <span className="text-white/40">·</span>
-                <span className="text-green-400">{faces.filter(f => f.status === 'known').length} {isCorporate ? 'customer' : 'friend'}{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
-                <span className="text-white/40">·</span>
-                <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
-              </div>
-            )}
-            {!loading && identifyError && (
-              <div className="px-3 py-1.5 bg-red-900/70 rounded-lg text-xs text-red-300">{identifyError}</div>
-            )}
-            {!loading && !identifyError && faces.length === 0 && (
-              <div className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs text-gray-400">No faces detected</div>
-            )}
-          </div>
-        )}
-
-        {photoDataUrl ? (
-          <div ref={photoContainerRef} className="flex-1 min-h-0 flex items-center justify-center w-full bg-slate-700 overflow-hidden">
-
-            {/* Wrapper sized exactly to rendered image — bounding boxes are % of this */}
-            <div className="relative flex-shrink-0" style={imgStyle || { width: '100%', height: '100%' }}>
-            <img
-              src={photoDataUrl}
-              alt="Captured"
-              className="block"
-              style={{ width: '100%', height: '100%' }}
-              draggable={false}
-              onLoad={e => calcImgStyle(e.target)}
-            />
-
-            {/* Mobile: floating Back button top-left */}
+          {/* Summary row: Back button left, message centered — desktop only */}
+          <div className="hidden md:flex w-full items-center px-3 py-1.5">
             <button
               onClick={() => navigate(-1)}
-              className="md:hidden absolute top-3 left-3 z-20 flex items-center gap-1 px-3 py-1.5 bg-black/60 backdrop-blur-sm text-white rounded-lg text-sm"
+              className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm flex-shrink-0"
             >
-              <BackIcon className="w-5 h-5" />
+              <BackIcon className="w-6 h-6" />
               <span>Back</span>
             </button>
 
-            {/* Loading overlay */}
-            {loading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 rounded-xl gap-3">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400" />
-                <p className="text-white text-sm font-medium">Identifying faces...</p>
-              </div>
-            )}
+            <div className="flex-1 flex justify-center">
+              {!loading && faces.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg text-sm flex-wrap justify-center">
+                  <span className="text-gray-300 font-medium">{faces.length} face{faces.length !== 1 ? 's' : ''} found</span>
+                  <span className="text-gray-600">·</span>
+                  <span className="text-green-400">{faces.filter(f => f.status === 'known').length} {isCorporate ? 'customer' : 'friend'}{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
+                  <span className="text-gray-600">·</span>
+                  <span className="text-orange-400">{faces.filter(f => f.status === 'identified').length} identified</span>
+                  <span className="text-gray-600">·</span>
+                  <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
+                </div>
+              )}
+              {!loading && identifyError && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-red-900/50 border border-red-700 rounded-lg">
+                  <span className="text-sm text-red-400">{identifyError}</span>
+                  <button onClick={identifyFaces} className="text-sm text-white bg-red-700 hover:bg-red-600 px-2 py-0.5 rounded">Retry</button>
+                </div>
+              )}
+              {!loading && !identifyError && faces.length === 0 && (
+                <span className="px-3 py-1.5 bg-gray-800 rounded-lg text-sm text-gray-400">No faces detected</span>
+              )}
+            </div>
 
-            {/* Face bounding box overlays — percentage of image wrapper */}
-            {!loading && imgStyle && (() => {
-              let unknownCount = 0;
-              const unknownLabels = faces.reduce((acc, f, i) => {
-                if (f.status === 'unknown') acc[i] = ++unknownCount;
-                return acc;
-              }, {});
-              return faces.map((face, i) => {
-              const { left, top, width, height } = face.boundingBox;
-              const drawLeft   = Math.max(0, left   - width  * 0.05);
-              const drawTop    = Math.max(0, top    - height * 0.05);
-              const drawWidth  = Math.min(1 - drawLeft, width  * 1.1);
-              const drawHeight = Math.min(1 - drawTop,  height * 1.1);
-              const color = face.status === 'known' && face.tier?.color ? face.tier.color : (STATUS_COLORS[face.status]?.border || '#ffffff');
-              const isHovered = hoveredFaceIndex === i;
-              const tooltipAttrs = buildTooltip(face);
-              const tooltipAbove = top > 0.45;
+            <div className="flex-shrink-0" style={{ width: '72px' }} />
+          </div>
 
-              return (
+          {/* Mobile: identification message above photo */}
+          {photoDataUrl && (
+            <div className="md:hidden w-full flex justify-center pointer-events-none px-3 py-1.5">
+              {!loading && faces.length > 0 && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 rounded-lg text-xs whitespace-nowrap">
+                  <span className="text-white font-semibold">{faces.length} face{faces.length !== 1 ? 's' : ''}</span>
+                  <span className="text-white/40">·</span>
+                  <span className="text-green-400">{faces.filter(f => f.status === 'known').length} {isCorporate ? 'customer' : 'friend'}{faces.filter(f => f.status === 'known').length !== 1 ? 's' : ''}</span>
+                  <span className="text-white/40">·</span>
+                  <span className="text-red-400">{faces.filter(f => f.status === 'unknown').length} unknown</span>
+                </div>
+              )}
+              {!loading && identifyError && (
+                <div className="px-3 py-1.5 bg-red-900/70 rounded-lg text-xs text-red-300">{identifyError}</div>
+              )}
+              {!loading && !identifyError && faces.length === 0 && (
+                <div className="px-3 py-1.5 bg-gray-800 rounded-lg text-xs text-gray-400">No faces detected</div>
+              )}
+            </div>
+          )}
+
+          {photoDataUrl ? (
+            <div ref={photoContainerRef} className="flex-1 min-h-0 flex items-center justify-center w-full bg-slate-700 overflow-hidden">
+
+              {/* Wrapper sized exactly to rendered image — bounding boxes are % of this */}
+              <div className="relative flex-shrink-0" style={imgStyle || { width: '100%', height: '100%' }}>
+                <img
+                  src={photoDataUrl}
+                  alt="Captured"
+                  className="block"
+                  style={{ width: '100%', height: '100%' }}
+                  draggable={false}
+                  onLoad={e => calcImgStyle(e.target)}
+                />
+
+                {/* Mobile: floating Back button top-left */}
                 <button
-                  key={face.faceId || i}
-                  onMouseEnter={() => setHoveredFaceIndex(i)}
-                  onMouseLeave={() => setHoveredFaceIndex(null)}
-                  onClick={() => { setContextMenu(null); handleFaceClick(face, i); }}
-                  onContextMenu={e => handleFaceRightClick(e, face, i)}
-                  title={face.friendName || `Unknown — click to add as ${isCorporate ? 'customer' : 'friend'}`}
-                  style={{
-                    position: 'absolute',
-                    left:   `${drawLeft   * 100}%`,
-                    top:    `${drawTop    * 100}%`,
-                    width:  `${drawWidth  * 100}%`,
-                    height: `${drawHeight * 100}%`,
-                    borderColor: color,
-                    borderWidth: 2,
-                    borderStyle: 'solid',
-                  }}
-                  className="rounded cursor-pointer hover:bg-white/10 transition-colors"
+                  onClick={() => navigate(-1)}
+                  className="md:hidden absolute top-3 left-3 z-20 flex items-center gap-1 px-3 py-1.5 bg-black/60 backdrop-blur-sm text-white rounded-lg text-sm"
                 >
-                  {/* Name label at bottom of box */}
-                  <span
-                    className="absolute bottom-0 left-0 right-0 text-center text-xs px-1 py-0.5 truncate text-white"
-                    style={{ backgroundColor: color + 'cc' }}
-                  >
-                    {face.friendName || `Unknown ${unknownLabels[i]}`}
-                  </span>
+                  <BackIcon className="w-5 h-5" />
+                  <span>Back</span>
+                </button>
 
-                  {/* Hover tooltip */}
-                  {isHovered && (
-                    <div
-                      className="absolute z-20 bg-gray-900/95 text-white text-xs rounded-lg px-3 py-2 shadow-2xl pointer-events-none min-w-max"
-                      style={tooltipAbove
-                        ? { bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)' }
-                        : { top:    'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)' }
-                      }
+                {/* Loading overlay */}
+                {loading && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 rounded-xl gap-3">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400" />
+                    <p className="text-white text-sm font-medium">Identifying faces...</p>
+                  </div>
+                )}
+
+                {/* Face bounding box overlays — percentage of image wrapper */}
+                {!loading && imgStyle && faces.map((face, i) => {
+                  const { left, top, width, height } = face.boundingBox;
+                  const drawLeft   = Math.max(0, left   - width  * 0.05);
+                  const drawTop    = Math.max(0, top    - height * 0.05);
+                  const drawWidth  = Math.min(1 - drawLeft, width  * 1.1);
+                  const drawHeight = Math.min(1 - drawTop,  height * 1.1);
+                  const color = face.status === 'known' && face.tier?.color ? face.tier.color : (STATUS_COLORS[face.status]?.border || '#ffffff');
+                  const isHovered = hoveredFaceIndex === i;
+                  const tooltipAttrs = buildTooltip(face);
+                  const tooltipAbove = top > 0.45;
+
+                  return (
+                    <button
+                      key={face.faceId || i}
+                      onMouseEnter={() => setHoveredFaceIndex(i)}
+                      onMouseLeave={() => setHoveredFaceIndex(null)}
+                      onClick={() => { setContextMenu(null); handleFaceClick(face, i); }}
+                      onContextMenu={e => handleFaceRightClick(e, face, i)}
+                      title={face.friendName || `Unknown — click to add as ${isCorporate ? 'customer' : 'friend'}`}
+                      style={{
+                        position: 'absolute',
+                        left:   `${drawLeft   * 100}%`,
+                        top:    `${drawTop    * 100}%`,
+                        width:  `${drawWidth  * 100}%`,
+                        height: `${drawHeight * 100}%`,
+                        borderColor: color,
+                        borderWidth: 2,
+                        borderStyle: 'solid',
+                      }}
+                      className="rounded cursor-pointer hover:bg-white/10 transition-colors"
                     >
-                      <p
-                        className="font-semibold mb-1"
-                        style={{ color }}
+                      {/* Name label at bottom of box */}
+                      <span
+                        className="absolute bottom-0 left-0 right-0 text-center text-xs px-1 py-0.5 truncate text-white"
+                        style={{ backgroundColor: color + 'cc' }}
                       >
                         {face.friendName || `Unknown ${unknownLabels[i]}`}
-                      </p>
-                      {tooltipAttrs.map((attr, j) => (
-                        <p key={j} className="text-gray-300">{attr}</p>
-                      ))}
-                      <p className="text-gray-500 mt-1 italic">
-                        {face.status === 'known' ? 'Click to view / edit' : face.status === 'employee' ? 'Click to view' : face.status === 'unknown' ? `Click to add · Right-click to assign to existing ${isCorporate ? 'customer' : 'friend'}` : 'Click to view'}
-                      </p>
-                    </div>
-                  )}
-                </button>
-              );
-            });
-            })()}
+                      </span>
 
+                      {/* Hover tooltip */}
+                      {isHovered && (
+                        <div
+                          className="absolute z-20 bg-gray-900/95 text-white text-xs rounded-lg px-3 py-2 shadow-2xl pointer-events-none min-w-max"
+                          style={tooltipAbove
+                            ? { bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)' }
+                            : { top:    'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)' }
+                          }
+                        >
+                          <p className="font-semibold mb-1" style={{ color }}>
+                            {face.friendName || `Unknown ${unknownLabels[i]}`}
+                          </p>
+                          {tooltipAttrs.map((attr, j) => (
+                            <p key={j} className="text-gray-300">{attr}</p>
+                          ))}
+                          <p className="text-gray-500 mt-1 italic">
+                            {face.status === 'known' ? 'Click to view / edit' : face.status === 'employee' ? 'Click to view' : face.status === 'unknown' ? `Click to add · Right-click to assign to existing ${isCorporate ? 'customer' : 'friend'}` : 'Click to view'}
+                          </p>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-500 text-center">
+              <div>
+                <p>No photo to display</p>
+                <button onClick={() => navigate(-1)} className="text-blue-400 hover:text-blue-300 mt-2 underline text-sm">
+                  Return to Hub
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile: horizontal tile strip */}
+          {!loading && visibleTiles.length > 0 && (
+            <div className="md:hidden flex-shrink-0 overflow-x-auto bg-gray-900 border-t border-gray-700"
+                 style={{ scrollbarWidth: 'none' }}>
+              <div className="flex gap-2 p-2">
+                {faces.map((face, i) => (
+                  !dismissedFaces.has(i) && (
+                    <div key={face.faceId || i} className="flex-shrink-0 w-52">
+                      <FaceTile
+                        face={face}
+                        crop={faceCrops[i]}
+                        displayName={face.friendName || `Unknown ${unknownLabels[i]}`}
+                        onOpen={() => handleFaceClick(face, i)}
+                        onDismiss={() => setDismissedFaces(prev => new Set([...prev, i]))}
+                      />
+                    </div>
+                  )
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right: face tile panel — desktop only */}
+        <div className="hidden md:flex w-72 flex-shrink-0 flex-col bg-gray-900 border-l border-gray-700">
+          <div className="px-3 py-2 border-b border-gray-700 flex-shrink-0">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              {loading ? 'Identifying…' : `${faces.length} face${faces.length !== 1 ? 's' : ''} found`}
+            </p>
           </div>
-        ) : (
-          <div className="text-gray-500 text-center">
-            <p>No photo to display</p>
-            <button onClick={() => navigate(-1)} className="text-blue-400 hover:text-blue-300 mt-2 underline text-sm">
-              Return to Hub
-            </button>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center mt-8 gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400" />
+                <p className="text-gray-500 text-sm">Identifying faces...</p>
+              </div>
+            ) : faces.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center mt-8">No faces detected</p>
+            ) : (
+              faces.map((face, i) => (
+                !dismissedFaces.has(i) && (
+                  <FaceTile
+                    key={face.faceId || i}
+                    face={face}
+                    crop={faceCrops[i]}
+                    displayName={face.friendName || `Unknown ${unknownLabels[i]}`}
+                    onOpen={() => handleFaceClick(face, i)}
+                    onDismiss={() => setDismissedFaces(prev => new Set([...prev, i]))}
+                  />
+                )
+              ))
+            )}
           </div>
-        )}
+        </div>
+
       </main>
 
       <TrueFooter />
