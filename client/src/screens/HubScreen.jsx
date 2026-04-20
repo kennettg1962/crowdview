@@ -228,6 +228,14 @@ export default function HubScreen() {
     connectPhoneCamera();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Auto-start live scan when navigated from IdScreen with autoStartLive ──
+  const autoStartFiredRef = useRef(false);
+  useEffect(() => {
+    if (!location.state?.autoStartLive || autoStartFiredRef.current || !isStreaming) return;
+    autoStartFiredRef.current = true;
+    startLiveScan();
+  }, [isStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Re-connect phone camera after glasses disconnect ──────────────────────
   useEffect(() => {
     if (cameraReconnectKey === 0) return; // skip initial mount

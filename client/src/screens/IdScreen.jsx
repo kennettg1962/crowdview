@@ -335,7 +335,7 @@ export default function IdScreen() {
 
                 {/* Floating Live shortcut — top-left corner of photo, all breakpoints */}
                 <button
-                  onClick={() => navigate('/hub')}
+                  onClick={() => navigate('/hub', { state: { autoStartLive: true } })}
                   title="Live"
                   className="absolute top-3 left-3 z-20 flex flex-col items-center gap-1.5 px-4 py-3 bg-black/60 backdrop-blur-sm text-white rounded-lg hover:bg-black/80 transition-colors"
                 >
