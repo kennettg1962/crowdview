@@ -5,7 +5,7 @@ import NavBar from '../components/NavBar';
 import TrueFooter from '../components/TrueFooter';
 import FriendFormPopup from '../components/FriendFormPopup';
 import AddPhotoToFriendPopup from '../components/AddPhotoToFriendPopup';
-import { MovieCameraIcon, FriendsIcon, BackIcon, UserProfileIcon } from '../components/Icons';
+import { MovieCameraIcon, FriendsIcon, BackIcon, UserProfileIcon, LiveScanIcon } from '../components/Icons';
 import useVoiceCommands from '../hooks/useVoiceCommands';
 import useGlassesPresentation from '../hooks/useGlassesPresentation';
 import { useApp } from '../context/AppContext';
@@ -336,10 +336,11 @@ export default function IdScreen() {
                 {/* Floating Live shortcut — top-left corner of photo, all breakpoints */}
                 <button
                   onClick={() => navigate('/hub')}
-                  className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1.5 bg-black/60 backdrop-blur-sm text-white rounded-lg text-sm font-medium hover:bg-black/80 transition-colors"
+                  title="Live"
+                  className="absolute top-3 left-3 z-20 flex flex-col items-center gap-1.5 px-4 py-3 bg-black/60 backdrop-blur-sm text-white rounded-lg hover:bg-black/80 transition-colors"
                 >
-                  <MovieCameraIcon className="w-4 h-4" />
-                  <span>Live</span>
+                  <LiveScanIcon className="w-[42px] h-[42px]" />
+                  <span className="text-xs font-medium">Live</span>
                 </button>
 
                 {/* Loading overlay */}
