@@ -333,13 +333,13 @@ export default function IdScreen() {
                   onLoad={e => calcImgStyle(e.target)}
                 />
 
-                {/* Mobile: floating Back button top-left */}
+                {/* Floating Live shortcut — top-left corner of photo, all breakpoints */}
                 <button
-                  onClick={() => navigate(-1)}
-                  className="md:hidden absolute top-3 left-3 z-20 flex items-center gap-1 px-3 py-1.5 bg-black/60 backdrop-blur-sm text-white rounded-lg text-sm"
+                  onClick={() => navigate('/hub')}
+                  className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1.5 bg-black/60 backdrop-blur-sm text-white rounded-lg text-sm font-medium hover:bg-black/80 transition-colors"
                 >
-                  <BackIcon className="w-5 h-5" />
-                  <span>Back</span>
+                  <MovieCameraIcon className="w-4 h-4" />
+                  <span>Live</span>
                 </button>
 
                 {/* Loading overlay */}

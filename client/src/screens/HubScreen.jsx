@@ -915,6 +915,15 @@ export default function HubScreen() {
                     <p className="text-white text-sm font-medium">Initializing face detection...</p>
                   </div>
                 )}
+                {/* Floating Id shortcut — top-left corner of video, desktop only (mobile uses panel buttons) */}
+                <button
+                  onClick={handleId}
+                  disabled={!canId}
+                  className="hidden md:flex absolute top-3 left-3 z-20 items-center gap-1.5 px-2.5 py-1.5 bg-black/60 backdrop-blur-sm text-white rounded-lg text-sm font-medium disabled:opacity-40 hover:bg-black/80 transition-colors"
+                >
+                  <IdIcon className="w-4 h-4" />
+                  <span>Id</span>
+                </button>
               </>
             ) : permissionError ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center px-6">
