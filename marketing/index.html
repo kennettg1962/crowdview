@@ -455,6 +455,74 @@
       color: #9ba3b0;
     }
 
+    /* ── WEARABLES ───────────────────────────────────────── */
+    .wearables-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 20px;
+      margin-top: 32px;
+    }
+    .wearable-card {
+      background: var(--white);
+      border: 1px solid rgba(91,97,110,0.18);
+      border-radius: 12px;
+      padding: 22px 20px 18px;
+    }
+    .wearable-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .wearable-card h4 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 3px;
+    }
+    .wearable-card .wearable-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .wearable-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .wearable-badge.available {
+      background: rgba(52,199,89,0.15);
+      color: #34c759;
+    }
+    .wearable-caps {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .wearable-caps li {
+      font-size: 12.5px;
+      color: var(--muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+    }
+    .wearable-caps li .cap-icon {
+      flex-shrink: 0;
+      font-size: 13px;
+      margin-top: 1px;
+    }
+    .wearable-caps li.cap-yes { color: var(--text); }
+    .wearable-caps li.cap-no  { opacity: 0.45; }
+
     /* ── HOW IT WORKS ────────────────────────────────────── */
     .steps {
       display: grid;
@@ -736,6 +804,7 @@
   <ul class="nav-links">
     <li><a href="#solutions">Solutions</a></li>
     <li><a href="#features">Features</a></li>
+    <li><a href="#supported-glasses">Glasses</a></li>
     <li><a href="#contact">Contact Us</a></li>
   </ul>
   <div class="nav-actions">
@@ -948,16 +1017,82 @@
       <div class="feature-card">
         <div class="feature-icon">📱</div>
         <h3>Mobile &amp; wearables</h3>
-        <p>Full feature set on iOS and Android. Connect smart glasses and use a hands-free first-person view while results display on your phone.</p>
-        <p style="margin-top:10px; font-size:12px; color:#578bfa; font-weight:600;">
-          🕶 AR glasses: compatible with INMO Air 3 only
-        </p>
+        <p>Full feature set on iOS and Android. Connect <a href="#supported-glasses" style="color:#578bfa; text-decoration:none; border-bottom:1px dotted #578bfa;">smart glasses</a> for a hands-free first-person view with results on the lens and in your ear.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🏢</div>
         <h3>Multi-desk corporate</h3>
         <p>Unlimited users sharing one customer database. Add a new front desk in minutes — no configuration, no syncing, just log in.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SUPPORTED GLASSES ── -->
+<section class="section-gray" id="supported-glasses" style="padding-top:72px; padding-bottom:72px;">
+  <div class="container">
+    <div class="section-label">Smart glasses</div>
+    <h2 class="section-heading" style="margin-bottom:8px;">Supported wearables</h2>
+    <p style="color:var(--muted); font-size:15px; max-width:560px; margin:0 auto 8px;">
+      CrowdView works with a growing range of smart glasses. Each device brings a different combination of camera, display, and audio capabilities.
+    </p>
+    <p style="color:var(--muted); font-size:13px; max-width:560px; margin:0 auto;">
+      Wearable support is included on all corporate plans and must be enabled in profile settings.
+    </p>
+
+    <div class="wearables-grid">
+
+      <!-- Brilliant Labs Halo -->
+      <div class="wearable-card">
+        <div class="wearable-card-header">
+          <div>
+            <h4>Brilliant Labs Halo</h4>
+            <div class="wearable-sub">Frame glasses · $349</div>
+          </div>
+          <span class="wearable-badge available">Available</span>
+        </div>
+        <ul class="wearable-caps">
+          <li class="cap-yes"><span class="cap-icon">📷</span>Glasses camera — tap frame to capture</li>
+          <li class="cap-yes"><span class="cap-icon">🖥</span>640×400 OLED lens display — results overlay</li>
+          <li class="cap-yes"><span class="cap-icon">🎙</span>Dual mic — voice commands</li>
+          <li class="cap-yes"><span class="cap-icon">🔊</span>Bone conduction speakers — audio feedback</li>
+        </ul>
+      </div>
+
+      <!-- INMO Air 3 -->
+      <div class="wearable-card">
+        <div class="wearable-card-header">
+          <div>
+            <h4>INMO Air 3</h4>
+            <div class="wearable-sub">AR glasses · Android-based</div>
+          </div>
+          <span class="wearable-badge available">Available</span>
+        </div>
+        <ul class="wearable-caps">
+          <li class="cap-no"><span class="cap-icon">📷</span>Camera — streams to phone via WebRTC</li>
+          <li class="cap-yes"><span class="cap-icon">🖥</span>1080p waveguide display — results overlay</li>
+          <li class="cap-yes"><span class="cap-icon">🎙</span>Built-in mic — voice commands</li>
+          <li class="cap-yes"><span class="cap-icon">🔊</span>Built-in speakers — audio feedback</li>
+        </ul>
+      </div>
+
+      <!-- Meta AI Glasses -->
+      <div class="wearable-card">
+        <div class="wearable-card-header">
+          <div>
+            <h4>Meta AI Glasses</h4>
+            <div class="wearable-sub">Ray-Ban smart glasses</div>
+          </div>
+          <span class="wearable-badge available">Available</span>
+        </div>
+        <ul class="wearable-caps">
+          <li class="cap-no"><span class="cap-icon">📷</span>Phone camera used for capture</li>
+          <li class="cap-no"><span class="cap-icon">🖥</span>No display — audio only</li>
+          <li class="cap-yes"><span class="cap-icon">🎙</span>Glasses mic — voice commands via Bluetooth</li>
+          <li class="cap-yes"><span class="cap-icon">🔊</span>Open-ear speakers — audio feedback</li>
+        </ul>
+      </div>
+
     </div>
   </div>
 </section>
@@ -1097,6 +1232,7 @@
         <li><a href="#features">Features</a></li>
         <li><a href="#how-it-works">How it works</a></li>
         <li><a href="#solutions">Solutions</a></li>
+        <li><a href="#supported-glasses">Smart glasses</a></li>
         <li><a href="https://crowdview.tv">Sign in</a></li>
       </ul>
     </div>
@@ -1118,7 +1254,7 @@
   </div>
   <div class="footer-bottom">
     <span>© 2026 CrowdView. All rights reserved.</span>
-    <span style="color:#5b616e; font-size:13px;">🕶 AR glasses compatible: INMO Air 3 only</span>
+    <a href="#supported-glasses" style="color:#5b616e; font-size:13px; text-decoration:none;">🕶 Supported smart glasses →</a>
     <div style="display:flex; gap:24px;">
       <a href="https://crowdview.tv/privacy">Privacy</a>
       <a href="terms.html">Terms</a>
