@@ -315,36 +315,29 @@ router.post('/forgot-password', async (req, res) => {
       [token, expires, user.User_Id]
     );
 
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const clientUrl = process.env.CLIENT_URL || 'https://crowdview.tv';
     const resetUrl = `${clientUrl}/reset-password?token=${token}`;
 
-    // Send email via nodemailer if SMTP is configured, otherwise log to console
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-      try {
-        const nodemailer = require('nodemailer');
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: parseInt(process.env.SMTP_PORT) || 587,
-          secure: process.env.SMTP_SECURE === 'true',
-          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-        });
-        await transporter.sendMail({
-          from: process.env.SMTP_FROM || process.env.SMTP_USER,
-          to: email,
-          subject: 'CrowdView – Reset Your Password',
-          html: `
-            <p>Hi,</p>
+    try {
+      await sendMail({
+        to: email,
+        subject: 'CrowdView – Reset Your Password',
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:auto;">
+            <h2 style="color:#0052ff;">Reset your password</h2>
             <p>You requested a password reset for your CrowdView account.</p>
-            <p><a href="${resetUrl}" style="color:#2563eb;font-weight:bold;">Click here to reset your password</a></p>
-            <p>This link expires in 1 hour.</p>
-            <p>If you did not request this, you can safely ignore this email.</p>
-          `
-        });
-      } catch (emailErr) {
-        console.error('Email send failed:', emailErr.message);
-      }
-    } else {
-      console.log(`[Password Reset] No SMTP configured. Reset URL for ${email}:\n${resetUrl}`);
+            <p style="margin:24px 0;">
+              <a href="${resetUrl}"
+                 style="background:#0052ff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">
+                Reset my password
+              </a>
+            </p>
+            <p style="color:#666;font-size:13px;">This link expires in 1 hour. If you did not request this, you can safely ignore this email.</p>
+          </div>
+        `
+      });
+    } catch (emailErr) {
+      console.error('Password reset email failed:', emailErr.message);
     }
 
     res.json({ message: 'If that email exists, a reset link has been sent.' });
