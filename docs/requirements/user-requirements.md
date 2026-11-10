@@ -319,3 +319,6 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 - Add an "Undesirable" flag to a friend, set via a checkbox in the Friend form.
 - When face recognition detects an undesirable, highlight the face in pink (instead of the usual status/tier colour).
 - Implemented: `Friend.Undesirable_Fl` column; POST/PUT `/api/friends` accept `undesirable`; `/api/rekognition/identify` returns `undesirable: true|false` per face; pink #ec4899 applied in IdScreen, HubScreen, StreamsScreen, StreamWatchScreen and useLiveScan.
+
+### [2026-11-09] Commit HubScreen hook refactor — `#hubscreen #refactor`
+- User confirmed the previously uncommitted HubScreen refactor (camera, recording, Halo mode and live-scan logic extracted into `useHubCamera`, `useHubRecording`, `useHaloMode`, `useLiveScan` hooks) is theirs and ready; committed together with the pink Undesirable highlight in HubScreen face tiles and live-scan boxes.
