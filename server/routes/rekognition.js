@@ -129,6 +129,7 @@ router.post('/identify', auth, async (req, res) => {
       let note = null;
       let friendGroup = null;
       let tier = null;
+      let undesirable = false;
       let faceId = `face_${i + 1}`;
       let status = 'unknown';
       let matchedLabel = 'Unrecognized';
@@ -182,13 +183,14 @@ router.post('/identify', auth, async (req, res) => {
           const ownerUserId = uPart ? parseInt(uPart.slice(1), 10) : userId;
 
           const [rows] = await pool.execute(
-            'SELECT Name_Txt, Note_Multi_Line_Txt, Friend_Group, Customer_Tier_Id FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
+            'SELECT Name_Txt, Note_Multi_Line_Txt, Friend_Group, Customer_Tier_Id, Undesirable_Fl FROM Friend WHERE Friend_Id = ? AND User_Id = ?',
             [friendId, ownerUserId]
           );
           if (rows.length) {
             friendName = rows[0].Name_Txt;
             note = rows[0].Note_Multi_Line_Txt || null;
             friendGroup = rows[0].Friend_Group || null;
+            undesirable = rows[0].Undesirable_Fl === 'Y';
             if (rows[0].Customer_Tier_Id) {
               const [tierRows] = await pool.execute(
                 'SELECT Tier_Id, Tier_Name_Txt, Tier_Color_Txt FROM Organization_Customer_Tier WHERE Tier_Id = ?',
@@ -287,6 +289,7 @@ router.post('/identify', auth, async (req, res) => {
         friendName,
         friendGroup,
         tier,
+        undesirable,
         note,
         matchedLabel,
         attributes,

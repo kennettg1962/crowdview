@@ -314,3 +314,8 @@ Append-only log of user requests, ordered chronologically. Each entry records wh
 ### [2026-04-13] Use "Tier" instead of "Group" in bounding box tooltip — `#ui #corporate #idscreen`
 - In the IdScreen bounding box tooltip, the label for `friendGroup` was changed from "Group:" to "Tier:" to match the subscription tier terminology used elsewhere in the product.
 - Change applies to IdScreen's `buildTooltip()` function.
+
+### [2026-11-09] Undesirable flag on friends — pink face highlight — `#friends #face-recognition #ui #database`
+- Add an "Undesirable" flag to a friend, set via a checkbox in the Friend form.
+- When face recognition detects an undesirable, highlight the face in pink (instead of the usual status/tier colour).
+- Implemented: `Friend.Undesirable_Fl` column; POST/PUT `/api/friends` accept `undesirable`; `/api/rekognition/identify` returns `undesirable: true|false` per face; pink #ec4899 applied in IdScreen, HubScreen, StreamsScreen, StreamWatchScreen and useLiveScan.

@@ -281,7 +281,8 @@ AppContext: currentOutlet = { id: 'crowdview', name: 'CrowdView Live', icon: '�
 - Bounding box overlays (absolutely positioned % of photo dimensions)
 
 ### Bounding Box Overlay (per face)
-- Border colour: green (#22c55e) = known, orange (#f97316) = identified, red (#ef4444) = unknown
+- Border colour: green (#22c55e) = known (or customer-tier colour in corporate mode), orange (#f97316) = identified, red (#ef4444) = unknown, white = employee
+- **Pink (#ec4899) = undesirable** — overrides green/tier colour when the matched friend has the Undesirable flag set. Applies to bounding boxes and face tiles on IdScreen, HubScreen (live scan), StreamsScreen and StreamWatchScreen
 - Border width: 2px
 - Name label at bottom of box: friend name (known/identified) or "Unknown N" (sequential)
   - Background: green-700/80 (known), orange-700/80 (identified), red-700/80 (unknown)
@@ -337,7 +338,9 @@ cropped face data URL (padded 12%)
 ### Fields
 - Name (text, required)
 - Note (textarea, optional)
-- Group (dropdown: Friend, Family, Friend of Friend, Friend of Family, Business)
+- Tier (dropdown, corporate only)
+- Undesirable (checkbox, default unchecked; pink accent; helper text "— highlighted pink when detected"). Shown in both individual and corporate mode, below Note/Tier and above Group
+- Group (dropdown: Friend, Family, Friend of Friend, Friend of Family, Business; individual mode only)
 
 ### Photo Wallet (edit mode)
 - Grid of friend photos (from `/api/friends/:id/photos`)

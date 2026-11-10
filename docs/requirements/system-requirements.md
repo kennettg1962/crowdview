@@ -151,6 +151,8 @@ The Unity AR layer is a separate project targeting the AR camera/overlay experie
 | Note_Multi_Line_Txt | TEXT | nullable |
 | Friend_Group | VARCHAR | default 'Friend' |
 | Friend_User_Id | INT FK → User | nullable; links to another CrowdView account |
+| Customer_Tier_Id | BIGINT | nullable; corporate customer tier |
+| Undesirable_Fl | CHAR(1) | NOT NULL default 'N'; 'Y' = undesirable → face highlighted pink. Added via `server/db/alter.sql` |
 | Created_At | TIMESTAMP | |
 
 #### `Friend_Photo`
@@ -255,9 +257,10 @@ All authenticated endpoints require: `Authorization: Bearer <JWT>`
   "faceId": "uuid",
   "boundingBox": { "left": 0.0, "top": 0.0, "width": 0.0, "height": 0.0 },
   "confidence": 0.0,
-  "status": "known|identified|unknown",
+  "status": "known|identified|unknown|employee",
   "friendId": 1,
   "friendName": "string",
+  "undesirable": false,
   "friendGroup": "string",
   "note": "string",
   "matchedLabel": "string",

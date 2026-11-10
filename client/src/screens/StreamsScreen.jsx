@@ -27,10 +27,12 @@ const HLS_BASE = window.location.protocol === 'capacitor:'
   : `${SERVER_ORIGIN}/hls`;
 
 const STATUS_COLORS = { known: '#22c55e', identified: '#f97316', employee: '#ffffff', unknown: '#ef4444' };
+const UNDESIRABLE_COLOR = '#ec4899';
 const REJOIN_THRESHOLD = 30_000;
 
 function FaceTile({ face, onView }) {
-  const tierColor = face.status === 'known' && face.tier?.color ? face.tier.color : null;
+  const tierColor = face.undesirable ? UNDESIRABLE_COLOR
+                  : face.status === 'known' && face.tier?.color ? face.tier.color : null;
   const accentClass = tierColor ? ''
                     : face.status === 'known'      ? 'border-green-500'
                     : face.status === 'identified' ? 'border-orange-500'
@@ -249,7 +251,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
           const y = Math.max(0, by - bh * 0.05);
           const w = Math.min(canvas.width  - x, bw * 1.1);
           const h = Math.min(canvas.height - y, bh * 1.1);
-          const color = status === 'known' && face.tier?.color ? face.tier.color : (STATUS_COLORS[status] || '#ffffff');
+          const color = face.undesirable ? UNDESIRABLE_COLOR : status === 'known' && face.tier?.color ? face.tier.color : (STATUS_COLORS[status] || '#ffffff');
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
           ctx.strokeRect(x, y, w, h);
@@ -384,7 +386,7 @@ function VideoTile({ stream, onClose, scanActive, onToggleScan }) {
               faceLastSeenRef.current[saved.friendId] = Date.now();
               setRecognizedFaces(prev => prev.map(f =>
                 f.faceId === liveFacePopup.faceId
-                  ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId }
+                  ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId, undesirable: !!saved.undesirable }
                   : f
               ));
             }

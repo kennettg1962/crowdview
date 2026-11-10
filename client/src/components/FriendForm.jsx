@@ -22,6 +22,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
   const [note, setNote] = useState(friend?.Note_Multi_Line_Txt || '');
   const [group, setGroup] = useState(friend?.Friend_Group || defaultGroup);
   const [tierId, setTierId] = useState(friend?.Customer_Tier_Id || null);
+  const [undesirable, setUndesirable] = useState(friend?.Undesirable_Fl === 'Y');
   const [tiers, setTiers] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -50,7 +51,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
     api.get('/api/corporate/tiers').then(res => setTiers(res.data)).catch(() => {});
   }, [isCorporate]);
 
-  useEffect(() => { isDirty.current = true; }, [name, note, group, tierId]);
+  useEffect(() => { isDirty.current = true; }, [name, note, group, tierId, undesirable]);
 
   useEffect(() => {
     if (!friend?.Friend_Id) return;
@@ -63,6 +64,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
           setNote(res.data.Note_Multi_Line_Txt || '');
           setGroup(res.data.Friend_Group || defaultGroup);
           setTierId(res.data.Customer_Tier_Id || null);
+          setUndesirable(res.data.Undesirable_Fl === 'Y');
           setLinkedUserName(res.data.Linked_User_Name || null);
           setLinkedUserEmail(res.data.Linked_User_Email || null);
         })
@@ -99,10 +101,10 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
       const selectedTier = tierId ? tiers.find(t => t.tierId === tierId) : null;
       const tierPayload = selectedTier ? { id: selectedTier.tierId, name: selectedTier.name, color: selectedTier.color } : null;
       if (friend?.Friend_Id) {
-        await api.put(`/api/friends/${friend.Friend_Id}`, { name: name.trim(), note, group, tierId: tierId || null });
-        onSave && onSave({ name: name.trim(), friendId: friend.Friend_Id, tier: tierPayload });
+        await api.put(`/api/friends/${friend.Friend_Id}`, { name: name.trim(), note, group, tierId: tierId || null, undesirable });
+        onSave && onSave({ name: name.trim(), friendId: friend.Friend_Id, tier: tierPayload, undesirable });
       } else {
-        const res = await api.post('/api/friends', { name: name.trim(), note, group, tierId: tierId || null });
+        const res = await api.post('/api/friends', { name: name.trim(), note, group, tierId: tierId || null, undesirable });
         const newId = res.data?.friendId;
         if (newId) {
           if (pendingPhoto) {
@@ -116,7 +118,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
             await api.post(`/api/friends/${newId}/photos`, formData);
           }
         }
-        onSave && onSave({ name: name.trim(), friendId: newId, tier: tierPayload });
+        onSave && onSave({ name: name.trim(), friendId: newId, tier: tierPayload, undesirable });
       }
       onClose();
     } catch (err) {
@@ -154,7 +156,7 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
   }
 
   function handleCloseRequest() {
-    if (isDirty.current && (name !== (friend?.Name_Txt || '') || note !== (friend?.Note_Multi_Line_Txt || '') || group !== (friend?.Friend_Group || defaultGroup))) {
+    if (isDirty.current && (name !== (friend?.Name_Txt || '') || note !== (friend?.Note_Multi_Line_Txt || '') || group !== (friend?.Friend_Group || defaultGroup) || undesirable !== (friend?.Undesirable_Fl === 'Y'))) {
       setConfirmClose(true);
     } else {
       onClose();
@@ -317,6 +319,14 @@ export default function FriendForm({ friend, capturedPhotoUrl, onClose, onSave, 
             </select>
           </div>
         )}
+
+        {/* Undesirable flag — matched faces are highlighted pink */}
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" checked={undesirable} onChange={e => setUndesirable(e.target.checked)}
+            className="w-4 h-4 accent-pink-500" />
+          <span className="text-gray-300 text-sm">Undesirable</span>
+          <span className="text-gray-500 text-xs">— highlighted pink when detected</span>
+        </label>
 
         {/* Group — hidden in corporate mode (always 'Business') */}
         {!isCorporate && (

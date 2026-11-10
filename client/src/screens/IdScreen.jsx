@@ -17,6 +17,7 @@ const STATUS_COLORS = {
   employee:   { border: '#ffffff' },
   unknown:    { border: '#ef4444' },
 };
+const UNDESIRABLE_COLOR = '#ec4899';
 
 function cropFace(photoDataUrl, box) {
   return new Promise(resolve => {
@@ -40,7 +41,7 @@ function cropFace(photoDataUrl, box) {
 }
 
 function FaceTile({ face, crop, displayName, onOpen, onDismiss }) {
-  const tierColor = face.tier?.color || null;
+  const tierColor = face.undesirable ? UNDESIRABLE_COLOR : (face.tier?.color || null);
   const accentClass = tierColor ? ''
     : face.status === 'known'      ? 'border-green-500'
     : face.status === 'identified' ? 'border-orange-500'
@@ -358,7 +359,7 @@ export default function IdScreen() {
                   const drawTop    = Math.max(0, top    - height * 0.05);
                   const drawWidth  = Math.min(1 - drawLeft, width  * 1.1);
                   const drawHeight = Math.min(1 - drawTop,  height * 1.1);
-                  const color = face.status === 'known' && face.tier?.color ? face.tier.color : (STATUS_COLORS[face.status]?.border || '#ffffff');
+                  const color = face.undesirable ? UNDESIRABLE_COLOR : face.status === 'known' && face.tier?.color ? face.tier.color : (STATUS_COLORS[face.status]?.border || '#ffffff');
                   const isHovered = hoveredFaceIndex === i;
                   const tooltipAttrs = buildTooltip(face);
                   const tooltipAbove = top > 0.45;
@@ -513,7 +514,7 @@ export default function IdScreen() {
             const face = showAddPhotoPopup.face;
             setFaces(prev => prev.map(f =>
               f.faceId === face.faceId
-                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId, friendGroup: saved.group, tier: saved.tier || null }
+                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId, friendGroup: saved.group, tier: saved.tier || null, undesirable: !!saved.undesirable }
                 : f
             ));
           }}
@@ -529,7 +530,7 @@ export default function IdScreen() {
             if (!saved || !activeFace) return;
             setFaces(prev => prev.map(f =>
               f.faceId === activeFace.faceId
-                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId, tier: saved.tier || null }
+                ? { ...f, status: 'known', friendName: saved.name, friendId: saved.friendId, tier: saved.tier || null, undesirable: !!saved.undesirable }
                 : f
             ));
           }}

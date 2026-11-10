@@ -36,3 +36,6 @@ ALTER TABLE User ADD COLUMN IF NOT EXISTS Detect_Month_Count INT DEFAULT 0;
 ALTER TABLE User ADD COLUMN IF NOT EXISTS Detect_Month_Ref   CHAR(7) DEFAULT NULL;
 ALTER TABLE User ADD COLUMN IF NOT EXISTS Detect_Year_Count  INT DEFAULT 0;
 ALTER TABLE User ADD COLUMN IF NOT EXISTS Detect_Year_Ref    CHAR(4) DEFAULT NULL;
+
+-- Undesirable flag on Friend — faces matched to an undesirable are highlighted pink
+ALTER TABLE Friend ADD COLUMN Undesirable_Fl CHAR(1) NOT NULL DEFAULT 'N';

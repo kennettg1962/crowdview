@@ -41,6 +41,7 @@ CrowdView is a real-time crowd face-identification and live-streaming applicatio
 | BR-08 | The "Connect Last Used Device on Login" preference is per-user and stored server-side. When enabled, the app automatically attempts to reconnect the last-used video device on login. |
 | BR-09 | Stream keys are unique per user (UUID). Only MediaMTX webhook endpoints bypass authentication; all other API endpoints require a valid JWT. |
 | BR-10 | Live stream visibility: a user sees their own live stream and live streams from friends whose CrowdView accounts are linked. |
+| BR-12 | A friend/customer can be flagged as **Undesirable** in the Friend form. When face recognition matches an undesirable (own or same-organisation friend list), the face is highlighted **pink** (#ec4899), overriding the normal green / customer-tier colour. The face status remains `known`. Friends-of-friends matches do not carry the flag (it is private to the owning user/org). |
 | BR-11 | Password reset links expire after a fixed period (implementation-defined; currently stored as `Password_Reset_Expires` in DB). |
 
 ---
@@ -118,6 +119,7 @@ The wearable platform opens a golf-specific vertical:
 | BC-02 | Face recognition data (Rekognition Face IDs) is stored in the DB and must be cleaned up when a friend photo is deleted. |
 | BC-03 | Social platform tokens (Facebook, Instagram, YouTube, TikTok) are stored per user but the posting feature is currently a stub — no actual OAuth or API integration is implemented. ⚠ Confirm whether social posting is in scope for MVP. |
 | BC-04 | The production site runs at `https://crowdview.tv` (and `www.`). Both must be whitelisted in CORS and Vite preview allowedHosts. |
+| BC-06 | The Undesirable flag is a subjective label attached to a biometric match. ⚠ Lawyer review recommended (defamation / discrimination / biometric-privacy exposure, esp. corporate use as a watch-list) before public launch. |
 | BC-05 | On macOS + Chrome, SpeechRecognition is not started — the mic is owned by `getUserMedia({audio})` for stream audio. Voice commands are a Windows/Android/wearable feature only. |
 
 ---

@@ -75,12 +75,12 @@ router.get('/:id', auth, async (req, res) => {
 
 // POST /api/friends
 router.post('/', auth, async (req, res) => {
-  const { name, note, group, tierId } = req.body;
+  const { name, note, group, tierId, undesirable } = req.body;
   if (!name) return res.status(400).json({ error: 'Name required' });
   try {
     const [result] = await pool.execute(
-      'INSERT INTO Friend (User_Id, Name_Txt, Note_Multi_Line_Txt, Friend_Group, Customer_Tier_Id) VALUES (?, ?, ?, ?, ?)',
-      [req.user.userId, name, note || '', group || 'Friend', tierId || null]
+      'INSERT INTO Friend (User_Id, Name_Txt, Note_Multi_Line_Txt, Friend_Group, Customer_Tier_Id, Undesirable_Fl) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.user.userId, name, note || '', group || 'Friend', tierId || null, undesirable ? 'Y' : 'N']
     );
     res.status(201).json({ friendId: result.insertId });
   } catch (err) {
@@ -91,13 +91,13 @@ router.post('/', auth, async (req, res) => {
 
 // PUT /api/friends/:id
 router.put('/:id', auth, async (req, res) => {
-  const { name, note, group, tierId } = req.body;
+  const { name, note, group, tierId, undesirable } = req.body;
   const scope = friendsScope(req.user);
   try {
     const [result] = await pool.execute(
-      `UPDATE Friend f SET f.Name_Txt = ?, f.Note_Multi_Line_Txt = ?, f.Friend_Group = ?, f.Customer_Tier_Id = ?
+      `UPDATE Friend f SET f.Name_Txt = ?, f.Note_Multi_Line_Txt = ?, f.Friend_Group = ?, f.Customer_Tier_Id = ?, f.Undesirable_Fl = ?
         WHERE f.Friend_Id = ? AND ${scope.clause}`,
-      [name, note || '', group || 'Friend', tierId || null, req.params.id, ...scope.params]
+      [name, note || '', group || 'Friend', tierId || null, undesirable ? 'Y' : 'N', req.params.id, ...scope.params]
     );
     if (!result.affectedRows) return res.status(404).json({ error: 'Friend not found' });
     res.json({ message: 'Friend updated' });

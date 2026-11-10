@@ -19,6 +19,7 @@ const STATUS_COLORS = {
   identified: '#f97316',
   unknown:    '#ef4444',
 };
+const UNDESIRABLE_COLOR = '#ec4899';
 
 export default function StreamWatchScreen() {
   const navigate   = useNavigate();
@@ -168,7 +169,7 @@ export default function StreamWatchScreen() {
           const y = Math.max(0, by - bh * 0.05);
           const w = Math.min(canvas.width  - x, bw * 1.1);
           const h = Math.min(canvas.height - y, bh * 1.1);
-          const color = STATUS_COLORS[status] || '#ffffff';
+          const color = face.undesirable ? UNDESIRABLE_COLOR : (STATUS_COLORS[status] || '#ffffff');
 
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
@@ -329,7 +330,7 @@ export default function StreamWatchScreen() {
                 const drawTop    = Math.max(0, top    - height * 0.05);
                 const drawWidth  = Math.min(1 - drawLeft, width  * 1.1);
                 const drawHeight = Math.min(1 - drawTop,  height * 1.1);
-                const color = STATUS_COLORS[face.status] || '#ffffff';
+                const color = face.undesirable ? UNDESIRABLE_COLOR : (STATUS_COLORS[face.status] || '#ffffff');
                 const labelAbove = drawTop > 0.45;
                 return (
                   <div
